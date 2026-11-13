@@ -1,0 +1,25 @@
+{
+  "name": "foot-draft",
+  "private": true,
+  "version": "0.1.0",
+  "description": "FOOTBALL DRAFT - online football player draft & team building game",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "dev:api": "npm run dev -w @fd/api",
+    "dev:web": "npm run dev -w @fd/web",
+    "dev:admin": "npm run dev -w @fd/admin",
+    "db:migrate:local": "npm run db:migrate:local -w @fd/api",
+    "seed:generate": "npm run seed:generate -w @fd/api",
+    "admin:create:local": "npm run admin:create:local -w @fd/api",
+    "sim:balance": "npm run sim:balance -w @fd/shared",
+    "build": "npm run build --workspaces --if-present"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
