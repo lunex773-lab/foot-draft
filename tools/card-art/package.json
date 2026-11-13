@@ -1,0 +1,24 @@
+{
+  "name": "@fd/card-art",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Paints a unique illustrated player into every card image of the player database",
+  "scripts": {
+    "appearance": "tsx src/generate-appearance.ts",
+    "render": "tsx src/render.ts",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@fd/shared": "*",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "tsx": "^4.20.0",
+    "typescript": "~5.9.3"
+  }
+}

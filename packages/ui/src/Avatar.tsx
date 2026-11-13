@@ -2,10 +2,10 @@ import type { Player } from '@fd/shared';
 import { memo } from 'react';
 import { CARD_HEIGHT, CARD_WIDTH, RARITY_COLORS, cardImageUrl } from './cardAssets';
 
-/** portrait area of the provided card images (512 x 680) */
-const CROP = { x: 166, y: 152, size: 180 };
+/** head area of the card images (512 x 680, illustrated player painted by tools/card-art) */
+const CROP = { x: 176, y: 146, size: 160 };
 
-/** Round crop of the card image's portrait area, for compact lists and the pitch. */
+/** Round crop of the player's head on the card image, for compact lists and the pitch. */
 function PlayerAvatarInner({ player, size = 40, ring = true }: { player: Player; size?: number; ring?: boolean }) {
   const k = size / CROP.size;
   return (

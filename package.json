@@ -5,7 +5,8 @@
   "description": "FOOTBALL DRAFT - online football player draft & team building game",
   "workspaces": [
     "packages/*",
-    "apps/*"
+    "apps/*",
+    "tools/*"
   ],
   "scripts": {
     "typecheck": "npm run typecheck --workspaces --if-present",
@@ -17,7 +18,9 @@
     "seed:generate": "npm run seed:generate -w @fd/api",
     "admin:create:local": "npm run admin:create:local -w @fd/api",
     "sim:balance": "npm run sim:balance -w @fd/shared",
-    "build": "npm run build --workspaces --if-present"
+    "build": "npm run build --workspaces --if-present",
+    "cards:appearance": "npm run appearance -w @fd/card-art",
+    "cards:render": "npm run render -w @fd/card-art && python3 tools/card-art/optimize.py"
   },
   "engines": {
     "node": ">=20"

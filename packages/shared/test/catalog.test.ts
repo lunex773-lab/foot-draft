@@ -82,6 +82,20 @@ describe('player catalog = FOOTBALL DRAFT 300 Player Database v1', () => {
     expect(() => convertPlayerDatabase(broken, sim)).toThrow(/unknown trait/);
   });
 
+  it('every card has its own illustrated player (distinct faces, rendered card images)', () => {
+    const looks = JSON.parse(readFileSync(join(ROOT, 'data/player-db-v1/appearance.json'), 'utf8')).players as Record<string, Record<string, unknown>>;
+    expect(Object.keys(looks)).toHaveLength(300);
+    const faces = new Set(Object.values(looks).map((a) => `${a.skinTone}|${a.hairStyle}|${a.hairColor}|${a.facialHair}`));
+    expect(faces.size).toBe(300);
+    for (const p of catalog) {
+      expect(looks[p.id]).toBeTruthy();
+      // the served card differs from the original silhouette card of the database
+      const original = readFileSync(join(ROOT, 'data/player-db-v1', p.cardAsset));
+      const rendered = readFileSync(join(ROOT, 'assets', p.cardAsset));
+      expect(rendered.equals(original)).toBe(false);
+    }
+  });
+
   it('has enough goalkeepers for the draft pool', () => {
     expect(catalog.filter((p) => p.primaryPosition === 'GK').length).toBeGreaterThanOrEqual(GAME_CONFIG.pool.GK);
   });

@@ -11,7 +11,8 @@
 | --- | --- |
 | `packages/shared` | 型・選手データベースの取り込み・スネークドラフト・自動指名・編成・ケミストリー・試合SIM・リーグ順位・通信の型 |
 | `data/player-db-v1` | 選手データベース（FOOTBALL DRAFT 300 Player Database v1：架空選手300人、SIM用19能力） |
-| `assets/` | カード画像（`cards/FD-001.png`〜`FD-300.png`）とレアリティ別テンプレート。ゲーム・管理サイトの静的ファイルとして配信 |
+| `assets/` | 配信用のカード画像（`cards/FD-001.png`〜`FD-300.png`：元画像に選手を描き込んだもの）とレアリティ別テンプレート。ゲーム・管理サイトの静的ファイルとして配信 |
+| `tools/card-art` | カード画像に選手のイラスト（顔・ユニフォーム・エンブレム）を描き込むツール |
 | `packages/ui` | 選手カード（データベースのカード画像を表示）・国旗 |
 | `apps/api` | ゲームのバックエンド。Cloudflare Workers（Hono）＋ D1 ＋ Durable Objects（`RoomDO`：ルーム・ドラフト・試合の進行をサーバーで確定） |
 | `apps/web` | ゲーム本体（React＋Vite） |
@@ -45,7 +46,9 @@ npm run admin:create:local -- --username あなたの管理者名
 
 ## 選手データの更新
 
-1. `data/player-db-v1/players.json`・`simulation_attributes.json` と `assets/cards/` を差し替える
+1. `data/player-db-v1/players.json`・`simulation_attributes.json` と元のカード画像 `data/player-db-v1/cards/` を差し替える
+   - 選手の外見：`npm run cards:appearance`（新しい選手の分を追加。既存の外見は保持）。個別に変えたい時は `data/player-db-v1/appearance.json` を編集
+   - カード画像の描き込み：`npm run cards:render`（Playwright＋Chromium と Python の Pillow が必要。`assets/cards/` に出力）
 2. `npm test -w @fd/shared`（取り込み検証：レアリティ・OVR帯・特殊能力・ポジション・画像ファイルの有無）
 3. `npm run seed:generate` で D1 用のマイグレーションを作り直す（既に適用済みの環境には新しい番号のマイグレーションとして追加する）
 
