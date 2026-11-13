@@ -240,11 +240,15 @@ export class RoomDO extends DurableObject<Env> {
     }
   }
 
-  private broadcastSnapshot(exclude?: WebSocket) {
+  /**
+   * @param skip   socket that should not receive this broadcast
+   * @param closed socket that is closing (its user is shown as disconnected)
+   */
+  private broadcastSnapshot(skip?: WebSocket, closed?: WebSocket) {
     for (const ws of this.ctx.getWebSockets()) {
-      if (ws === exclude) continue;
+      if (ws === skip || ws === closed) continue;
       const a = ws.deserializeAttachment() as WsAttachment | null;
-      this.send(ws, { type: 'snapshot', state: this.snapshotFor(a?.userId ?? null, exclude) });
+      this.send(ws, { type: 'snapshot', state: this.snapshotFor(a?.userId ?? null, closed) });
     }
   }
 
@@ -838,11 +842,11 @@ export class RoomDO extends DurableObject<Env> {
   }
 
   override async webSocketClose(ws: WebSocket) {
-    this.broadcastSnapshot(ws);
+    this.broadcastSnapshot(undefined, ws);
   }
 
   override async webSocketError(ws: WebSocket) {
-    this.broadcastSnapshot(ws);
+    this.broadcastSnapshot(undefined, ws);
   }
 }
 
