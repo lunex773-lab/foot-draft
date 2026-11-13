@@ -11,6 +11,7 @@ export * from './players/ratings';
 export * from './players/import';
 export * from './players/catalog';
 export * from './players/roles';
+export * from './players/cardArt';
 export * from './lineup';
 export * from './chemistry';
 export * from './draft';

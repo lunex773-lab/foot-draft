@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
@@ -6,6 +6,7 @@ import {
   CLUB_BY_ID,
   GAME_CONFIG,
   NATION_BY_CODE,
+  PHOTO_CARD_IDS,
   POSITIONS,
   RARITY_INFO,
   TRAIT_IDS,
@@ -82,7 +83,7 @@ describe('player catalog = FOOTBALL DRAFT 300 Player Database v1', () => {
     expect(() => convertPlayerDatabase(broken, sim)).toThrow(/unknown trait/);
   });
 
-  it('every card has its own illustrated player (distinct faces, rendered card images)', () => {
+  it('every card has its own player (distinct illustrated faces, rendered card images)', () => {
     const looks = JSON.parse(readFileSync(join(ROOT, 'data/player-db-v1/appearance.json'), 'utf8')).players as Record<string, Record<string, unknown>>;
     expect(Object.keys(looks)).toHaveLength(300);
     const faces = new Set(Object.values(looks).map((a) => `${a.skinTone}|${a.hairStyle}|${a.hairColor}|${a.facialHair}`));
@@ -94,6 +95,20 @@ describe('player catalog = FOOTBALL DRAFT 300 Player Database v1', () => {
       const rendered = readFileSync(join(ROOT, 'assets', p.cardAsset));
       expect(rendered.equals(original)).toBe(false);
     }
+  });
+
+  it('photo cards: every listed portrait exists and was built into the served card', () => {
+    const portraits = JSON.parse(readFileSync(join(ROOT, 'data/player-db-v1/portraits.json'), 'utf8')).players as Record<string, { model: string }>;
+    const ids = new Set(catalog.map((p) => p.id));
+    expect(PHOTO_CARD_IDS.size).toBe(Object.keys(portraits).length);
+    for (const id of PHOTO_CARD_IDS) {
+      expect(ids.has(id)).toBe(true);
+      expect(portraits[id].model).toBeTruthy();
+      expect(existsSync(join(ROOT, 'data/player-db-v1/portraits', `${id}.jpg`))).toBe(true);
+    }
+    // the portrait files and the list match exactly
+    const jpgs = readdirSync(join(ROOT, 'data/player-db-v1/portraits')).filter((f) => f.endsWith('.jpg'));
+    expect(jpgs.map((f) => f.slice(0, -4)).sort()).toEqual([...PHOTO_CARD_IDS].sort());
   });
 
   it('has enough goalkeepers for the draft pool', () => {
