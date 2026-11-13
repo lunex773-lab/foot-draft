@@ -3,10 +3,250 @@
  "description": "Photorealistic portraits of the fictional players (AI-generated with Figma generate_image). Prompts: tools/card-art/src/prompts.ts",
  "figma_file": "uI5fcFJldxuJrTlNTvs5XJ",
  "players": {
-  "FD-001": { "model": "gpt-image-2.5-flare", "figma_node": "1:2", "generated_at": "2026-11-13" },
-  "FD-004": { "model": "gpt-image-2.5-flare", "figma_node": "1:3", "generated_at": "2026-11-13" },
-  "FD-009": { "model": "gpt-image-2.5-flare", "figma_node": "1:4", "generated_at": "2026-11-13" },
-  "FD-088": { "model": "gpt-image-2.5-flare", "figma_node": "1:5", "generated_at": "2026-11-13" },
-  "FD-173": { "model": "gpt-image-2.5-flare", "figma_node": "1:6", "generated_at": "2026-11-13" }
+  "FD-001": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "1:2",
+   "generated_at": "2026-11-13"
+  },
+  "FD-002": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "2:2",
+   "generated_at": "2026-11-13"
+  },
+  "FD-003": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "2:3",
+   "generated_at": "2026-11-13"
+  },
+  "FD-004": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "1:3",
+   "generated_at": "2026-11-13"
+  },
+  "FD-005": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "2:4",
+   "generated_at": "2026-11-13"
+  },
+  "FD-006": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "2:5",
+   "generated_at": "2026-11-13"
+  },
+  "FD-007": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "2:6",
+   "generated_at": "2026-11-13"
+  },
+  "FD-008": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "2:7",
+   "generated_at": "2026-11-13"
+  },
+  "FD-009": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "1:4",
+   "generated_at": "2026-11-13"
+  },
+  "FD-010": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "2:8",
+   "generated_at": "2026-11-13"
+  },
+  "FD-011": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "2:9",
+   "generated_at": "2026-11-13"
+  },
+  "FD-012": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "2:10",
+   "generated_at": "2026-11-13"
+  },
+  "FD-013": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "2:11",
+   "generated_at": "2026-11-13"
+  },
+  "FD-014": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "2:12",
+   "generated_at": "2026-11-13"
+  },
+  "FD-015": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "2:13",
+   "generated_at": "2026-11-13"
+  },
+  "FD-016": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "2:14",
+   "generated_at": "2026-11-13"
+  },
+  "FD-017": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "2:15",
+   "generated_at": "2026-11-13"
+  },
+  "FD-018": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "2:16",
+   "generated_at": "2026-11-13"
+  },
+  "FD-019": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "2:17",
+   "generated_at": "2026-11-13"
+  },
+  "FD-020": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "2:18",
+   "generated_at": "2026-11-13"
+  },
+  "FD-021": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "2:19",
+   "generated_at": "2026-11-13"
+  },
+  "FD-022": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "2:20",
+   "generated_at": "2026-11-13"
+  },
+  "FD-023": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "2:21",
+   "generated_at": "2026-11-13"
+  },
+  "FD-024": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "2:22",
+   "generated_at": "2026-11-13"
+  },
+  "FD-025": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "2:23",
+   "generated_at": "2026-11-13"
+  },
+  "FD-026": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "2:24",
+   "generated_at": "2026-11-13"
+  },
+  "FD-027": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "2:25",
+   "generated_at": "2026-11-13"
+  },
+  "FD-028": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "3:2",
+   "generated_at": "2026-11-13"
+  },
+  "FD-029": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "3:3",
+   "generated_at": "2026-11-13"
+  },
+  "FD-030": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "3:4",
+   "generated_at": "2026-11-13"
+  },
+  "FD-031": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "3:5",
+   "generated_at": "2026-11-13"
+  },
+  "FD-032": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "3:6",
+   "generated_at": "2026-11-13"
+  },
+  "FD-033": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "3:7",
+   "generated_at": "2026-11-13"
+  },
+  "FD-034": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "4:2",
+   "generated_at": "2026-11-13"
+  },
+  "FD-035": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "4:3",
+   "generated_at": "2026-11-13"
+  },
+  "FD-036": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "4:4",
+   "generated_at": "2026-11-13"
+  },
+  "FD-037": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "4:5",
+   "generated_at": "2026-11-13"
+  },
+  "FD-038": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "4:6",
+   "generated_at": "2026-11-13"
+  },
+  "FD-039": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "4:7",
+   "generated_at": "2026-11-13"
+  },
+  "FD-040": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "4:8",
+   "generated_at": "2026-11-13"
+  },
+  "FD-041": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "4:9",
+   "generated_at": "2026-11-13"
+  },
+  "FD-042": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "4:10",
+   "generated_at": "2026-11-13"
+  },
+  "FD-043": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "4:11",
+   "generated_at": "2026-11-13"
+  },
+  "FD-044": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "4:12",
+   "generated_at": "2026-11-13"
+  },
+  "FD-045": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "4:13",
+   "generated_at": "2026-11-13"
+  },
+  "FD-046": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "4:14",
+   "generated_at": "2026-11-13"
+  },
+  "FD-047": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "4:15",
+   "generated_at": "2026-11-13"
+  },
+  "FD-088": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "1:5",
+   "generated_at": "2026-11-13"
+  },
+  "FD-173": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "1:6",
+   "generated_at": "2026-11-13"
+  }
  }
 }
