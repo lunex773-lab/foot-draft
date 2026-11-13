@@ -7,9 +7,12 @@ import { ApiError, errorBody } from './lib/http';
 import { adminRoutes } from './routes/admin';
 import { authRoutes } from './routes/auth';
 import { draftRoutes } from './routes/drafts';
+import { eventRoutes } from './routes/events';
 import { matchRoutes } from './routes/matches';
 import { playerRoutes } from './routes/players';
+import { rankedRoutes } from './routes/ranked';
 import { roomRoutes } from './routes/rooms';
+import { soloRoutes } from './routes/solo';
 import { userRoutes } from './routes/users';
 
 export { RoomDO } from './room/RoomDO';
@@ -34,6 +37,9 @@ app.route('/api/players', playerRoutes);
 app.route('/api/rooms', roomRoutes);
 app.route('/api/drafts', draftRoutes);
 app.route('/api/matches', matchRoutes);
+app.route('/api/ranked', rankedRoutes);
+app.route('/api/solo', soloRoutes);
+app.route('/api/events', eventRoutes);
 app.route('/api/admin', adminRoutes);
 
 app.notFound((c) => c.json(errorBody('NOT_FOUND', 'not found'), 404));

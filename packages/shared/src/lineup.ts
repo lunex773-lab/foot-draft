@@ -124,13 +124,18 @@ export type LineupError =
   | 'INVALID_BENCH'
   | 'UNKNOWN_PLAYER'
   | 'DUPLICATE_PLAYER'
-  | 'INVALID_TACTICS';
+  | 'INVALID_TACTICS'
+  | 'FORMATION_LOCKED';
 
-/** Server-side validation of a lineup submitted by a client. */
-export function validateLineup(lineup: unknown, rosterIds: readonly string[]): LineupError | null {
+/**
+ * Server-side validation of a lineup submitted by a client.
+ * @param lockedFormation Solo Challenge rule "formation fixed"
+ */
+export function validateLineup(lineup: unknown, rosterIds: readonly string[], lockedFormation?: FormationId | null): LineupError | null {
   if (!lineup || typeof lineup !== 'object') return 'INVALID_STARTERS';
   const l = lineup as Partial<Lineup>;
   if (typeof l.formation !== 'string' || !(l.formation in FORMATIONS)) return 'INVALID_FORMATION';
+  if (lockedFormation && l.formation !== lockedFormation) return 'FORMATION_LOCKED';
   if (!Array.isArray(l.starters) || l.starters.length !== GAME_CONFIG.startersCount) return 'INVALID_STARTERS';
   const expectedBench = Math.min(GAME_CONFIG.benchCount, rosterIds.length - GAME_CONFIG.startersCount);
   if (!Array.isArray(l.bench) || l.bench.length !== expectedBench) return 'INVALID_BENCH';

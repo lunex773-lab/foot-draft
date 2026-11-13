@@ -72,12 +72,16 @@ export const requireAdmin: MiddlewareHandler<AppEnv> = async (c, next) => {
 };
 
 /** RBAC (provisional roles: owner / admin / viewer, spec 24-11 undecided) */
-export type AdminPermission = 'cards.read' | 'audit.read';
+export type AdminPermission = 'cards.read' | 'audit.read' | 'events.read' | 'events.write' | 'seasons.read';
 const ROLE_PERMISSIONS: Record<AuthAdmin['role'], AdminPermission[]> = {
-  owner: ['cards.read', 'audit.read'],
-  admin: ['cards.read', 'audit.read'],
-  viewer: ['cards.read'],
+  owner: ['cards.read', 'audit.read', 'events.read', 'events.write', 'seasons.read'],
+  admin: ['cards.read', 'audit.read', 'events.read', 'events.write', 'seasons.read'],
+  viewer: ['cards.read', 'events.read', 'seasons.read'],
 };
+
+export function permissionsOf(role: AuthAdmin['role']): AdminPermission[] {
+  return [...ROLE_PERMISSIONS[role]];
+}
 
 export function requirePermission(p: AdminPermission): MiddlewareHandler<AppEnv> {
   return async (c, next) => {

@@ -20,7 +20,9 @@ export type AnalyticsEventName =
   | 'draft_completed'
   | 'match_started'
   | 'match_completed'
-  | 'match_abandoned';
+  | 'match_abandoned'
+  | 'rating_updated'
+  | 'solo_challenge_completed';
 
 export interface AnalyticsInput {
   name: AnalyticsEventName;

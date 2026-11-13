@@ -1,9 +1,11 @@
-import { CLUB_BY_ID, LEAGUE_BY_ID, NATION_BY_CODE, RARITY_INFO, rarityRank, type Player } from '@fd/shared';
+import { CLUB_BY_ID, LEAGUE_BY_ID, NATION_BY_CODE, RARITY_INFO, analyzePool, describeFilter, rarityRank, sanitizeFilter, type Player } from '@fd/shared';
 import { Hono } from 'hono';
-import { createAdminSession, requireAdmin, requirePermission } from '../lib/auth';
+import { createAdminSession, permissionsOf, requireAdmin, requirePermission } from '../lib/auth';
 import { randomId, verifyPassword, verifyTotp } from '../lib/crypto';
 import { ApiError, readJson, str } from '../lib/http';
 import { loadCatalog } from '../lib/players';
+import { ensureCurrentSeason, leaderboard, seasonView } from '../lib/seasons';
+import { eventView, type EventRow } from './events';
 import type { AppEnv, Env } from '../env';
 
 /**
@@ -79,7 +81,7 @@ adminRoutes.post('/auth/logout', async (c) => {
 
 adminRoutes.get('/auth/me', (c) => {
   const a = c.get('admin');
-  return c.json({ admin: { id: a.id, username: a.username, role: a.role }, environment: c.env.ENVIRONMENT });
+  return c.json({ admin: { id: a.id, username: a.username, role: a.role, permissions: permissionsOf(a.role) }, environment: c.env.ENVIRONMENT });
 });
 
 type SortKey = 'ovr' | 'name' | 'rarity' | 'position' | 'pac' | 'sho' | 'pas' | 'dri' | 'def' | 'phy' | 'id';
@@ -160,4 +162,127 @@ adminRoutes.get('/audit-logs', requirePermission('audit.read'), async (c) => {
        FROM admin_audit_logs l LEFT JOIN admin_users a ON a.id = l.admin_id ORDER BY l.created_at DESC LIMIT 200`,
   ).all();
   return c.json({ items: rows.results });
+});
+
+// ------------------------------------------------------------------ events
+
+/** Special Events management (decision 28). */
+adminRoutes.get('/events', requirePermission('events.read'), async (c) => {
+  const rows = await c.env.DB.prepare('SELECT * FROM events ORDER BY CASE status WHEN \'published\' THEN 0 WHEN \'draft\' THEN 1 ELSE 2 END, starts_at DESC').all<EventRow>();
+  const stats = await c.env.DB.prepare(
+    `SELECT r.event_id, COUNT(DISTINCT r.id) AS rooms, COUNT(DISTINCT rm.user_id) AS players,
+            SUM(CASE WHEN r.status = 'finished' THEN 1 ELSE 0 END) AS finished_rows
+       FROM rooms r LEFT JOIN room_members rm ON rm.room_id = r.id AND rm.is_cpu = 0
+      WHERE r.event_id IS NOT NULL GROUP BY r.event_id`,
+  ).all<{ event_id: string; rooms: number; players: number }>();
+  const byEvent = new Map(stats.results.map((x) => [x.event_id, x]));
+  const now = Date.now();
+  const items = [];
+  for (const r of rows.results) {
+    const st = byEvent.get(r.id);
+    items.push({ ...(await eventView(c.env, r, now)), createdAt: r.created_at, updatedAt: r.updated_at, publishedAt: r.published_at, archivedAt: r.archived_at, rooms: st?.rooms ?? 0, players: st?.players ?? 0 });
+  }
+  return c.json({ items });
+});
+
+interface EventInput {
+  name: string;
+  description: string;
+  startsAt: number;
+  endsAt: number;
+  filter: ReturnType<typeof sanitizeFilter>;
+}
+
+function eventInput(body: Record<string, unknown>): EventInput {
+  const name = str(body.name, 'name', { min: 1, max: 60 });
+  const description = str(body.description, 'description', { max: 500, optional: true });
+  const startsAt = Number(body.startsAt);
+  const endsAt = Number(body.endsAt);
+  if (!Number.isFinite(startsAt) || !Number.isFinite(endsAt) || startsAt <= 0) throw new ApiError('BAD_REQUEST', 'startsAt and endsAt are required');
+  if (endsAt <= startsAt) throw new ApiError('BAD_REQUEST', 'endsAt must be after startsAt');
+  if (endsAt - startsAt > 90 * 24 * 60 * 60 * 1000) throw new ApiError('BAD_REQUEST', 'an event can last at most 90 days');
+  return { name, description, startsAt, endsAt, filter: sanitizeFilter(body.filter) };
+}
+
+/** Pool preview for the event form: how many players match, whether the rest is filled. */
+adminRoutes.post('/events/preview', requirePermission('events.read'), async (c) => {
+  const body = await readJson(c);
+  const filter = sanitizeFilter(body.filter);
+  const catalog = await loadCatalog(c.env);
+  return c.json({ filter, conditions: describeFilter(filter), pool: analyzePool(catalog, filter) });
+});
+
+adminRoutes.post('/events', requirePermission('events.write'), async (c) => {
+  const a = c.get('admin');
+  const input = eventInput(await readJson(c));
+  const id = `ev-${randomId(8)}`;
+  const now = Date.now();
+  await c.env.DB.prepare(
+    "INSERT INTO events (id, name, description, starts_at, ends_at, status, rules_json, created_by, updated_by, created_at, updated_at) VALUES (?,?,?,?,?,'draft',?,?,?,?,?)",
+  )
+    .bind(id, input.name, input.description, input.startsAt, input.endsAt, JSON.stringify({ pool: input.filter }), a.id, a.id, now, now)
+    .run();
+  await audit(c.env, a.id, 'event_created', { type: 'event', id }, { name: input.name, startsAt: input.startsAt, endsAt: input.endsAt, filter: input.filter }, ipOf(c));
+  return c.json({ id }, 201);
+});
+
+async function eventRow(env: Env, id: string): Promise<EventRow> {
+  const row = await env.DB.prepare('SELECT * FROM events WHERE id = ?').bind(id).first<EventRow>();
+  if (!row) throw new ApiError('NOT_FOUND', 'event not found');
+  return row;
+}
+
+/** Edit an event. Changes apply to rooms created afterwards; archived events cannot be edited. */
+adminRoutes.patch('/events/:id', requirePermission('events.write'), async (c) => {
+  const a = c.get('admin');
+  const row = await eventRow(c.env, c.req.param('id'));
+  if (row.status === 'archived') throw new ApiError('CONFLICT', 'archived events cannot be edited');
+  const input = eventInput(await readJson(c));
+  await c.env.DB.prepare('UPDATE events SET name = ?, description = ?, starts_at = ?, ends_at = ?, rules_json = ?, updated_by = ?, updated_at = ? WHERE id = ?')
+    .bind(input.name, input.description, input.startsAt, input.endsAt, JSON.stringify({ pool: input.filter }), a.id, Date.now(), row.id)
+    .run();
+  await audit(c.env, a.id, 'event_updated', { type: 'event', id: row.id }, { name: input.name, startsAt: input.startsAt, endsAt: input.endsAt, filter: input.filter }, ipOf(c));
+  return c.json({ ok: true });
+});
+
+adminRoutes.post('/events/:id/publish', requirePermission('events.write'), async (c) => {
+  const a = c.get('admin');
+  const row = await eventRow(c.env, c.req.param('id'));
+  if (row.status !== 'draft') throw new ApiError('CONFLICT', 'only draft events can be published');
+  if (row.ends_at <= Date.now()) throw new ApiError('BAD_REQUEST', 'the event period has already ended');
+  const now = Date.now();
+  await c.env.DB.prepare("UPDATE events SET status = 'published', published_at = ?, updated_by = ?, updated_at = ? WHERE id = ?").bind(now, a.id, now, row.id).run();
+  await audit(c.env, a.id, 'event_published', { type: 'event', id: row.id }, { name: row.name, startsAt: row.starts_at, endsAt: row.ends_at }, ipOf(c));
+  return c.json({ ok: true });
+});
+
+/** End an event now (no new rooms; running rooms finish normally). */
+adminRoutes.post('/events/:id/archive', requirePermission('events.write'), async (c) => {
+  const a = c.get('admin');
+  const row = await eventRow(c.env, c.req.param('id'));
+  if (row.status === 'archived') throw new ApiError('CONFLICT', 'already archived');
+  const now = Date.now();
+  await c.env.DB.prepare("UPDATE events SET status = 'archived', archived_at = ?, updated_by = ?, updated_at = ? WHERE id = ?").bind(now, a.id, now, row.id).run();
+  await audit(c.env, a.id, 'event_archived', { type: 'event', id: row.id }, { name: row.name, previousStatus: row.status }, ipOf(c));
+  return c.json({ ok: true });
+});
+
+// ------------------------------------------------------------------ seasons
+
+adminRoutes.get('/seasons', requirePermission('seasons.read'), async (c) => {
+  await ensureCurrentSeason(c.env);
+  const rows = await c.env.DB.prepare(
+    `SELECT s.id, s.name, s.starts_at, s.ends_at, s.status, s.finalized_at,
+            (SELECT COUNT(*) FROM ranked_ratings r WHERE r.season_id = s.id AND r.games > 0) AS players,
+            (SELECT COUNT(DISTINCT room_id) FROM rating_changes rc WHERE rc.season_id = s.id) AS leagues,
+            (SELECT COUNT(DISTINCT room_id) FROM rating_changes rc WHERE rc.season_id = s.id AND rc.rated = 1) AS rated_leagues
+       FROM seasons s ORDER BY s.id DESC LIMIT 36`,
+  ).all();
+  return c.json({ items: rows.results });
+});
+
+adminRoutes.get('/seasons/:id/leaderboard', requirePermission('seasons.read'), async (c) => {
+  const id = c.req.param('id');
+  if (!/^\d{4}-\d{2}$/.test(id)) throw new ApiError('BAD_REQUEST', 'invalid season id');
+  return c.json({ season: seasonView(id), items: await leaderboard(c.env, id) });
 });

@@ -20,3 +20,6 @@ export * from './cpu';
 export * from './sim/types';
 export * from './sim/engine';
 export * from './protocol';
+export * from './ranked';
+export * from './pool';
+export * from './challenges';

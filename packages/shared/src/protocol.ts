@@ -2,12 +2,47 @@
  * WebSocket protocol between the game client and the RoomDO (server).
  * The server is authoritative: clients only send intents.
  */
+import type { SoloChallenge, TeamLeagueRecord } from './challenges';
 import type { DraftPick } from './draft';
 import type { StandingRow } from './league';
+import type { PoolFilter } from './pool';
 import type { MatchResultData } from './sim/types';
 import type { Lineup, Player } from './types';
 
-export type RoomMode = 'quick' | 'private';
+export type RoomMode = 'quick' | 'private' | 'ranked' | 'solo' | 'event';
+
+/** What kind of league the room plays (Phase 3). */
+export type RoomVariant =
+  | { kind: 'standard' }
+  | { kind: 'ranked' }
+  | { kind: 'solo'; challenge: SoloChallenge }
+  | { kind: 'event'; eventId: string; name: string; description: string; filter: PoolFilter | null; endsAt: number };
+
+/** rating change of one seat in a ranked league */
+export interface SeatRatingChange {
+  before: number;
+  after: number;
+  delta: number;
+}
+
+export interface RankedOutcome {
+  seasonId: string;
+  /** false when fewer than 2 humans played (rating unchanged) */
+  rated: boolean;
+  /** seat -> change (human seats only) */
+  changes: Record<number, SeatRatingChange>;
+}
+
+export interface SoloOutcome {
+  challengeId: string;
+  cleared: boolean;
+  record: TeamLeagueRecord;
+}
+
+export interface RoomOutcome {
+  ranked?: RankedOutcome;
+  solo?: SoloOutcome;
+}
 export type RoomPhase = 'lobby' | 'drafting' | 'lineup' | 'playing' | 'finished' | 'closed';
 
 export interface RoomSettings {
@@ -15,6 +50,7 @@ export interface RoomSettings {
   /** fill empty seats with CPU when the host starts */
   fillWithCpu: boolean;
   /** dev/test only: override timings (ignored in production) */
+  queueSeconds?: number;
   lineupSecondsFirst?: number;
   lineupSecondsBetween?: number;
   playbackSeconds?: number;
@@ -54,9 +90,12 @@ export interface RoomSnapshot {
   roomId: string;
   code: string;
   mode: RoomMode;
+  variant: RoomVariant;
   phase: RoomPhase;
   settings: RoomSettings;
   seats: SeatInfo[];
+  /** ranked lobby: when the empty seats are filled with CPU and the draft starts */
+  lobbyDeadline: number | null;
   /** server time (ms) to sync timers */
   serverNow: number;
   /** seat index of the receiving client (null = spectator) */
@@ -81,6 +120,8 @@ export interface RoomSnapshot {
   live: LiveMatch[];
   standings: StandingRow[];
   finalRanks: Record<number, number> | null;
+  /** results decided by the server after the league (rating change, challenge result) */
+  outcome: RoomOutcome | null;
 }
 
 export type ClientMessage =

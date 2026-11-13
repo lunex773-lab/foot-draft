@@ -17,16 +17,24 @@ import {
   snakeOrder,
   validateLineup,
   validatePick,
+  eloFromRanks,
+  evaluateGoal,
+  teamRecord,
   CPU_NAMES,
+  RANKED_CONFIG,
   type ClientMessage,
   type DraftState,
   type FixtureResult,
+  type FormationId,
   type Lineup,
   type LiveMatch,
   type MatchSummary,
   type Player,
   type RoomMode,
+  type RoomOutcome,
   type RoomPhase,
+  type RoomVariant,
+  type RankedOutcome,
   type RoomSettings,
   type RoomSnapshot,
   type ServerMessage,
@@ -37,6 +45,9 @@ import type { Env } from '../env';
 import { analyticsStatement, type AnalyticsInput } from '../lib/analytics';
 import { randomId } from '../lib/crypto';
 import { loadCatalog } from '../lib/players';
+import { ensureCurrentSeason, ratingOf } from '../lib/seasons';
+
+const ROOM_MODES: RoomMode[] = ['quick', 'private', 'ranked', 'solo', 'event'];
 
 /**
  * RoomDO — one Durable Object per room. It is the single authority for the
@@ -92,6 +103,10 @@ interface RoomState {
   playbackEndsAt: number | null;
   results: FixtureResult[];
   finalRanks: Record<number, number> | null;
+  /** Phase 3 (missing in rooms created before): league variant, ranked lobby deadline, outcome */
+  variant?: RoomVariant;
+  lobbyDeadline?: number | null;
+  outcome?: RoomOutcome | null;
 }
 
 interface WsAttachment {
@@ -182,6 +197,23 @@ export class RoomDO extends DurableObject<Env> {
     return this.env.DB.prepare('UPDATE rooms SET status = ? WHERE id = ?').bind(phase, this.state!.roomId);
   }
 
+  private variant(): RoomVariant {
+    return this.state?.variant ?? { kind: 'standard' };
+  }
+
+  /** Solo Challenge rule "formation fixed" (human seats only) */
+  private lockedFormation(seat: number): FormationId | null {
+    const v = this.variant();
+    if (v.kind !== 'solo' || v.challenge.rule.type !== 'fixed_formation') return null;
+    return this.state!.seats[seat]?.isCpu ? null : v.challenge.rule.formation;
+  }
+
+  /** modes whose rooms start by themselves when 4 humans are in */
+  private autoStartsWhenFull(): boolean {
+    const m = this.state!.mode;
+    return m === 'quick' || m === 'ranked' || m === 'event';
+  }
+
   // -------------------------------------------------------------- snapshot
 
   private snapshotFor(userId: string | null, exclude?: WebSocket): RoomSnapshot {
@@ -206,8 +238,10 @@ export class RoomDO extends DurableObject<Env> {
       roomId: s.roomId,
       code: s.code,
       mode: s.mode,
+      variant: this.variant(),
       phase: s.phase,
       settings: s.settings,
+      lobbyDeadline: s.phase === 'lobby' ? s.lobbyDeadline ?? null : null,
       seats: s.seats.map((x, seat) =>
         x
           ? { seat, userId: x.userId, displayName: x.displayName, isCpu: x.isCpu, connected: x.isCpu || (!!x.userId && connected.has(x.userId)), isHost: !!x.userId && x.userId === s.hostUserId }
@@ -225,6 +259,7 @@ export class RoomDO extends DurableObject<Env> {
       live: s.phase === 'playing' ? s.liveIds.map((id) => this.live.get(id)).filter((m): m is LiveMatch => !!m) : [],
       standings: this.standings(),
       finalRanks: s.finalRanks,
+      outcome: s.outcome ?? null,
     };
   }
 
@@ -275,7 +310,8 @@ export class RoomDO extends DurableObject<Env> {
   private async scheduleAlarm() {
     const s = this.state;
     let due: number | null = null;
-    if (s?.phase === 'drafting' && s.draft) due = s.draft.cpuDueAt ?? s.draft.deadline;
+    if (s?.phase === 'lobby') due = s.lobbyDeadline ?? null;
+    else if (s?.phase === 'drafting' && s.draft) due = s.draft.cpuDueAt ?? s.draft.deadline;
     else if (s?.phase === 'lineup') due = s.phaseDeadline;
     else if (s?.phase === 'playing') due = s.playbackEndsAt;
     if (due) await this.ctx.storage.setAlarm(due);
@@ -286,7 +322,10 @@ export class RoomDO extends DurableObject<Env> {
     const s = this.state;
     if (!s) return;
     const now = this.now();
-    if (s.phase === 'drafting' && s.draft) {
+    if (s.phase === 'lobby' && s.lobbyDeadline && s.lobbyDeadline <= now + 25) {
+      // ranked: nobody else came within the queue time -> CPU fill and start
+      if (this.humanSeats().length > 0) await this.startDraft();
+    } else if (s.phase === 'drafting' && s.draft) {
       const due = s.draft.cpuDueAt ?? s.draft.deadline;
       if (due !== null && due <= now + 25) {
         const seat = currentSeat(s.draft.state);
@@ -294,7 +333,10 @@ export class RoomDO extends DurableObject<Env> {
           const seatInfo = s.seats[seat];
           const isCpu = !!seatInfo?.isCpu;
           const rng = new Rng(`${s.seed}:cpu:${s.draft.state.picks.length}`);
-          const playerId = chooseAutoPick(s.draft.state, seat, this.players, isCpu ? rng : undefined, isCpu ? 2 : 0);
+          const v = this.variant();
+          // Solo Challenge "strong CPU": CPU picks the best player without randomness
+          const noise = isCpu ? (v.kind === 'solo' && v.challenge.rule.type === 'strong_cpu' ? 0 : 2) : 0;
+          const playerId = chooseAutoPick(s.draft.state, seat, this.players, isCpu && noise > 0 ? rng : undefined, noise);
           await this.doPick(seat, playerId, true, !isCpu);
         }
       }
@@ -352,15 +394,22 @@ export class RoomDO extends DurableObject<Env> {
 
   private async init(body: Record<string, unknown>): Promise<HttpResult> {
     if (this.state) return fail('CONFLICT', 'room already initialised', 409);
+    const mode = ROOM_MODES.includes(body.mode as RoomMode) ? (body.mode as RoomMode) : 'quick';
+    const settings = body.settings as RoomSettings;
+    const allowTestTimings = body.allowTestTimings === true;
+    const queueSeconds = allowTestTimings && settings.queueSeconds ? settings.queueSeconds : RANKED_CONFIG.queueSeconds;
     this.state = {
       version: 1,
       roomId: String(body.roomId),
       code: String(body.code),
-      mode: body.mode === 'private' ? 'private' : 'quick',
+      mode,
+      variant: (body.variant as RoomVariant | undefined) ?? { kind: 'standard' },
+      lobbyDeadline: mode === 'ranked' ? this.now() + queueSeconds * 1000 : null,
+      outcome: null,
       phase: 'lobby',
-      settings: body.settings as RoomSettings,
+      settings,
       environment: String(body.environment),
-      allowTestTimings: body.allowTestTimings === true,
+      allowTestTimings,
       hostUserId: null,
       seed: randomId(16),
       createdAt: this.now(),
@@ -389,7 +438,7 @@ export class RoomDO extends DurableObject<Env> {
     if (existing !== null) return { ok: true, seat: existing, rejoined: true };
     if (s.phase !== 'lobby') return fail('ROOM_NOT_JOINABLE', 'the draft has already started', 409);
     const seat = s.seats.findIndex((x) => x === null);
-    if (seat < 0) return fail('ROOM_FULL', 'room is full', 409);
+    if (seat < 0 || (s.mode === 'solo' && this.humanSeats().length > 0)) return fail('ROOM_FULL', 'room is full', 409);
     const now = this.now();
     s.seats[seat] = { seat, userId, displayName: displayName.slice(0, 24), isCpu: false, joinedAt: now };
     if (!s.hostUserId) s.hostUserId = userId;
@@ -403,8 +452,8 @@ export class RoomDO extends DurableObject<Env> {
       ]),
     );
     this.broadcastSnapshot();
-    // a full quick-match room starts automatically
-    if (s.mode === 'quick' && this.humanSeats().length === GAME_CONFIG.maxPlayers) await this.startDraft();
+    // a full quick / ranked / event room starts automatically; a solo room starts right away
+    if ((this.autoStartsWhenFull() && this.humanSeats().length === GAME_CONFIG.maxPlayers) || s.mode === 'solo') await this.startDraft();
     return { ok: true, seat, rejoined: false };
   }
 
@@ -441,6 +490,7 @@ export class RoomDO extends DurableObject<Env> {
     const s = this.state;
     if (!s) return fail('NOT_FOUND', 'room not found', 404);
     if (s.phase !== 'lobby') return fail('CONFLICT', 'already started', 409);
+    if (s.mode === 'ranked' || s.mode === 'solo') return fail('FORBIDDEN', 'this room starts automatically', 403);
     if (s.hostUserId !== userId) return fail('FORBIDDEN', 'only the host can start', 403);
     const humans = this.humanSeats().length;
     if (!s.settings.fillWithCpu && humans < GAME_CONFIG.maxPlayers) return fail('CONFLICT', '4 players are required (CPU fill is off)', 409);
@@ -463,12 +513,19 @@ export class RoomDO extends DurableObject<Env> {
     const catalog = await loadCatalog(this.env);
     if (s.phase !== 'lobby') return; // another event started it meanwhile
     const rng = new Rng(`${s.seed}:draft`);
-    const pool = buildDraftPool(catalog, rng.fork('pool'));
+    const v = this.variant();
+    const filter = v.kind === 'solo' ? v.challenge.pool.filter : v.kind === 'event' ? v.filter : null;
+    const pool = buildDraftPool(catalog, rng.fork('pool'), GAME_CONFIG.pool, filter);
     const byId = new Map(catalog.map((p) => [p.id, p]));
     this.players = new Map(pool.map((id) => [id, byId.get(id)!]));
     const state = createDraftState(pool);
     // randomize draft positions, then apply the snake order to them
-    const perm = rng.fork('order').shuffle([0, 1, 2, 3]);
+    let perm = rng.fork('order').shuffle([0, 1, 2, 3]);
+    if (v.kind === 'solo' && v.challenge.rule.type === 'last_pick') {
+      // Solo Challenge rule: the player picks 4th (last) in the first round
+      const human = this.humanSeats()[0]?.seat ?? 0;
+      perm = [...perm.filter((x) => x !== human), human];
+    }
     state.order = snakeOrder(GAME_CONFIG.maxPlayers, GAME_CONFIG.picksPerPlayer).map((i) => perm[i]);
     s.draft = { draftId: randomId(), seed: rng.seed, state, turnStartedAt: now, deadline: null, cpuDueAt: null };
     s.phase = 'drafting';
@@ -574,7 +631,7 @@ export class RoomDO extends DurableObject<Env> {
         s.lineups[seat] = cpuLineup(roster, new Rng(`${s.seed}:cpu-lineup:${seat}:1`), this.roster(this.opponentOf(seat, 1)));
         s.lineupReady[seat] = true;
       } else {
-        s.lineups[seat] = autoLineup(roster);
+        s.lineups[seat] = autoLineup(roster, this.lockedFormation(seat) ?? undefined);
         s.lineupReady[seat] = false;
       }
     }
@@ -608,7 +665,7 @@ export class RoomDO extends DurableObject<Env> {
     if (s.phase !== 'lineup') return fail('CONFLICT', 'lineups are locked', 409);
     const seat = this.seatOf(userId);
     if (seat === null) return fail('FORBIDDEN', 'not a member of this room', 403);
-    const err = validateLineup(lineup, s.rosters[seat]);
+    const err = validateLineup(lineup, s.rosters[seat], this.lockedFormation(seat));
     if (err) return fail(err, err, 400);
     s.lineups[seat] = { formation: lineup.formation, starters: [...lineup.starters], bench: [...lineup.bench], tactics: { ...lineup.tactics } };
     s.lineupReady[seat] = ready;
@@ -763,10 +820,97 @@ export class RoomDO extends DurableObject<Env> {
       for (const r of table) {
         writes.push(this.env.DB.prepare('UPDATE room_members SET final_rank = ?, points = ?, goals_for = ?, goals_against = ? WHERE room_id = ? AND seat = ?').bind(r.rank, r.points, r.goalsFor, r.goalsAgainst, s.roomId, r.seat));
       }
+      s.outcome = await this.leagueOutcome(table, now, writes);
     }
     await this.save();
     this.db(() => this.env.DB.batch(writes));
     this.broadcastSnapshot();
+  }
+
+  // --------------------------------------------------------------- outcomes
+
+  /** results decided after the league: ranked rating changes, Solo Challenge goal */
+  private async leagueOutcome(table: StandingRow[], now: number, writes: D1PreparedStatement[]): Promise<RoomOutcome | null> {
+    const s = this.state!;
+    const v = this.variant();
+    if (s.mode === 'ranked') {
+      try {
+        return { ranked: await this.applyRanked(table, now) };
+      } catch (err) {
+        console.error('ranked rating update failed', err);
+        return null;
+      }
+    }
+    if (v.kind === 'solo') {
+      const human = this.humanSeats()[0];
+      if (!human) return null;
+      const record = teamRecord(human.seat, table, s.results);
+      const cleared = evaluateGoal(v.challenge.goal, record);
+      writes.push(
+        this.env.DB.prepare('UPDATE solo_attempts SET status = ?, result_json = ?, finished_at = ? WHERE room_id = ?').bind(cleared ? 'cleared' : 'failed', JSON.stringify(record), now, s.roomId),
+        analyticsStatement(this.env, { name: 'solo_challenge_completed', userId: human.userId, properties: { challengeId: v.challenge.id, roomId: s.roomId, cleared, rank: record.rank } }),
+      );
+      return { solo: { challengeId: v.challenge.id, cleared, record } };
+    }
+    return null;
+  }
+
+  /**
+   * Elo from the final ranks of the human players (decisions 25-26). Written
+   * in one D1 batch; rating_changes(room_id, user_id) is UNIQUE, so a league
+   * can never be applied twice.
+   */
+  private async applyRanked(table: StandingRow[], now: number): Promise<RankedOutcome> {
+    const s = this.state!;
+    const season = await ensureCurrentSeason(this.env, now);
+    const humans = this.humanSeats();
+    const rankOf = (seat: number) => table.find((r) => r.seat === seat)!.rank;
+    const current = new Map<string, { rating: number; exists: boolean }>();
+    for (const h of humans) current.set(h.userId!, await ratingOf(this.env, season.id, h.userId!));
+    const rated = humans.length >= 2;
+    const changes = eloFromRanks(
+      humans.map((h) => ({ id: h.userId!, rating: current.get(h.userId!)!.rating, rank: rankOf(h.seat) })),
+    );
+    const outcome: RankedOutcome = { seasonId: season.id, rated, changes: {} };
+    const stmts: D1PreparedStatement[] = [];
+    for (const h of humans) {
+      const c = changes.find((x) => x.id === h.userId)!;
+      const delta = rated ? c.delta : 0;
+      const before = c.before;
+      outcome.changes[h.seat] = { before, after: before + delta, delta };
+      stmts.push(
+        this.env.DB.prepare(
+          'INSERT INTO rating_changes (id, season_id, room_id, user_id, final_rank, humans, rated, rating_before, rating_after, delta, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)',
+        ).bind(randomId(), season.id, s.roomId, h.userId, rankOf(h.seat), humans.length, rated ? 1 : 0, before, before + delta, delta, now),
+      );
+      if (rated) {
+        stmts.push(
+          this.env.DB.prepare(
+            'INSERT INTO ranked_ratings (season_id, user_id, rating, initial_rating, peak_rating, games, wins, created_at, updated_at) VALUES (?,?,?,?,?,0,0,?,?) ON CONFLICT(season_id, user_id) DO NOTHING',
+          ).bind(season.id, h.userId, before, before, before, now, now),
+          this.env.DB.prepare(
+            'UPDATE ranked_ratings SET rating = rating + ?, peak_rating = MAX(peak_rating, rating + ?), games = games + 1, wins = wins + ?, updated_at = ? WHERE season_id = ? AND user_id = ?',
+          ).bind(delta, delta, rankOf(h.seat) === 1 ? 1 : 0, now, season.id, h.userId),
+          analyticsStatement(this.env, { name: 'rating_updated', userId: h.userId, properties: { roomId: s.roomId, seasonId: season.id, before, after: before + delta, delta, rank: rankOf(h.seat), humans: humans.length } }),
+        );
+      }
+    }
+    try {
+      await this.env.DB.batch(stmts);
+    } catch (err) {
+      // already applied (e.g. retried after a restart): report what was stored
+      const rows = await this.env.DB.prepare('SELECT user_id, rating_before, rating_after, delta, rated FROM rating_changes WHERE room_id = ?')
+        .bind(s.roomId)
+        .all<{ user_id: string; rating_before: number; rating_after: number; delta: number; rated: number }>();
+      if (rows.results.length === 0) throw err;
+      outcome.changes = {};
+      for (const r of rows.results) {
+        const seat = this.seatOf(r.user_id);
+        if (seat !== null) outcome.changes[seat] = { before: r.rating_before, after: r.rating_after, delta: r.delta };
+        outcome.rated = r.rated === 1;
+      }
+    }
+    return outcome;
   }
 
   // -------------------------------------------------------------- websocket
@@ -832,6 +976,7 @@ export class RoomDO extends DurableObject<Env> {
   private async updateSettings(userId: string, patch: Partial<RoomSettings>): Promise<HttpResult> {
     const s = this.state!;
     if (s.phase !== 'lobby') return fail('CONFLICT', 'settings are locked', 409);
+    if (s.mode !== 'quick' && s.mode !== 'private') return fail('FORBIDDEN', 'settings are fixed in this mode', 403);
     if (s.hostUserId !== userId) return fail('FORBIDDEN', 'only the host can change settings', 403);
     const next = sanitizeSettings({ ...s.settings, ...patch }, s.allowTestTimings);
     s.settings = next;
@@ -857,7 +1002,7 @@ export function sanitizeSettings(input: Partial<RoomSettings>, allowTestTimings:
     fillWithCpu: input.fillWithCpu !== false,
   };
   if (allowTestTimings) {
-    for (const k of ['lineupSecondsFirst', 'lineupSecondsBetween', 'playbackSeconds'] as const) {
+    for (const k of ['queueSeconds', 'lineupSecondsFirst', 'lineupSecondsBetween', 'playbackSeconds'] as const) {
       const v = Number(input[k]);
       if (Number.isFinite(v) && v >= 1 && v <= 600) out[k] = v;
     }

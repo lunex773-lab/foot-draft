@@ -1,4 +1,4 @@
-import { GAME_CONFIG, type RoomSettings } from '@fd/shared';
+import { GAME_CONFIG, type RoomMode, type RoomSettings, type RoomVariant } from '@fd/shared';
 import { Hono } from 'hono';
 import { track } from '../lib/analytics';
 import { requireUser } from '../lib/auth';
@@ -10,26 +10,58 @@ import type { AppEnv, AuthUser, Env } from '../env';
 
 export const roomRoutes = new Hono<AppEnv>();
 
-async function createRoom(env: Env, user: AuthUser, mode: 'quick' | 'private', settings: Partial<RoomSettings>) {
+export interface CreateRoomOptions {
+  variant?: RoomVariant;
+  eventId?: string | null;
+  challengeId?: string | null;
+}
+
+/** Creates a room (D1 row + RoomDO) and seats the creator. */
+export async function createRoom(env: Env, user: AuthUser, mode: RoomMode, settings: Partial<RoomSettings>, opts: CreateRoomOptions = {}) {
   const allowTest = env.ALLOW_TEST_TIMINGS === 'true' && env.ENVIRONMENT !== 'production';
-  const clean = sanitizeSettings({ pickSeconds: GAME_CONFIG.pickSeconds, fillWithCpu: true, ...settings }, allowTest);
+  // only quick / private rooms take player settings; ranked / solo / event rooms use fixed
+  // rules (CPU fill, default pick time) except for test timings in non-production environments
+  const custom = mode === 'quick' || mode === 'private';
+  const input = custom ? settings : allowTest ? { ...settings, fillWithCpu: true } : {};
+  const clean = sanitizeSettings({ pickSeconds: GAME_CONFIG.pickSeconds, fillWithCpu: true, ...input }, allowTest);
   const id = randomId();
   let code = '';
   for (let i = 0; i < 5; i++) {
     code = randomRoomCode();
     const r = await env.DB.prepare(
-      "INSERT INTO rooms (id, code, mode, status, host_user_id, settings_json, member_count, environment, created_at) VALUES (?,?,?,'lobby',?,?,0,?,?) ON CONFLICT(code) DO NOTHING",
+      "INSERT INTO rooms (id, code, mode, status, host_user_id, settings_json, member_count, environment, created_at, event_id, challenge_id) VALUES (?,?,?,'lobby',?,?,0,?,?,?,?) ON CONFLICT(code) DO NOTHING",
     )
-      .bind(id, code, mode, user.id, JSON.stringify(clean), env.ENVIRONMENT, Date.now())
+      .bind(id, code, mode, user.id, JSON.stringify(clean), env.ENVIRONMENT, Date.now(), opts.eventId ?? null, opts.challengeId ?? null)
       .run();
     if (r.meta.changes === 1) break;
     code = '';
   }
   if (!code) throw new ApiError('INTERNAL', 'could not allocate a room code');
-  await callRoom(env, id, '/init', { roomId: id, code, mode, settings: clean, environment: env.ENVIRONMENT, allowTestTimings: allowTest });
+  await callRoom(env, id, '/init', { roomId: id, code, mode, settings: clean, environment: env.ENVIRONMENT, allowTestTimings: allowTest, variant: opts.variant ?? { kind: 'standard' } });
   const joined = await callRoom<{ seat: number }>(env, id, '/join', { userId: user.id, displayName: user.displayName });
-  await track(env, { name: 'room_created', userId: user.id, properties: { roomId: id, mode } });
+  await track(env, { name: 'room_created', userId: user.id, properties: { roomId: id, mode, eventId: opts.eventId ?? undefined, challengeId: opts.challengeId ?? undefined } });
   return { roomId: id, code, seat: joined.seat };
+}
+
+/**
+ * Matchmaking: joins the oldest open room matching the query (lobby, not full,
+ * created in the last 10 minutes) or returns null.
+ */
+export async function joinOpenRoom(env: Env, user: AuthUser, where: string, binds: unknown[]): Promise<{ roomId: string; code: string; seat: number } | null> {
+  const open = await env.DB.prepare(
+    `SELECT id, code FROM rooms WHERE ${where} AND status = 'lobby' AND member_count < 4 AND created_at > ? AND environment = ? ORDER BY created_at ASC LIMIT 5`,
+  )
+    .bind(...binds, Date.now() - 10 * 60 * 1000, env.ENVIRONMENT)
+    .all<{ id: string; code: string }>();
+  for (const r of open.results) {
+    try {
+      const joined = await callRoom<{ seat: number }>(env, r.id, '/join', { userId: user.id, displayName: user.displayName });
+      return { roomId: r.id, code: r.code, seat: joined.seat };
+    } catch {
+      // full or already started -> try next
+    }
+  }
+  return null;
 }
 
 roomRoutes.use('*', async (c, next) => {
@@ -50,8 +82,10 @@ roomRoutes.post('/', async (c) => {
 roomRoutes.post('/join', async (c) => {
   const body = await readJson(c);
   const code = str(body.code, 'code', { min: 6, max: 6 }).toUpperCase();
-  const room = await c.env.DB.prepare('SELECT id FROM rooms WHERE code = ?').bind(code).first<{ id: string }>();
+  const room = await c.env.DB.prepare('SELECT id, mode FROM rooms WHERE code = ?').bind(code).first<{ id: string; mode: RoomMode }>();
   if (!room) throw new ApiError('NOT_FOUND', 'room not found');
+  // ranked / solo / event rooms are only joined through their own matchmaking
+  if (room.mode !== 'quick' && room.mode !== 'private') throw new ApiError('ROOM_NOT_JOINABLE', 'this room cannot be joined with a code');
   const user = c.get('user');
   const joined = await callRoom<{ seat: number }>(c.env, room.id, '/join', { userId: user.id, displayName: user.displayName });
   return c.json({ roomId: room.id, code, seat: joined.seat });
@@ -61,19 +95,8 @@ roomRoutes.post('/join', async (c) => {
 roomRoutes.post('/quick', async (c) => {
   const user = c.get('user');
   await track(c.env, { name: 'mode_selected', userId: user.id, properties: { mode: 'quick' } });
-  const open = await c.env.DB.prepare(
-    "SELECT id, code FROM rooms WHERE mode = 'quick' AND status = 'lobby' AND member_count < 4 AND created_at > ? AND environment = ? ORDER BY created_at ASC LIMIT 5",
-  )
-    .bind(Date.now() - 10 * 60 * 1000, c.env.ENVIRONMENT)
-    .all<{ id: string; code: string }>();
-  for (const r of open.results) {
-    try {
-      const joined = await callRoom<{ seat: number }>(c.env, r.id, '/join', { userId: user.id, displayName: user.displayName });
-      return c.json({ roomId: r.id, code: r.code, seat: joined.seat });
-    } catch {
-      // full or already started -> try next
-    }
-  }
+  const joined = await joinOpenRoom(c.env, user, "mode = 'quick'", []);
+  if (joined) return c.json(joined);
   return c.json(await createRoom(c.env, user, 'quick', {}), 201);
 });
 

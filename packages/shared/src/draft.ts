@@ -2,6 +2,7 @@ import { roleSynergy } from './chemistry';
 import { GAME_CONFIG } from './config';
 import { POSITION_GROUP } from './data/positions';
 import { assignPlayers } from './lineup';
+import { isEmptyFilter, matchesFilter, type PoolFilter } from './pool';
 import { Rng } from './rng';
 import type { FormationId, Player, PositionGroup } from './types';
 
@@ -17,20 +18,45 @@ export function snakeOrder(players: number, rounds: number): number[] {
 /**
  * Build the candidate pool for one draft (provisional: 84 players,
  * GK12 / DF24 / MF24 / FW12 / free 12, spec 3-3).
+ *
+ * With a filter (Special Events / Solo Challenge) the matching players are
+ * taken first in every slot group and the free slots (any position), and only
+ * the remaining slots are filled with other players (decision 30).
  */
-export function buildDraftPool(catalog: readonly Player[], rng: Rng, composition = GAME_CONFIG.pool): string[] {
+export function buildDraftPool(catalog: readonly Player[], rng: Rng, composition = GAME_CONFIG.pool, filter?: PoolFilter | null): string[] {
+  const target = isEmptyFilter(filter) ? null : (p: Player) => matchesFilter(p, filter!);
   const byGroup: Record<PositionGroup, Player[]> = { GK: [], DF: [], MF: [], FW: [] };
   for (const p of catalog) byGroup[POSITION_GROUP[p.primaryPosition]].push(p);
   const chosen = new Set<string>();
-  const take = (list: Player[], n: number) => {
-    const shuffled = rng.shuffle(list.filter((p) => !chosen.has(p.id)));
-    for (const p of shuffled.slice(0, n)) chosen.add(p.id);
+  /** adds up to n players of the list (target players first); returns how many were added */
+  const take = (list: Player[], n: number): number => {
+    let added = 0;
+    const lists = target ? [list.filter(target), list.filter((p) => !target(p))] : [list];
+    for (const l of lists) {
+      if (added >= n) break;
+      const shuffled = rng.shuffle(l.filter((p) => !chosen.has(p.id)));
+      for (const p of shuffled.slice(0, n - added)) {
+        chosen.add(p.id);
+        added++;
+      }
+    }
+    return added;
   };
-  take(byGroup.GK, composition.GK);
-  take(byGroup.DF, composition.DF);
-  take(byGroup.MF, composition.MF);
-  take(byGroup.FW, composition.FW);
-  take([...byGroup.DF, ...byGroup.MF, ...byGroup.FW], composition.FREE);
+  for (const g of ['GK', 'DF', 'MF', 'FW'] as const) take(byGroup[g], composition[g]);
+  const before = chosen.size;
+  if (target) {
+    // free slots: remaining target players first — outfield players, then goalkeepers
+    // (so a goalkeeper event still includes every goalkeeper)
+    const left = catalog.filter((p) => target(p) && !chosen.has(p.id));
+    const remainingTargets = [...rng.shuffle(left.filter((p) => p.primaryPosition !== 'GK')), ...rng.shuffle(left.filter((p) => p.primaryPosition === 'GK'))];
+    for (const p of remainingTargets.slice(0, composition.FREE)) chosen.add(p.id);
+  }
+  const freeLeft = composition.FREE - (chosen.size - before);
+  if (freeLeft > 0) {
+    const others = [...byGroup.DF, ...byGroup.MF, ...byGroup.FW].filter((p) => !target || !target(p));
+    const shuffled = rng.shuffle(others.filter((p) => !chosen.has(p.id)));
+    for (const p of shuffled.slice(0, freeLeft)) chosen.add(p.id);
+  }
   // stable order: by OVR desc then id
   const byId = new Map(catalog.map((p) => [p.id, p]));
   return [...chosen].sort((a, b) => (byId.get(b)!.ovr - byId.get(a)!.ovr) || a.localeCompare(b));
