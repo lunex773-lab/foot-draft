@@ -12,7 +12,7 @@ export function Draft({ snap, players, send, serverNow }: { snap: RoomSnapshot; 
   const d = snap.draft!;
   const [filter, setFilter] = useState<Filter>('ALL');
   const [sort, setSort] = useState<Sort>('ovr');
-  const [hideTaken, setHideTaken] = useState(false);
+  const [hideTaken, setHideTaken] = useState(() => window.innerWidth < 640);
   const [selected, setSelected] = useState<string | null>(null);
   const [view, setView] = useState<number | null>(null);
   const myTurn = d.currentSeat === snap.you;
@@ -51,6 +51,9 @@ export function Draft({ snap, players, send, serverNow }: { snap: RoomSnapshot; 
             <div className="tiny muted">
               {pickNo > 56 ? 56 : pickNo} / 56 ピック・ラウンド {Math.min(14, Math.ceil(pickNo / 4))}
               {!myTurn && myNextIndex >= 0 && `・あなたの番まであと ${myNextIndex - d.picks.length} ピック`}
+            </div>
+            <div className="tiny muted">
+              あなた {mine.length}/14（GK {groups.GK}/3・DF {groups.DF}・MF {groups.MF}・FW {groups.FW}）
             </div>
           </div>
           <Countdown deadline={d.deadline} serverNow={serverNow} />

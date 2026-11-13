@@ -45,7 +45,7 @@ export function PitchEditor({ roster, lineup, onChange, disabled }: { roster: Pl
           const fit = p ? (p.positions.includes(slot.pos) ? 'fit-good' : r >= p.ovr - 6 ? 'fit-ok' : 'fit-bad') : 'fit-bad';
           const selected = sel?.kind === 'slot' && sel.index === i;
           return (
-            <div key={slot.id} className={`pslot ${selected ? 'sel' : ''}`} style={{ left: `${slot.x}%`, top: `${100 - slot.y}%` }} onClick={() => tap({ kind: 'slot', index: i })}>
+            <div key={slot.id} className={`pslot ${selected ? 'sel' : ''}`} style={{ left: `${slot.x}%`, top: `${94 - slot.y * 0.86}%` }} onClick={() => tap({ kind: 'slot', index: i })}>
               {p ? <PlayerAvatar player={p} size={40} /> : <div style={{ width: 40, height: 40, borderRadius: 20, background: '#0008' }} />}
               <span className={`rt ${fit}`}>
                 {slot.pos} {r || ''}

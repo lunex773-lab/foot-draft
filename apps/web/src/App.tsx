@@ -27,7 +27,7 @@ function Shell() {
             <Link to="/history" className="small">
               履歴
             </Link>
-            <span>{me.displayName}</span>
+            <span className="uname">{me.displayName}</span>
             <button className="btn small ghost" onClick={logout}>
               ログアウト
             </button>

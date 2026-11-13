@@ -80,6 +80,11 @@ button {
   gap: 10px;
   color: var(--muted);
   font-size: 14px;
+  flex-wrap: nowrap;
+}
+
+.topbar .who > * {
+  white-space: nowrap;
 }
 
 .btn {
@@ -832,6 +837,13 @@ table.tbl th.num {
 }
 
 @media (max-width: 640px) {
+  .brand {
+    font-size: 16px;
+    letter-spacing: 0.08em;
+  }
+  .topbar .who .uname {
+    display: none;
+  }
   .grid2 {
     grid-template-columns: minmax(0, 1fr);
   }
