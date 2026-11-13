@@ -5,10 +5,10 @@
 import type { DraftPick } from './draft';
 import type { StandingRow } from './league';
 import type { MatchResultData } from './sim/types';
-import type { Lineup } from './types';
+import type { Lineup, Player } from './types';
 
 export type RoomMode = 'quick' | 'private';
-export type RoomPhase = 'lobby' | 'drafting' | 'lineup' | 'playing' | 'standings' | 'finished' | 'closed';
+export type RoomPhase = 'lobby' | 'drafting' | 'lineup' | 'playing' | 'finished' | 'closed';
 
 export interface RoomSettings {
   pickSeconds: number;
@@ -48,7 +48,6 @@ export interface LiveMatch {
   /** playback length (ms) */
   durationMs: number;
   result: MatchResultData;
-  /** player data snapshot for both rosters (id -> minimal info) */
 }
 
 export interface RoomSnapshot {
@@ -62,6 +61,7 @@ export interface RoomSnapshot {
   serverNow: number;
   /** seat index of the receiving client (null = spectator) */
   you: number | null;
+  /** draft order of seats (pick positions are randomized) */
   draft: null | {
     draftId: string;
     pool: string[];
@@ -95,6 +95,8 @@ export type ClientMessage =
 
 export type ServerMessage =
   | { type: 'snapshot'; state: RoomSnapshot }
+  /** player cards of the draft pool (sent once per connection) */
+  | { type: 'players'; players: Player[] }
   | { type: 'pick'; pick: DraftPick; nextSeat: number | null; deadline: number | null }
   | { type: 'error'; code: string; message?: string }
   | { type: 'pong'; t: number; serverNow: number };

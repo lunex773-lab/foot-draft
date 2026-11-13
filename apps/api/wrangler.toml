@@ -1,0 +1,81 @@
+# FOOTBALL DRAFT game backend (Cloudflare Workers + D1 + Durable Objects)
+#
+# Environments (spec 19-3): local (default, `wrangler dev`), dev, staging, production.
+# Each environment has its own D1 database, Durable Object namespace and secrets.
+# Secrets are NOT stored here:
+#   local:       apps/api/.dev.vars (copy .dev.vars.example)
+#   deployed:    wrangler secret put WS_TICKET_SECRET --env <env>
+name = "football-draft-api"
+main = "src/index.ts"
+compatibility_date = "2026-09-01"
+
+[vars]
+ENVIRONMENT = "local"
+ADMIN_REQUIRE_2FA = "false"
+ALLOW_TEST_TIMINGS = "true"
+ALLOWED_ORIGINS = "http://127.0.0.1:5173,http://localhost:5173,http://127.0.0.1:5174,http://localhost:5174"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "football-draft-local"
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "migrations"
+
+[[durable_objects.bindings]]
+name = "ROOM"
+class_name = "RoomDO"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["RoomDO"]
+
+# ------------------------------------------------------------------ dev
+[env.dev]
+name = "football-draft-api-dev"
+[env.dev.vars]
+ENVIRONMENT = "development"
+ADMIN_REQUIRE_2FA = "true"
+ALLOW_TEST_TIMINGS = "true"
+ALLOWED_ORIGINS = ""
+[[env.dev.d1_databases]]
+binding = "DB"
+database_name = "football-draft-dev"
+database_id = "REPLACE_WITH_DEV_DATABASE_ID"
+migrations_dir = "migrations"
+[[env.dev.durable_objects.bindings]]
+name = "ROOM"
+class_name = "RoomDO"
+
+# ------------------------------------------------------------------ staging
+[env.staging]
+name = "football-draft-api-staging"
+[env.staging.vars]
+ENVIRONMENT = "staging"
+ADMIN_REQUIRE_2FA = "true"
+ALLOW_TEST_TIMINGS = "false"
+ALLOWED_ORIGINS = ""
+[[env.staging.d1_databases]]
+binding = "DB"
+database_name = "football-draft-staging"
+database_id = "REPLACE_WITH_STAGING_DATABASE_ID"
+migrations_dir = "migrations"
+[[env.staging.durable_objects.bindings]]
+name = "ROOM"
+class_name = "RoomDO"
+
+# ------------------------------------------------------------------ production
+[env.production]
+name = "football-draft-api"
+[env.production.vars]
+ENVIRONMENT = "production"
+ADMIN_REQUIRE_2FA = "true"
+ALLOW_TEST_TIMINGS = "false"
+ALLOWED_ORIGINS = ""
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "football-draft-production"
+database_id = "REPLACE_WITH_PRODUCTION_DATABASE_ID"
+migrations_dir = "migrations"
+[[env.production.durable_objects.bindings]]
+name = "ROOM"
+class_name = "RoomDO"

@@ -1,0 +1,29 @@
+{
+  "name": "@fd/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --ip 127.0.0.1 --port 8787",
+    "deploy:staging": "wrangler deploy --env staging",
+    "deploy:production": "wrangler deploy --env production",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "seed:generate": "tsx scripts/generate-seed.ts",
+    "db:migrate:local": "wrangler d1 migrations apply DB --local",
+    "admin:create:local": "tsx scripts/create-admin.ts --local",
+    "e2e": "tsx scripts/e2e.ts"
+  },
+  "dependencies": {
+    "@fd/shared": "*",
+    "hono": "4.13.13"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20251001.0",
+    "@types/node": "^22.0.0",
+    "tsx": "^4.20.0",
+    "typescript": "~5.9.3",
+    "vitest": "^3.2.4",
+    "wrangler": "4.150.0"
+  }
+}
