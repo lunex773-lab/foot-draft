@@ -1,30 +1,30 @@
-import { CLUB_BY_ID, type Player } from '@fd/shared';
-import { memo, useId } from 'react';
-import { PortraitGroup } from './Portrait';
-import { RARITY_THEMES } from './theme';
+import type { Player } from '@fd/shared';
+import { memo } from 'react';
+import { CARD_HEIGHT, CARD_WIDTH, RARITY_COLORS, cardImageUrl } from './cardAssets';
 
-/** Round portrait for compact lists (draft board, pitch, match log). */
+/** portrait area of the provided card images (512 x 680) */
+const CROP = { x: 166, y: 152, size: 180 };
+
+/** Round crop of the card image's portrait area, for compact lists and the pitch. */
 function PlayerAvatarInner({ player, size = 40, ring = true }: { player: Player; size?: number; ring?: boolean }) {
-  const raw = useId();
-  const uid = `a${raw.replace(/[^a-zA-Z0-9]/g, '')}`;
-  const th = RARITY_THEMES[player.rarity];
+  const k = size / CROP.size;
   return (
-    <svg width={size} height={size} viewBox="40 34 120 120" role="img" aria-label={player.name} style={{ display: 'block', flex: 'none' }}>
-      <defs>
-        <clipPath id={`${uid}-clip`}>
-          <circle cx={100} cy={94} r={58} />
-        </clipPath>
-        <linearGradient id={`${uid}-bg`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor={th.bg[0]} />
-          <stop offset="1" stopColor={th.bg[2]} />
-        </linearGradient>
-      </defs>
-      <circle cx={100} cy={94} r={58} fill={`url(#${uid}-bg)`} />
-      <g clipPath={`url(#${uid}-clip)`}>
-        <PortraitGroup appearance={player.appearance} club={CLUB_BY_ID[player.clubId]} uid={`${uid}-p`} />
-      </g>
-      {ring && <circle cx={100} cy={94} r={57} fill="none" stroke={th.frame[1]} strokeWidth={5} />}
-    </svg>
+    <span
+      role="img"
+      aria-label={player.name}
+      style={{
+        display: 'block',
+        flex: 'none',
+        width: size,
+        height: size,
+        borderRadius: '50%',
+        backgroundImage: `url(${cardImageUrl(player)})`,
+        backgroundSize: `${CARD_WIDTH * k}px ${CARD_HEIGHT * k}px`,
+        backgroundPosition: `${-CROP.x * k}px ${-CROP.y * k}px`,
+        boxShadow: ring ? `0 0 0 2px ${RARITY_COLORS[player.rarity]}` : undefined,
+        backgroundColor: '#111',
+      }}
+    />
   );
 }
 

@@ -56,7 +56,10 @@ export function CardDetail({ id, onClose }: { id: string; onClose: () => void })
         {d && (
           <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 260px) minmax(0, 1fr)', gap: 20 }}>
             <div>
-              <PlayerCard player={d.player} width="100%" showLabel />
+              <PlayerCard player={d.player} width="100%" loading="eager" />
+              <div className="tiny muted" style={{ marginTop: 6 }}>
+                画像：{d.player.cardAsset}
+              </div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div className="panel">
@@ -75,11 +78,11 @@ export function CardDetail({ id, onClose }: { id: string; onClose: () => void })
                   <dd>
                     {d.league.name} / {d.club.name}
                   </dd>
-                  <dt>年齢・利き足・身長</dt>
+                  <dt>年齢・身長</dt>
                   <dd>
-                    {d.player.age}歳・{d.player.preferredFoot === 'L' ? '左' : '右'}・{d.player.heightCm}cm
+                    {d.player.age}歳・{d.player.heightCm}cm
                   </dd>
-                  <dt>プレースタイル</dt>
+                  <dt>プレースタイル（自動判定）</dt>
                   <dd>
                     {ROLES[d.player.role].nameJa} — <span className="muted">{ROLES[d.player.role].descriptionJa}</span>
                   </dd>
@@ -90,7 +93,7 @@ export function CardDetail({ id, onClose }: { id: string; onClose: () => void })
                 </dl>
               </div>
               <div className="panel">
-                <h3>特殊能力（発動条件）</h3>
+                <h3>特殊能力（データベースの値・発動条件）</h3>
                 {d.player.traits.map((t) => (
                   <div key={t} className="small" style={{ marginBottom: 6 }}>
                     <b>{TRAITS[t].nameJa}</b>（{TRAITS[t].name}）<div className="muted">{TRAITS[t].effectJa}</div>
@@ -98,7 +101,7 @@ export function CardDetail({ id, onClose }: { id: string; onClose: () => void })
                 ))}
               </div>
               <div className="panel">
-                <h3>表示能力（内部能力から算出）</h3>
+                <h3>表示能力（データベースの値）</h3>
                 {DISPLAY_KEYS.map((k) => (
                   <div className="attr" key={k}>
                     <span>{DISPLAY_LABELS_JA[k]}</span>
@@ -122,7 +125,7 @@ export function CardDetail({ id, onClose }: { id: string; onClose: () => void })
                 ))}
               </div>
               <div className="panel">
-                <h3>ポジション別評価（適性外はペナルティ込み）</h3>
+                <h3>ポジション別評価（主ポジション＝カードのOVR。適性外はペナルティ込み）</h3>
                 <div className="row">
                   {POSITIONS.map((pos) => {
                     const r = positionRatings(d.player)[pos];

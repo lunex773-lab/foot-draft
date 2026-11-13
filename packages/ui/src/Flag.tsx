@@ -62,10 +62,6 @@ export function FlagShapes({ code }: { code: string }) {
       return <>{vertical(['#009246', '#ffffff', '#ce2b37'])}</>;
     case 'NED':
       return <>{horizontal(['#ae1c28', '#ffffff', '#21468b'])}</>;
-    case 'BEL':
-      return <>{vertical(['#000000', '#fae042', '#ed2939'])}</>;
-    case 'EST':
-      return <>{horizontal(['#0072ce', '#000000', '#ffffff'])}</>;
     case 'JPN':
       return (
         <>
@@ -89,24 +85,6 @@ export function FlagShapes({ code }: { code: string }) {
           <path d="M10.6 9 Q15 7.6 19.4 10.4" stroke="#fff" strokeWidth={0.9} fill="none" />
         </>
       );
-    case 'NGA':
-      return <>{vertical(['#008751', '#ffffff', '#008751'])}</>;
-    case 'SEN':
-      return (
-        <>
-          {vertical(['#00853f', '#fdef42', '#e31b23'])}
-          <polygon points={star(15, 10, 3.4)} fill="#00853f" />
-        </>
-      );
-    case 'CIV':
-      return <>{vertical(['#f77f00', '#ffffff', '#009e60'])}</>;
-    case 'GHA':
-      return (
-        <>
-          {horizontal(['#ce1126', '#fcd116', '#006b3f'])}
-          <polygon points={star(15, 10, 3.2)} fill="#000" />
-        </>
-      );
     case 'MAR':
       return (
         <>
@@ -114,20 +92,61 @@ export function FlagShapes({ code }: { code: string }) {
           <polygon points={star(15, 10.4, 5)} fill="none" stroke="#006233" strokeWidth={0.9} />
         </>
       );
-    case 'COL':
-      return <>{horizontal(['#fcd116', '#003893', '#ce1126'], [2, 1, 1])}</>;
     case 'SWE':
       return nordic('#006aa7', '#fecc00');
-    case 'DEN':
-      return nordic('#c8102e', '#ffffff');
-    case 'NOR':
-      return nordic('#ba0c2f', '#ffffff', '#00205b');
-    case 'IRL':
-      return <>{vertical(['#169b62', '#ffffff', '#ff883e'])}</>;
-    case 'POL':
-      return <>{horizontal(['#ffffff', '#dc143c'])}</>;
-    case 'AUT':
-      return <>{horizontal(['#ed2939', '#ffffff', '#ed2939'])}</>;
+    case 'KOR':
+      return (
+        <>
+          <rect width={W} height={H} fill="#fff" />
+          <g transform="rotate(-34 15 10)">
+            <path d="M10 10 A5 5 0 0 1 20 10 Z" fill="#cd2e3a" />
+            <path d="M10 10 A5 5 0 0 0 20 10 Z" fill="#0047a0" />
+            <circle cx={12.5} cy={10} r={2.5} fill="#cd2e3a" />
+            <circle cx={17.5} cy={10} r={2.5} fill="#0047a0" />
+          </g>
+          <g stroke="#000" strokeWidth={0.8}>
+            {[
+              [5.5, 4, 34],
+              [24.5, 16, 34],
+              [24.5, 4, -34],
+              [5.5, 16, -34],
+            ].map(([x, y, a], i) => (
+              <g key={i} transform={`rotate(${a} ${x} ${y})`}>
+                <line x1={x - 2} y1={y - 1.3} x2={x + 2} y2={y - 1.3} />
+                <line x1={x - 2} y1={y} x2={x + 2} y2={y} />
+                <line x1={x - 2} y1={y + 1.3} x2={x + 2} y2={y + 1.3} />
+              </g>
+            ))}
+          </g>
+        </>
+      );
+    case 'CRO':
+      return (
+        <>
+          {horizontal(['#ff0000', '#ffffff', '#171796'])}
+          <rect x={12} y={5} width={6} height={7.5} fill="#fff" stroke="#171796" strokeWidth={0.4} />
+          {[0, 1, 2].flatMap((r) => [0, 1, 2].map((c) => ((r + c) % 2 === 0 ? <rect key={`${r}${c}`} x={12 + c * 2} y={5 + r * 2.5} width={2} height={2.5} fill="#ff0000" /> : null)))}
+        </>
+      );
+    case 'USA':
+      return (
+        <>
+          {horizontal(Array.from({ length: 13 }, (_, i) => (i % 2 === 0 ? '#b22234' : '#ffffff')))}
+          <rect width={12} height={10.8} fill="#3c3b6e" />
+          {Array.from({ length: 20 }, (_, i) => (
+            <circle key={i} cx={1.5 + (i % 5) * 2.25} cy={1.5 + Math.floor(i / 5) * 2.5} r={0.45} fill="#fff" />
+          ))}
+        </>
+      );
+    case 'POR':
+      return (
+        <>
+          <rect width={12} height={H} fill="#006600" />
+          <rect x={12} width={18} height={H} fill="#ff0000" />
+          <circle cx={12} cy={10} r={4} fill="none" stroke="#ffcc00" strokeWidth={1.2} />
+          <rect x={10.4} y={8.2} width={3.2} height={3.8} rx={0.6} fill="#fff" stroke="#ff0000" strokeWidth={0.6} />
+        </>
+      );
     default:
       return <rect width={W} height={H} fill="#888" />;
   }

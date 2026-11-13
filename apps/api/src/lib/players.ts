@@ -1,4 +1,4 @@
-import type { Appearance, Player, Position, Rarity, RoleId, TraitId } from '@fd/shared';
+import type { Player, Position, Rarity, RoleId, TraitId } from '@fd/shared';
 import type { Env } from '../env';
 
 /**
@@ -27,9 +27,8 @@ interface CardRow {
   def: number;
   phy: number;
   age: number;
-  preferred_foot: 'L' | 'R';
   height_cm: number;
-  appearance_json: string;
+  card_asset: string | null;
 }
 
 interface AttrRow {
@@ -114,10 +113,9 @@ export async function loadCatalog(env: Env, opts: { fresh?: boolean } = {}): Pro
         gkPositioning: a.gk_positioning,
       },
       stats: { pac: c.pac, sho: c.sho, pas: c.pas, dri: c.dri, def: c.def, phy: c.phy },
-      appearance: JSON.parse(c.appearance_json) as Appearance,
       age: c.age,
-      preferredFoot: c.preferred_foot,
       heightCm: c.height_cm,
+      cardAsset: c.card_asset ?? '',
     });
   }
   cache = { at: Date.now(), players };

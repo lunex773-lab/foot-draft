@@ -134,7 +134,7 @@ export function CardsPage() {
         <div className="filters">
           <label>
             検索（名前・ID・クラブ・国）
-            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="例：Moretti / fd0004" />
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="例：Mendes / FD-001" />
           </label>
           <label>
             ポジション
@@ -245,7 +245,7 @@ export function CardsPage() {
         <div className="cards">
           {data.items.map((p) => (
             <div key={p.id} style={{ textAlign: 'center' }}>
-              <PlayerCard player={p} width="100%" showLabel onClick={() => setSelected(p.id)} />
+              <PlayerCard player={p} width="100%" onClick={() => setSelected(p.id)} />
               <div className="tiny muted" style={{ marginTop: 4 }}>
                 {p.id}
               </div>

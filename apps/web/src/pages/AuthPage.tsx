@@ -1,8 +1,16 @@
-import { SHOWCASE, getCatalog } from '@fd/shared';
-import { PlayerCard } from '@fd/ui';
+import { cardImageUrl } from '@fd/ui';
 import { useState, type FormEvent } from 'react';
 import { useAuth } from '../lib/auth';
 import { errorText } from '../lib/labels';
+
+/** highest OVR card of each rarity in the player database v1 */
+const SHOWCASE_CARDS = [
+  { cardAsset: 'cards/FD-103.png', alt: 'Adrian Ferreira CDM 65 (Common)' },
+  { cardAsset: 'cards/FD-013.png', alt: 'Victor Fischer CM 75 (Rare)' },
+  { cardAsset: 'cards/FD-009.png', alt: 'Theo Dubois RW 85 (Epic)' },
+  { cardAsset: 'cards/FD-088.png', alt: 'Axel Kovac CM 92 (Legendary)' },
+  { cardAsset: 'cards/FD-173.png', alt: 'Adrian Mendes CAM 99 (Icon)' },
+];
 
 export default function AuthPage() {
   const { login, register } = useAuth();
@@ -12,8 +20,6 @@ export default function AuthPage() {
   const [displayName, setDisplayName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const catalog = getCatalog();
-  const showcase = SHOWCASE.map((s) => catalog.find((p) => p.name === `${s.firstName} ${s.lastName}`)!);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -39,8 +45,8 @@ export default function AuthPage() {
         <p>限られた選手プールから14人を指名し、戦術で勝ち抜くオンライン対戦</p>
       </div>
       <div className="showcase">
-        {showcase.map((p) => (
-          <PlayerCard key={p.id} player={p} width={150} showLabel />
+        {SHOWCASE_CARDS.map((c) => (
+          <img key={c.cardAsset} src={cardImageUrl(c)} alt={c.alt} width={150} height={199} style={{ borderRadius: 10 }} />
         ))}
       </div>
       <form className="panel" style={{ maxWidth: 420, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 12 }} onSubmit={submit}>

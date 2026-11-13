@@ -52,7 +52,7 @@ export default function CatalogPage() {
       </div>
       <div className="pool" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))' }}>
         {list.map((p) => (
-          <PlayerCard key={p.id} player={p} width="100%" showLabel />
+          <PlayerCard key={p.id} player={p} width="100%" />
         ))}
       </div>
     </div>

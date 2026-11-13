@@ -314,12 +314,14 @@ async function main() {
   const adminOnUser = await api('/api/users/me', { token: at });
   check(adminOnUser.status === 401, 'admin token is not a player session');
   const cards = await api('/api/admin/cards', { token: at });
-  check(cards.status === 200 && cards.data.total === 240, 'admin card list returns 240 cards');
-  check(cards.data.counts.icon === 8 && cards.data.counts.common === 96, 'rarity counts (icon 8, common 96)');
+  check(cards.status === 200 && cards.data.total === 300, 'admin card list returns the 300 database cards');
+  check(cards.data.counts.icon === 9 && cards.data.counts.common === 120, 'rarity counts (icon 9, common 120)');
   const icons = await api('/api/admin/cards?rarity=icon&sort=ovr', { token: at });
-  check(icons.data.total === 8 && icons.data.items[0].ovr >= icons.data.items[7].ovr, 'filter by rarity + sort by OVR');
-  const one = await api('/api/admin/cards/fd0001', { token: at });
-  check(one.status === 200 && one.data.player.name === 'Elias Voss' && one.data.player.ovr === 64, 'card detail (Elias Voss, 64)');
+  check(icons.data.total === 9 && icons.data.items[0].ovr >= icons.data.items[8].ovr, 'filter by rarity + sort by OVR');
+  const cfs = await api('/api/admin/cards?position=CF', { token: at });
+  check(cfs.data.total === 10, 'filter by the new CF position (10 cards)');
+  const one = await api('/api/admin/cards/FD-001', { token: at });
+  check(one.status === 200 && one.data.player.name === 'Dario Mendes' && one.data.player.ovr === 51 && one.data.player.cardAsset === 'cards/FD-001.png', 'card detail (FD-001 Dario Mendes, 51, card image)');
   const audit = await api('/api/admin/audit-logs', { token: at });
   check(audit.status === 403, 'viewer role cannot read audit logs (RBAC)');
 

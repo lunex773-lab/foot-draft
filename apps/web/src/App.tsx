@@ -8,7 +8,6 @@ const RoomPage = lazy(() => import('./pages/RoomPage'));
 const HistoryPage = lazy(() => import('./pages/HistoryPage'));
 const CatalogPage = lazy(() => import('./pages/CatalogPage'));
 const MatchReplayPage = lazy(() => import('./pages/MatchReplayPage'));
-const CardsPreview = lazy(() => import('./pages/CardsPreview'));
 
 function Shell() {
   const { me, loading, logout } = useAuth();
@@ -43,12 +42,10 @@ function Shell() {
             <Route path="/history" element={<HistoryPage />} />
             <Route path="/match/:matchId" element={<MatchReplayPage />} />
             <Route path="/cards" element={<CatalogPage />} />
-            {import.meta.env.DEV && <Route path="/dev/cards" element={<CardsPreview />} />}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         ) : (
           <Routes>
-            {import.meta.env.DEV && <Route path="/dev/cards" element={<CardsPreview />} />}
             <Route path="*" element={<AuthPage />} />
           </Routes>
         )}
