@@ -6,7 +6,7 @@
 foot-draft/
 ├─ packages/
 │  ├─ shared/   # 型・定数・乱数・選手生成・ドラフト・編成・ケミストリー・SIM・リーグ（クライアントとサーバーで共用）
-│  └─ ui/       # React 部品：選手カード（参考画像のデザイン）・SVG肖像・国旗・紋章・アイコン
+│  └─ ui/       # React 部品：選手カード（データベースのカード画像）・国旗
 ├─ apps/
 │  ├─ api/      # Cloudflare Workers（Hono）＋ D1 ＋ Durable Objects（RoomDO：ルーム・ドラフト・試合進行）
 │  ├─ web/      # ゲーム本体（React＋Vite）
@@ -25,8 +25,8 @@ foot-draft/
 | 機能 | 新規ファイル | DB | API | UI | テスト | 完了条件 |
 | --- | --- | --- | --- | --- | --- | --- |
 | 乱数・シード | shared/rng.ts | - | - | - | 同一シードで同一数列 | テスト合格 |
-| 架空選手DB（240人） | shared/players/* | player_cards, player_attributes, player_positions, player_traits | GET /api/players | カード一覧 | 人数・レアリティ帯・重複名なし | D1に投入され管理画面に表示 |
-| 選手カード | ui/PlayerCard 他 | - | - | 全画面 | スクリーンショット確認 | 参考画像の要素がそろう |
+| 選手DB（データベースv1・300人） | data/player-db-v1, shared/players/* | player_cards, player_attributes, player_positions, player_traits | GET /api/players | カード一覧 | 人数・レアリティ帯・元データとの一致 | D1に投入され管理画面に表示 |
+| 選手カード | ui/PlayerCard（データベースのPNG） | - | - | 全画面 | スクリーンショット確認 | 全カード画像が表示される |
 | アカウント | api/auth.ts | users, user_sessions | /api/auth/register・login・logout, /api/users/me | ログイン画面 | 登録・ログイン・不正パスワード | 結合テスト合格 |
 | ルーム | api/rooms.ts, RoomDO | rooms, room_members | /api/rooms, /api/rooms/join, /api/rooms/quick, /api/rooms/:id | ロビー | 4人参加・満員拒否 | 4人で同じルームに入れる |
 | Snake Draft | shared/draft.ts, RoomDO | drafts, draft_picks | WebSocket, POST /api/drafts/:id/pick, GET /api/drafts/:id/state | ドラフト画面 | 56回・重複なし・GK上限・時間切れ自動指名 | 結合テスト合格 |
@@ -36,7 +36,7 @@ foot-draft/
 | 再接続 | RoomDO | - | WebSocket | 自動再接続 | 切断→再接続で状態復元 | 結合テスト合格 |
 | 対戦履歴 | api/matches.ts | 上記 | GET /api/matches/history, /api/users/me/history | 履歴画面 | 試合後に履歴が増える | 結合テスト合格 |
 | 管理者認証 | api/admin/* | admin_users, admin_sessions, admin_audit_logs | /api/admin/auth/* | 管理ログイン | 一般ユーザーのトークンで403 | テスト合格 |
-| 管理：カード一覧 | admin/* | player_* | GET /api/admin/cards, /api/admin/cards/:id | カード一覧・詳細 | 240枚・絞り込み | 画面で確認 |
+| 管理：カード一覧 | admin/* | player_* | GET /api/admin/cards, /api/admin/cards/:id | カード一覧・詳細 | 300枚・絞り込み | 画面で確認 |
 | 分析イベント | api/analytics.ts | analytics_events | - | - | 主要イベントが記録される | 結合テスト合格 |
 
 ## 3. 実装順序

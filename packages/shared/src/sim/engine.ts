@@ -20,7 +20,7 @@ import type {
 } from './types';
 
 /**
- * FOOTBALL DRAFT match simulation v0.1 (see docs/03-sim-v0.1.md).
+ * FOOTBALL DRAFT match simulation (see docs/03-sim.md, version = SIM_VERSION).
  *
  * A match is a sequence of possessions. Each possession moves through
  * phases (build-up -> midfield -> final third -> shot) and every phase is a

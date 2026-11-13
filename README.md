@@ -9,8 +9,10 @@
 
 | ディレクトリ | 内容 |
 | --- | --- |
-| `packages/shared` | 型・選手生成（架空240人）・スネークドラフト・自動指名・編成・ケミストリー・試合SIM・リーグ順位・通信の型 |
-| `packages/ui` | 選手カード（参考画像のデザイン）・SVGイラスト肖像・国旗・クラブ紋章・特性アイコン |
+| `packages/shared` | 型・選手データベースの取り込み・スネークドラフト・自動指名・編成・ケミストリー・試合SIM・リーグ順位・通信の型 |
+| `data/player-db-v1` | 選手データベース（FOOTBALL DRAFT 300 Player Database v1：架空選手300人、SIM用19能力） |
+| `assets/` | カード画像（`cards/FD-001.png`〜`FD-300.png`）とレアリティ別テンプレート。ゲーム・管理サイトの静的ファイルとして配信 |
+| `packages/ui` | 選手カード（データベースのカード画像を表示）・国旗 |
 | `apps/api` | ゲームのバックエンド。Cloudflare Workers（Hono）＋ D1 ＋ Durable Objects（`RoomDO`：ルーム・ドラフト・試合の進行をサーバーで確定） |
 | `apps/web` | ゲーム本体（React＋Vite） |
 | `apps/admin` | FOOTBALL DRAFT ADMIN（運営管理サイト。管理者専用認証） |
@@ -24,7 +26,7 @@ npm install
 
 # 1. APIの準備（初回のみ）
 cp apps/api/.dev.vars.example apps/api/.dev.vars   # WS_TICKET_SECRET をランダムな値に変更
-npm run db:migrate:local                            # テーブル作成＋選手240人を投入
+npm run db:migrate:local                            # テーブル作成＋選手データベース（300人）を投入
 
 # 2. 起動（それぞれ別のターミナルで）
 npm run dev:api     # http://127.0.0.1:8787
@@ -40,6 +42,12 @@ npm run admin:create:local -- --username あなたの管理者名
 
 ゲームは `http://127.0.0.1:5173` で新規登録 → 「クイックドラフト」または「ルームを作成」。
 1人でも開始でき、空席はCPUが埋めます。友だちとは招待コード・招待リンクで同じルームに入れます。
+
+## 選手データの更新
+
+1. `data/player-db-v1/players.json`・`simulation_attributes.json` と `assets/cards/` を差し替える
+2. `npm test -w @fd/shared`（取り込み検証：レアリティ・OVR帯・特殊能力・ポジション・画像ファイルの有無）
+3. `npm run seed:generate` で D1 用のマイグレーションを作り直す（既に適用済みの環境には新しい番号のマイグレーションとして追加する）
 
 ## テスト
 
@@ -58,12 +66,13 @@ npm run typecheck
 2. `wrangler d1 migrations apply DB --remote --env <env>`
 3. `wrangler secret put WS_TICKET_SECRET --env <env>`
 4. `ALLOWED_ORIGINS` にゲーム・管理サイトの公開URLを設定し、`apps/web` / `apps/admin` をビルドして配信（`VITE_API_URL` にAPIのURL）
-5. 試合SIMとCPUの自動指名はCPU時間を使うため、Workers は有料プランを推奨
+5. カード画像は各アプリの静的ファイルとして配信される。CDN / R2 に置く場合は `VITE_CARD_BASE_URL` にそのURLを設定
+6. 試合SIMとCPUの自動指名はCPU時間を使うため、Workers は有料プランを推奨
 
 ## ドキュメント
 
 - `docs/00-phase0-report.md` 現状分析
 - `docs/01-dev-plan.md` 開発計画
 - `docs/02-decisions.md` 決定事項・暫定値・提案中の事項
-- `docs/03-sim-v0.1.md` 試合シミュレーションの仕様とバランス検証結果
+- `docs/03-sim.md` 試合シミュレーションの仕様とバランス検証結果
 - `docs/04-implementation-log.md` 実装記録（実装済み・未実装・検証結果・既知の課題）

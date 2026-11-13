@@ -1,6 +1,24 @@
 # 実装記録
 
-## 2026-11-13 Phase 1＋Phase 2＋管理画面カード一覧
+## 2026-11-13（2回目）選手データベース v1 への切り替え
+
+ユーザー提供の「FOOTBALL DRAFT 300 Player Database v1」をカードのデータに採用（決定内容は `docs/02-decisions.md` の 15〜19）。
+
+| 区分 | 変更内容 | 主なファイル |
+| --- | --- | --- |
+| データ | 元データを `data/player-db-v1/` に保存し、そのまま読み込む（変換・検証は `convertPlayerDatabase`）。表示能力・OVR・ポジション・特殊能力・SIM用19能力はデータのとおり | `packages/shared/src/players/import.ts`, `catalog.ts` |
+| カード画像 | 添付のPNG 300枚とテンプレート5枚を `assets/` に置き、ゲーム・管理サイトでそのまま表示。リスト・ピッチの丸アイコンはカード画像の人物部分を切り抜いて使う | `packages/ui/src/PlayerCard.tsx`, `Avatar.tsx` |
+| ポジション | CF・LWB・RWB を追加（15ポジション）。CF＝ST枠、LWB/RWB＝LB/RB枠で減点なし | `packages/shared/src/data/positions.ts` |
+| 特殊能力 | データの12種類に入れ替え、発動条件を明記してSIMに実装 | `data/traits.ts`, `sim/engine.ts` |
+| クラブ・リーグ・国籍 | データの10クラブ・6リーグ（Vortex League を追加）・15か国。国旗に韓国・クロアチア・アメリカ・ポルトガルを追加 | `data/clubs.ts`, `data/nations.ts`, `ui/src/Flag.tsx` |
+| SIM | v0.2.0。能力の水準をカードのOVRに合わせる補正、カウンターと決定機の確率を再調整（`docs/03-sim.md`） | `sim/engine.ts` |
+| D1 | マイグレーション `0003_player_db_v1.sql`：旧240人を無効化、`card_asset` 列を追加、300人を投入 | `apps/api/migrations/` |
+| 削除 | 自動生成の240人・最初の参考画像の5人・SVGカード／肖像／紋章／アイコン（git履歴には残っている） | - |
+
+検証：単体テスト26件成功（元データとの一致、全300枚の画像の存在、CF/LWB/RWB、OVRとポジション別評価の一致を含む）、結合テスト（4人オンライン・管理API、300枚・CF絞り込み・FD-001の詳細）すべて成功、ブラウザで登録→ドラフト→3試合→最終順位、管理サイト（TOTPログイン→カード一覧・表・詳細・操作ログ）を確認しエラーなし。スマートフォン幅の表示も確認。
+
+
+## 2026-11-13（1回目）Phase 1＋Phase 2＋管理画面カード一覧
 
 ### 実装済み（ローカル環境で動作確認済み）
 
