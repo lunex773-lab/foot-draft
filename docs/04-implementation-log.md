@@ -1,0 +1,49 @@
+# 実装記録
+
+## 2026-11-13 Phase 1＋Phase 2＋管理画面カード一覧
+
+### 実装済み（ローカル環境で動作確認済み）
+
+| 区分 | 内容 | 主なファイル |
+| --- | --- | --- |
+| 選手データ | 架空選手240人（Common 96・Rare 72・Epic 42・Legendary 22・Icon 8）。内部能力19項目 → 表示6能力・ポジション別評価を計算。参考画像の5枚（Elias Voss / Mateo Silva / Adrian Volkov / Luca Moretti / Orion Vale）は画像と同じ能力値で収録 | `packages/shared/src/players/*` |
+| カード | 参考画像のデザインを再現（盾形の枠・レアリティ別配色・王冠・OVRとポジション・特性バッジ3つ・6能力・国旗/リーグ/クラブ紋章・レアリティ名） | `packages/ui/src/PlayerCard.tsx` |
+| 肖像 | 選手ごとに異なるSVGイラスト（肌・髪型・髪色・ひげ・表情・顔の向き・クラブのユニフォーム）。写真や実在の人物・ロゴは使っていない | `packages/ui/src/Portrait.tsx` |
+| アカウント | 登録・ログイン・ログアウト（PBKDF2、トークンはハッシュで保存、ログイン失敗の回数制限） | `apps/api/src/routes/auth.ts` |
+| ルーム | クイックドラフト（自動マッチング、4人で自動開始）、プライベートルーム（招待コード・招待リンク、ホスト設定）、空席のCPU補充 | `apps/api/src/routes/rooms.ts`, `RoomDO.ts` |
+| ドラフト | 84人プール、スネーク順（指名位置はランダム）、56ピック、重複禁止（DBの一意制約も）、GK3人まで、時間切れのサーバー自動指名（不足ポジション・フォーメーション・適性・相性・控えを考慮） | `packages/shared/src/draft.ts`, `RoomDO.ts` |
+| 編成・戦術 | 8フォーメーション、攻撃/守備戦術＋5項目の詳細設定＋終盤の方針、スタメン/控えの入れ替え、ケミストリー表示、サーバー側の入力検証 | `lineup.ts`, `chemistry.ts`, `apps/web/src/pages/room/Lineup.tsx` |
+| 試合 | サーバーでSIM v0.1を実行（シード保存・再現可能）、2D戦術盤＋実況で約60秒の同時再生、統計（支配率・シュート・枠内・xG・パス成功率など）、選手評価・MVP・戦術効果 | `packages/shared/src/sim/*`, `apps/web/src/components/MatchBoard.tsx` |
+| リーグ | 総当たり3節、勝点→得失点差→総得点→直接対決→抽選。各節の前に編成変更（直後60秒・合間30秒） | `league.ts`, `RoomDO.ts` |
+| オンライン | Durable Objects＋WebSocket（ハイバネーション対応）、署名付きチケット認証、切断表示、自動再接続で状態を復元 | `RoomDO.ts`, `apps/web/src/lib/useRoom.ts` |
+| 履歴 | リーグ履歴・試合履歴・試合詳細・リプレイ | `routes/matches.ts`, `HistoryPage.tsx`, `MatchReplayPage.tsx` |
+| 分析イベント | account_registered / login_* / session_started / mode_selected / room_* / draft_* / match_* を `analytics_events` に記録 | `lib/analytics.ts` |
+| 管理サイト | 管理者専用ログイン（選手のトークンは不可）、TOTP 2段階認証、権限（owner/admin/viewer）、カード一覧（カード表示/表表示・検索・レアリティ/ポジション/リーグ/クラブ/国籍/特殊能力/プレースタイル/OVRで絞り込み・並び替え）、カード詳細（内部能力19項目・ポジション別評価・特殊能力の発動条件・ドラフト実績）、管理者操作ログ | `apps/admin/*`, `routes/admin.ts` |
+| 環境分離 | local / dev / staging / production を `wrangler.toml` で分離。Secrets は `.dev.vars`（git管理外）/ `wrangler secret` | `apps/api/wrangler.toml` |
+
+### 検証結果
+
+- 単体テスト：25件すべて成功（`npm test -w @fd/shared`）
+- 結合テスト（`npm run e2e -w @fd/api`、4人の実WebSocketクライアント）：すべて成功
+  - 登録・重複拒否・誤パスワード拒否・未ログイン拒否
+  - 招待コード参加・満員拒否・非メンバーのチケット拒否・偽造チケット拒否・ホスト以外の開始拒否
+  - 56ピック完了・重複なし・各14人・GK 1〜3人・放置したプレイヤーは全ピック自動指名
+  - 手番外の指名拒否・切断の表示・再接続で最新状態を受信
+  - 不正な編成の拒否・提出した戦術が試合に反映・3節6試合・順位と勝点の整合
+  - 保存されたシードとチームで試合を再計算すると完全に一致（設計書 6-4）
+  - クイックマッチで同じルームに入る・CPU補充
+  - 選手トークンで管理APIに入れない・管理トークンで選手APIに入れない・viewer は操作ログを見られない
+- ブラウザ確認（Playwright）：登録→ルーム作成→ドラフト（カードをクリックして指名）→戦術変更→3試合観戦→最終順位→履歴→リプレイ→図鑑、管理サイト（TOTPログイン→カード一覧→表→詳細→操作ログ）。コンソールエラーなし。スマートフォン幅（iPhone 13）でも表示を確認
+- SIMバランス：`docs/03-sim-v0.1.md` 参照
+
+### 未実装（今回の範囲外）
+
+Ranked・レーティング・シーズン（Phase 3）、Solo Challenge・Special Events、Collection・通貨・ガシャ・交換所（Phase 4）、管理サイトのカード一覧以外のページ（Overview・Users・Analytics・Retention・Economy・Feedback・GEMS配布など、Phase 5）、課金（Phase 6）、iOS/Android アプリ（Expo）、ゲーム内フィードバック送信、ルーム観戦、本番環境へのデプロイ。
+設計書 18 の API のうち `/api/users/me/collection`・`/api/matches/:id/start`・通貨・ガシャ・交換所・フィードバックは未作成（試合はサーバーが自動で開始するため `/api/matches/:id/start` は不要）。
+
+### 既知の課題
+
+- SIM：「カウンター＋ローブロック」がやや強い。退場がやや多い（ベータテストで調整）
+- 本番では SIM・自動指名の CPU 時間のため Workers 有料プランが前提
+- 進行中のルームの Durable Object の古いデータを掃除する仕組みは未作成
+- ルームを途中で抜けたプレイヤーは席が残り、サーバーが自動で操作する（再参加は可能）
