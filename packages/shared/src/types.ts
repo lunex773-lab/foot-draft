@@ -3,6 +3,8 @@ export type Position =
   | 'CB'
   | 'LB'
   | 'RB'
+  | 'LWB'
+  | 'RWB'
   | 'CDM'
   | 'CM'
   | 'CAM'
@@ -10,6 +12,7 @@ export type Position =
   | 'RM'
   | 'LW'
   | 'RW'
+  | 'CF'
   | 'ST';
 
 export type PositionGroup = 'GK' | 'DF' | 'MF' | 'FW';
@@ -53,21 +56,20 @@ export interface DisplayStats {
 
 export type DisplayStatKey = keyof DisplayStats;
 
+/** Special abilities of the player database v1 (spec 4-4). */
 export type TraitId =
-  | 'sniper'
-  | 'playmaker'
-  | 'speedster'
-  | 'wall'
-  | 'aerial_king'
-  | 'pressing_machine'
-  | 'clutch'
-  | 'sweeper_keeper'
-  | 'trickster'
   | 'engine'
-  | 'set_piece'
+  | 'counter_runner'
+  | 'sweeper_keeper'
+  | 'cross_specialist'
+  | 'press_resistant'
+  | 'clinical_finisher'
   | 'leader'
-  | 'shot_stopper'
-  | 'commanding';
+  | 'long_shot'
+  | 'aerial_threat'
+  | 'ball_winner'
+  | 'speedster'
+  | 'playmaker';
 
 export type RoleId =
   | 'keeper_classic'
@@ -90,38 +92,6 @@ export type RoleId =
   | 'false_nine'
   | 'complete_forward';
 
-export type HairStyle =
-  | 'buzz'
-  | 'short'
-  | 'crop'
-  | 'side_part'
-  | 'quiff'
-  | 'curly'
-  | 'afro'
-  | 'waves'
-  | 'long'
-  | 'man_bun'
-  | 'bald'
-  | 'mohawk';
-
-export type FacialHair = 'none' | 'stubble' | 'beard' | 'goatee' | 'mustache';
-
-/** Parameters for the procedurally generated SVG portrait. */
-export interface Appearance {
-  skinTone: number; // index into palette 0..5
-  hairStyle: HairStyle;
-  hairColor: number; // index into palette
-  facialHair: FacialHair;
-  faceWidth: number; // 0..1
-  jawWidth: number; // 0..1
-  browWeight: number; // 0..1
-  eyeColor: number; // index
-  noseSize: number; // 0..1
-  mouthWidth: number; // 0..1
-  expression: 'neutral' | 'focused' | 'smile' | 'shout';
-  headTurn: number; // -1..1 (looking left/right)
-}
-
 export interface Player {
   id: string;
   name: string;
@@ -135,14 +105,17 @@ export interface Player {
   /** primary first, then secondary positions */
   positions: Position[];
   ovr: number;
+  /** play style used for chemistry (derived from attributes; not in the database) */
   role: RoleId;
   traits: TraitId[];
+  /** SIM-only attributes (simulation_attributes.json) */
   attributes: InternalAttributes;
+  /** displayed card stats (taken from the database as-is) */
   stats: DisplayStats;
-  appearance: Appearance;
   age: number;
-  preferredFoot: 'L' | 'R';
   heightCm: number;
+  /** card image path relative to the card asset base, e.g. "cards/FD-001.png" */
+  cardAsset: string;
 }
 
 export type FormationId =

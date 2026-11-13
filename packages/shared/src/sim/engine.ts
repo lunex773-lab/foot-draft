@@ -2,8 +2,9 @@ import { computeChemistry, type ChemistryResult } from '../chemistry';
 import { SIM_VERSION } from '../config';
 import { FORMATIONS } from '../data/formations';
 import { POSITION_GROUP, positionFamiliarity } from '../data/positions';
+import { rawPositionRating } from '../players/ratings';
 import { Rng, clamp, logistic } from '../rng';
-import type { AttributeKey, FormationSlot, Player, PositionGroup, Tactics } from '../types';
+import type { AttributeKey, FormationSlot, Player, PositionGroup, Tactics, TraitId } from '../types';
 import type {
   ChanceType,
   MatchEvent,
@@ -35,19 +36,19 @@ export const SIM_TUNING = {
   biasBuild: 1.35,
   biasLongBall: 0.25,
   biasMid: 0.3,
-  biasFinal: -1.3,
-  biasCounter: -0.1,
+  biasFinal: -1.6,
+  biasCounter: -0.9,
   biasCorner: -0.7,
   recyclePossession: 0.38,
   recycleOther: 0.12,
   baseXg: {
-    through_ball: 0.145,
-    cutback: 0.11,
-    dribble: 0.085,
-    cross: 0.06,
-    long_shot: 0.026,
-    counter: 0.175,
-    press_win: 0.15,
+    through_ball: 0.135,
+    cutback: 0.1,
+    dribble: 0.08,
+    cross: 0.056,
+    long_shot: 0.024,
+    counter: 0.16,
+    press_win: 0.14,
     set_piece: 0.06,
     direct_fk: 0.05,
     penalty: 0.76,
@@ -62,6 +63,8 @@ interface OnPitch {
   p: Player;
   slot: FormationSlot;
   fam: number;
+  /** card OVR / attribute level: SIM uses the attribute profile at the card's OVR level */
+  scale: number;
   stamina: number;
   yellow: number;
   off: boolean;
@@ -82,6 +85,12 @@ interface TeamState {
   stats: TeamStats;
   goals: number;
   lateChange: string | null;
+}
+
+/** Calibrates a player's SIM attributes to the level of the card OVR. */
+function ovrScale(p: Player): number {
+  const raw = rawPositionRating(p.attributes, p.primaryPosition);
+  return raw > 0 ? p.ovr / raw : 1;
 }
 
 const POS_SHOOT_WEIGHT: Record<string, number> = {
@@ -165,7 +174,7 @@ export class MatchSimulator {
     const lineup: OnPitch[] = formation.slots.map((slot, i) => {
       const p = byId.get(input.lineup.starters[i]);
       if (!p) throw new Error(`unknown starter ${input.lineup.starters[i]}`);
-      return { p, slot, fam: positionFamiliarity(p.positions, slot.pos), stamina: 100, yellow: 0, off: false, enteredAt: 0, leftAt: null };
+      return { p, slot, fam: positionFamiliarity(p.positions, slot.pos), scale: ovrScale(p), stamina: 100, yellow: 0, off: false, enteredAt: 0, leftAt: null };
     });
     const bench = input.lineup.bench.map((id) => {
       const p = byId.get(id);
@@ -238,7 +247,7 @@ export class MatchSimulator {
   private eff(t: TeamState, o: OnPitch, key: AttributeKey): number {
     const isGkAttr = key === 'gkReflexes' || key === 'gkHandling' || key === 'gkPositioning';
     const fam = isGkAttr ? 1 : o.fam;
-    let v = o.p.attributes[key] * fam * this.fatigue(o) * t.chem.modifier;
+    let v = o.p.attributes[key] * o.scale * fam * this.fatigue(o) * t.chem.modifier;
     // Leader: limits the late-game drop when losing
     if (this.minute >= 70 && t.goals < this.teams[this.other(t.side)].goals && this.active(t).some((x) => x.p.traits.includes('leader'))) {
       v *= 1.01;
@@ -275,8 +284,13 @@ export class MatchSimulator {
     return f === 'left' ? 'right' : f === 'right' ? 'left' : 'center';
   }
 
-  private traitCount(t: TeamState, trait: string, groups?: PositionGroup[]): number {
-    return this.active(t).filter((o) => o.p.traits.includes(trait as never) && (!groups || groups.includes(this.group(o)))).length;
+  /** number of players on the pitch with a trait, optionally only in given slot groups */
+  private traitCount(t: TeamState, trait: TraitId, groups?: PositionGroup[]): number {
+    return this.active(t).filter((o) => o.p.traits.includes(trait) && (!groups || groups.includes(this.group(o)))).length;
+  }
+
+  private has(o: OnPitch | undefined, trait: TraitId): boolean {
+    return !!o && o.p.traits.includes(trait);
   }
 
   /** absolute pitch coordinates for the attacking side */
@@ -346,12 +360,14 @@ export class MatchSimulator {
     if (t.tactics.passing === 'short') v += 1.5;
     if (t.tactics.passing === 'direct') v -= 1;
     if (this.active(t).some((o) => o.p.role === 'keeper_libero')) v += 1.5;
+    v += Math.min(4, this.traitCount(t, 'press_resistant', ['DF', 'MF']) * 2);
     return v;
   }
 
   private press(t: TeamState): number {
     let v = this.unit(t, (o) => (this.group(o) === 'FW' ? 1 : this.group(o) === 'MF' ? 1 : 0), { acceleration: 0.25, sprintSpeed: 0.15, interception: 0.25, tackling: 0.2, stamina: 0.15 });
-    if (t.tactics.defense === 'high_press') v += 5 + Math.min(3, this.traitCount(t, 'pressing_machine')) * 1.3;
+    if (t.tactics.defense === 'high_press') v += 6;
+    v += Math.min(3, this.traitCount(t, 'ball_winner', ['DF', 'MF']));
     if (t.tactics.defense === 'low_block') v -= 6;
     if (t.tactics.pressIntensity === 'high') v += 2;
     if (t.tactics.pressIntensity === 'low') v -= 2;
@@ -362,6 +378,7 @@ export class MatchSimulator {
   private progression(t: TeamState): number {
     let v = this.unit(t, (o) => (this.group(o) === 'MF' ? 1 : this.group(o) === 'FW' ? 0.35 : 0.15), { shortPassing: 0.3, vision: 0.2, dribbling: 0.25, ballControl: 0.25 });
     v += Math.min(2, this.traitCount(t, 'playmaker', ['MF', 'FW'])) * 2;
+    v += Math.min(2, this.traitCount(t, 'press_resistant', ['DF', 'MF']));
     if (t.tactics.offense === 'possession') v += 2.5;
     if (t.tactics.tempo === 'fast') v -= 1;
     if (t.tactics.tempo === 'slow') v += 0.5;
@@ -372,6 +389,7 @@ export class MatchSimulator {
     let v = this.unit(t, (o) => (this.group(o) === 'MF' ? 1 : this.group(o) === 'DF' ? 0.35 : 0.1), { interception: 0.4, tackling: 0.35, strength: 0.25 });
     if (t.tactics.defense === 'low_block') v += 2.5;
     if (t.tactics.defense === 'high_press') v += 1;
+    v += Math.min(4, this.traitCount(t, 'ball_winner', ['DF', 'MF']) * 2);
     return v;
   }
 
@@ -416,11 +434,10 @@ export class MatchSimulator {
       },
       { tackling: 0.35, interception: 0.35, sprintSpeed: 0.15, strength: 0.15 },
     );
-    if (t.tactics.defense === 'low_block') v += 2.5;
+    if (t.tactics.defense === 'low_block') v += 1.5;
     if (t.tactics.defense === 'high_press') v -= 1;
     if (t.tactics.defensiveLine === 'deep') v += 2;
     if (t.tactics.defensiveLine === 'high') v -= 1;
-    v += Math.min(6, this.traitCount(t, 'wall', ['DF', 'MF']) * 3);
     if (t.lateChange === 'attack') v -= 2;
     return v;
   }
@@ -446,22 +463,20 @@ export class MatchSimulator {
   private aerialAttack(t: TeamState): number {
     const top = this.active(t)
       .filter((o) => o.slot.pos !== 'GK')
-      .map((o) => this.eff(t, o, 'jumping') * 0.5 + this.eff(t, o, 'strength') * 0.3 + this.eff(t, o, 'finishing') * 0.2 + (o.p.traits.includes('aerial_king') ? 8 : 0))
+      .map((o) => this.eff(t, o, 'jumping') * 0.5 + this.eff(t, o, 'strength') * 0.3 + this.eff(t, o, 'finishing') * 0.2 + (this.has(o, 'aerial_threat') ? 8 : 0))
       .sort((a, b) => b - a)
       .slice(0, 3);
-    const setPiece = this.active(t).some((o) => o.p.traits.includes('set_piece')) ? 3 : 0;
+    const setPiece = this.traitCount(t, 'cross_specialist') > 0 ? 3 : 0;
     return top.reduce((s, v) => s + v, 0) / Math.max(1, top.length) + setPiece;
   }
 
   private aerialDefense(t: TeamState): number {
     const top = this.active(t)
       .filter((o) => o.slot.pos !== 'GK')
-      .map((o) => this.eff(t, o, 'jumping') * 0.5 + this.eff(t, o, 'strength') * 0.4 + this.eff(t, o, 'interception') * 0.1 + (o.p.traits.includes('aerial_king') ? 8 : 0))
+      .map((o) => this.eff(t, o, 'jumping') * 0.5 + this.eff(t, o, 'strength') * 0.4 + this.eff(t, o, 'interception') * 0.1 + (this.has(o, 'aerial_threat') ? 8 : 0))
       .sort((a, b) => b - a)
       .slice(0, 3);
-    const gk = this.active(t).find((o) => o.slot.pos === 'GK');
-    const cmd = gk?.p.traits.includes('commanding') ? 6 : 0;
-    return top.reduce((s, v) => s + v, 0) / Math.max(1, top.length) + cmd;
+    return top.reduce((s, v) => s + v, 0) / Math.max(1, top.length);
   }
 
   private gkRating(t: TeamState): { rating: number; o: OnPitch | undefined } {
@@ -585,6 +600,7 @@ export class MatchSimulator {
         this.advance(side, 0.18);
         let a = this.paceAttack(att);
         if (att.tactics.offense === 'counter') a += 3;
+        a += Math.min(2, this.traitCount(att, 'counter_runner', ['FW', 'MF'])) * 5;
         const ok = this.contest(a, this.paceDefense(def), T.biasCounter);
         if (ok) {
           this.passes(side, this.rng.int(1, 3));
@@ -613,9 +629,9 @@ export class MatchSimulator {
         }
         const vsLowBlock = def.tactics.defense === 'low_block';
         const r = this.rng.next();
-        if (r < (vsLowBlock ? 0.16 : 0.13)) return { side, phase: 'corner' };
-        if (r < (vsLowBlock ? 0.25 : 0.22)) return this.foul(def, side, 'final');
-        if (r < (vsLowBlock ? 0.36 : 0.3)) return this.shot(att, def, 'long_shot', flank);
+        if (r < (vsLowBlock ? 0.14 : 0.11)) return { side, phase: 'corner' };
+        if (r < (vsLowBlock ? 0.22 : 0.19)) return this.foul(def, side, 'final');
+        if (r < (vsLowBlock ? 0.3 : 0.25)) return this.shot(att, def, 'long_shot', flank);
         if (att.tactics.offense === 'possession' && this.rng.chance(0.35)) {
           this.passes(side, this.rng.int(2, 4));
           this.advance(side, 0.2);
@@ -638,7 +654,7 @@ export class MatchSimulator {
       }
       case 'free_kick': {
         this.advance(side, 0.25);
-        const taker = this.bestBy(att, (o) => this.eff(att, o, 'shotAccuracy') * 0.5 + this.eff(att, o, 'shotPower') * 0.3 + (o.p.traits.includes('set_piece') ? 15 : 0) + (o.p.traits.includes('sniper') ? 8 : 0));
+        const taker = this.bestBy(att, (o) => this.eff(att, o, 'shotAccuracy') * 0.5 + this.eff(att, o, 'shotPower') * 0.3 + (this.has(o, 'long_shot') ? 12 : 0) + (this.has(o, 'cross_specialist') ? 6 : 0) - (o.slot.pos === 'GK' ? 100 : 0));
         if (this.rng.chance(0.45)) return this.shot(att, def, 'direct_fk', 'center', taker);
         const ok = this.contest(this.aerialAttack(att), this.aerialDefense(def), T.biasCorner + 0.1);
         if (ok) return this.shot(att, def, 'set_piece', 'center', undefined, taker);
@@ -657,13 +673,15 @@ export class MatchSimulator {
   }
 
   private chanceTypeFor(att: TeamState, flank: 'left' | 'center' | 'right'): ChanceType {
-    const aerial = this.active(att).some((o) => this.group(o) === 'FW' && (o.p.role === 'target_man' || o.p.traits.includes('aerial_king')));
+    const aerial = this.active(att).some((o) => this.group(o) === 'FW' && (o.p.role === 'target_man' || this.has(o, 'aerial_threat')));
     if (flank !== 'center') {
-      const crossP = (aerial ? 0.55 : 0.3) + (att.tactics.offense === 'long_ball' ? 0.15 : 0);
+      // Cross Specialist: only players in a wide slot on this flank
+      const crossers = this.active(att).filter((o) => this.has(o, 'cross_specialist') && this.flankOf(o) === flank).length;
+      const crossP = (aerial ? 0.55 : 0.3) + (att.tactics.offense === 'long_ball' ? 0.15 : 0) + Math.min(2, crossers) * 0.1;
       return this.rng.chance(crossP) ? 'cross' : 'cutback';
     }
-    const tricksters = this.traitCount(att, 'trickster', ['FW', 'MF']);
-    return this.rng.chance(0.3 + tricksters * 0.12) ? 'dribble' : 'through_ball';
+    const dribbling = this.unit(att, (o) => (this.group(o) === 'FW' || o.slot.pos === 'CAM' ? 1 : 0), { dribbling: 1 });
+    return this.rng.chance(0.3 + Math.max(0, dribbling - 70) * 0.01) ? 'dribble' : 'through_ball';
   }
 
   private bestBy(t: TeamState, f: (o: OnPitch) => number): OnPitch {
@@ -680,7 +698,9 @@ export class MatchSimulator {
   }
 
   private creditDefense(def: TeamState, groups: PositionGroup[]) {
-    const o = this.pickPlayer(def, (x) => (groups.includes(this.group(x)) ? x.p.attributes.tackling + x.p.attributes.interception : 1));
+    const o = this.pickPlayer(def, (x) =>
+      groups.includes(this.group(x)) ? (x.p.attributes.tackling + x.p.attributes.interception) * (this.has(x, 'ball_winner') && this.group(x) !== 'GK' ? 1.5 : 1) : 1,
+    );
     const st = this.stat(o);
     if (this.rng.chance(o.p.attributes.interception / (o.p.attributes.interception + o.p.attributes.tackling))) {
       st.interceptions++;
@@ -694,7 +714,8 @@ export class MatchSimulator {
 
   private turnover(winner: TeamState, zone: 'mid' | 'final'): { side: Side; phase: Phase } {
     const loser = this.teams[this.other(winner.side)];
-    const counterBase = winner.tactics.offense === 'counter' ? 0.32 : winner.tactics.offense === 'long_ball' ? 0.16 : 0.1;
+    const runners = Math.min(2, this.traitCount(winner, 'counter_runner', ['FW', 'MF']));
+    const counterBase = (winner.tactics.offense === 'counter' ? 0.24 : winner.tactics.offense === 'long_ball' ? 0.1 : 0.06) * (1 + runners * 0.08);
     // opponents committed forward leave more space
     const space = (loser.tactics.defensiveLine === 'high' ? 1.25 : loser.tactics.defensiveLine === 'deep' ? 0.8 : 1) * (loser.lateChange === 'attack' ? 1.3 : 1);
     const deep = winner.tactics.defense === 'low_block' ? 0.7 : winner.tactics.defense === 'high_press' ? 1.15 : 1; // distance to goal
@@ -709,11 +730,11 @@ export class MatchSimulator {
     const att = this.teams[attSide];
     const groups: PositionGroup[] = zone === 'final' ? ['DF', 'MF'] : zone === 'mid' ? ['MF'] : ['FW', 'MF'];
     const fouler = this.pickPlayer(def, (o) => (groups.includes(this.group(o)) ? 1 + o.p.attributes.tackling / 100 : 0.05));
-    const fouled = this.pickPlayer(att, (o) => (o.slot.pos === 'GK' ? 0 : 1 + (o.p.traits.includes('trickster') ? 1.5 : 0)));
+    const fouled = this.pickPlayer(att, (o) => (o.slot.pos === 'GK' ? 0 : 1 + o.p.attributes.dribbling / 100));
     def.stats.fouls++;
     const depth = zone === 'final' ? 80 : zone === 'mid' ? 50 : 25;
     this.addEvent('foul', attSide, this.rng.float(20, 80), depth, { playerId: fouler.p.id, otherId: fouled.p.id });
-    let yellowP = 0.26 + (def.tactics.pressIntensity === 'high' ? 0.04 : 0) + (fouled.p.traits.includes('trickster') ? 0.05 : 0);
+    let yellowP = 0.26 + (def.tactics.pressIntensity === 'high' ? 0.04 : 0);
     if (zone === 'final') yellowP += 0.05;
     if (this.rng.chance(0.004)) this.sendOff(def, fouler, false);
     else if (this.rng.chance(yellowP)) {
@@ -727,7 +748,7 @@ export class MatchSimulator {
     if (zone === 'final') {
       if (this.rng.chance(0.12)) {
         this.addEvent('penalty', attSide, 50, 89, { playerId: fouled.p.id });
-        const taker = this.bestBy(att, (o) => this.eff(att, o, 'finishing') * 0.5 + this.eff(att, o, 'shotAccuracy') * 0.5 + (o.p.traits.includes('set_piece') ? 5 : 0));
+        const taker = this.bestBy(att, (o) => this.eff(att, o, 'finishing') * 0.5 + this.eff(att, o, 'shotAccuracy') * 0.5 + (this.has(o, 'clinical_finisher') ? 5 : 0) - (o.slot.pos === 'GK' ? 100 : 0));
         return this.shot(att, def, 'penalty', 'center', taker);
       }
       this.addEvent('free_kick', attSide, 50, 75);
@@ -764,10 +785,9 @@ export class MatchSimulator {
       this.pickPlayer(att, (o) => {
         let w = POS_SHOOT_WEIGHT[o.slot.pos] ?? 0.2;
         if (chance === 'set_piece' && o.slot.pos === 'CB') w = 1.5;
-        if (header) w *= (o.p.attributes.jumping + o.p.attributes.strength) / 130 + (o.p.traits.includes('aerial_king') ? 1.2 : 0);
-        else if (longShot) w *= (o.p.attributes.shotPower + o.p.attributes.shotAccuracy) / 130 + (o.p.traits.includes('sniper') ? 1.2 : 0);
-        else w *= (o.p.attributes.finishing + o.p.attributes.positioning) / 130;
-        if (late && o.p.traits.includes('clutch')) w *= 1.6;
+        if (header) w *= (o.p.attributes.jumping + o.p.attributes.strength) / 130 + (this.has(o, 'aerial_threat') ? 1.2 : 0);
+        else if (longShot) w *= (o.p.attributes.shotPower + o.p.attributes.shotAccuracy) / 130 + (this.has(o, 'long_shot') ? 1.2 : 0);
+        else w *= (o.p.attributes.finishing + o.p.attributes.positioning) / 130 + (this.has(o, 'clinical_finisher') ? 0.2 : 0);
         if (flank !== 'center' && !header && this.flankOf(o) === flank) w *= 1.3;
         return Math.max(0.01, w);
       });
@@ -793,14 +813,14 @@ export class MatchSimulator {
       : longShot
         ? (this.eff(att, shooter, 'shotPower') + this.eff(att, shooter, 'shotAccuracy')) / 2
         : this.eff(att, shooter, 'finishing') * 0.75 + this.eff(att, shooter, 'positioning') * 0.25;
-    if (late && shooter.p.traits.includes('clutch')) finishing += 10;
     let q = T.baseXg[chance] * (1 + (finishing - 72) / 110);
     if (chance !== 'penalty') q *= 1 - (this.backline(def, this.mirror(flank)) - 70) / 260;
-    if (longShot && shooter.p.traits.includes('sniper')) q *= 1.5;
-    if (chance === 'direct_fk' && shooter.p.traits.includes('set_piece')) q *= 1.6;
-    if (header && shooter.p.traits.includes('aerial_king')) q *= 1.4;
-    if (assister?.p.traits.includes('playmaker')) q *= 1.15;
-    if (chance === 'set_piece' && this.active(att).some((o) => o.p.traits.includes('set_piece'))) q *= 1.1;
+    // trait conditions (spec 4-4): only the shooter / assister in a valid situation
+    if (longShot && this.has(shooter, 'long_shot')) q *= 1.5;
+    if (!longShot && !header && this.has(shooter, 'clinical_finisher')) q *= 1.15;
+    if (header && this.has(shooter, 'aerial_threat')) q *= 1.4;
+    if (this.has(assister, 'playmaker') && assister && this.group(assister) !== 'DF') q *= 1.15;
+    if (chance === 'cross' && this.has(assister, 'cross_specialist') && assister && this.flankOf(assister) !== 'center') q *= 1.2;
     q = clamp(q, 0.01, 0.85);
 
     att.stats.shots++;
@@ -821,10 +841,9 @@ export class MatchSimulator {
 
     const gk = this.gkRating(def);
     let gkr = gk.rating;
-    if (gk.o?.p.traits.includes('shot_stopper') && q >= 0.2) gkr += 6;
     const pGoal = clamp(q * (1 - (gkr - 72) / 130), 0.005, 0.92);
     const pSave = chance === 'penalty' ? 1 - pGoal - 0.06 : clamp(0.17 + (this.eff(att, shooter, 'shotAccuracy') - 70) / 220 + q * 0.25, 0.06, 0.45);
-    const pBlock = chance === 'penalty' || chance === 'direct_fk' ? 0 : 0.14 + Math.min(2, this.traitCount(def, 'wall', ['DF', 'MF'])) * 0.04;
+    const pBlock = chance === 'penalty' || chance === 'direct_fk' ? 0 : 0.14;
     const u = this.rng.next();
     const base = { playerId: shooter.p.id, chance, xg: Math.round(q * 100) / 100 };
 
@@ -862,7 +881,7 @@ export class MatchSimulator {
     }
     if (u < pGoal + pSave + pBlock) {
       this.addEvent('block', att.side, x, depth + 2, base);
-      const blocker = this.pickPlayer(def, (o) => (this.group(o) === 'DF' ? 2 + (o.p.traits.includes('wall') ? 2 : 0) : 0.3));
+      const blocker = this.pickPlayer(def, (o) => (this.group(o) === 'DF' ? 2 : 0.3));
       this.stat(blocker).ratingDelta += 0.15;
       if (this.rng.chance(0.45)) return { side: att.side, phase: 'corner' };
       return this.turnover(def, 'final');
@@ -876,7 +895,7 @@ export class MatchSimulator {
     const T = SIM_TUNING;
     for (const o of this.active(t)) {
       let d = T.staminaDrainPerSegment * (1.25 - o.p.attributes.stamina / 200) * (DRAIN_POS[o.slot.pos] ?? 1);
-      if (t.tactics.defense === 'high_press') d *= o.p.traits.includes('pressing_machine') ? 1.04 : 1.22;
+      if (t.tactics.defense === 'high_press') d *= 1.22;
       if (t.tactics.pressIntensity === 'high') d *= 1.1;
       if (t.tactics.pressIntensity === 'low') d *= 0.92;
       if (t.tactics.tempo === 'fast') d *= 1.08;
@@ -937,6 +956,7 @@ export class MatchSimulator {
         p: incoming,
         slot: o.slot,
         fam: positionFamiliarity(incoming.positions, o.slot.pos),
+        scale: ovrScale(incoming),
         stamina: 100,
         yellow: 0,
         off: false,

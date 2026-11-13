@@ -1,0 +1,301 @@
+﻿id,name,nationality_code,nationality,club_id,club_name,league_name,primary_position,positions,rarity,overall,PAC,SHO,PAS,DRI,DEF,PHY,traits,height_cm,age,card_asset
+FD-001,Dario Mendes,POR,Portugal,CL-04,Empire City,Empire League,CAM,CAM|CM,Common,51,67,65,75,71,29,46,Counter Runner|Engine,184,23,cards/FD-001.png
+FD-002,Silas Costa,MAR,Morocco,CL-02,Eclipse FC,Eclipse League,RW,RW|RM|ST,Common,59,79,69,63,76,29,52,Speedster|Long Shot,185,24,cards/FD-002.png
+FD-003,Noah Romero,NED,Netherlands,CL-02,Eclipse FC,Eclipse League,RB,RB|RWB,Common,56,67,33,59,57,62,63,Press Resistant|Engine,188,27,cards/FD-003.png
+FD-004,Axel Sato,KOR,South Korea,CL-04,Empire City,Empire League,LW,LW|LM|ST,Rare,68,84,72,63,88,40,56,Counter Runner|Engine,195,18,cards/FD-004.png
+FD-005,Noah Navarro,ENG,England,CL-06,Vortex Athletic,Vortex League,CM,CM|CDM|CAM,Common,46,47,45,51,55,47,49,Press Resistant|Playmaker,168,18,cards/FD-005.png
+FD-006,Marco Aoki,GER,Germany,CL-01,North United,North League,CB,CB|CDM,Rare,72,61,46,58,53,81,90,Engine|Ball Winner,190,24,cards/FD-006.png
+FD-007,Felix Romero,JPN,Japan,CL-09,Nova Borough,Orion League,CM,CM|CDM|CAM,Legendary,81,77,69,90,68,63,80,Clinical Finisher|Counter Runner|Ball Winner,187,18,cards/FD-007.png
+FD-008,Tomas Voss,ARG,Argentina,CL-05,Zenith FC,Zenith League,RM,RM|RW,Common,61,72,62,50,66,45,50,Aerial Threat|Sweeper Keeper,189,34,cards/FD-008.png
+FD-009,Theo Dubois,FRA,France,CL-09,Nova Borough,Orion League,RW,RW|RM|ST,Epic,85,99,89,77,98,46,63,Engine|Aerial Threat|Counter Runner,198,22,cards/FD-009.png
+FD-010,Elias Schneider,CRO,Croatia,CL-04,Empire City,Empire League,CB,CB|CDM,Rare,72,60,42,62,52,85,88,Speedster|Press Resistant,198,34,cards/FD-010.png
+FD-011,Dario Weber,MAR,Morocco,CL-07,Silvergate,North League,CB,CB|CDM,Common,59,50,26,46,41,69,68,Aerial Threat|Leader,194,19,cards/FD-011.png
+FD-012,Mateo Voss,USA,United States,CL-08,Asterion FC,Eclipse League,CM,CM|CDM|CAM,Rare,62,63,54,78,64,62,54,Aerial Threat|Leader,198,24,cards/FD-012.png
+FD-013,Victor Fischer,USA,United States,CL-09,Nova Borough,Orion League,CM,CM|CDM|CAM,Rare,75,73,69,79,78,67,67,Cross Specialist|Clinical Finisher,198,29,cards/FD-013.png
+FD-014,Nico Navarro,ENG,England,CL-01,North United,North League,LW,LW|LM|ST,Common,46,72,62,55,64,11,48,Long Shot|Playmaker,177,28,cards/FD-014.png
+FD-015,Rafael Alvarez,ITA,Italy,CL-08,Asterion FC,Eclipse League,CDM,CDM|CM,Legendary,87,72,70,92,76,92,84,Speedster|Ball Winner|Long Shot,195,35,cards/FD-015.png
+FD-016,Amir Petrov,JPN,Japan,CL-10,Crownside,Empire League,ST,ST|CF,Rare,65,74,81,55,66,21,83,Sweeper Keeper|Long Shot,169,22,cards/FD-016.png
+FD-017,Luca Yilmaz,ARG,Argentina,CL-09,Nova Borough,Orion League,GK,GK,Rare,72,29,11,56,31,35,76,Clinical Finisher|Long Shot,190,23,cards/FD-017.png
+FD-018,Axel Rossi,JPN,Japan,CL-02,Eclipse FC,Eclipse League,CM,CM|CDM|CAM,Common,61,60,55,61,69,50,61,Aerial Threat|Engine,185,24,cards/FD-018.png
+FD-019,Elian Alvarez,GER,Germany,CL-02,Eclipse FC,Eclipse League,CB,CB|CDM,Rare,65,63,26,60,48,77,81,Cross Specialist|Speedster,179,19,cards/FD-019.png
+FD-020,Mateo Mendes,KOR,South Korea,CL-10,Crownside,Empire League,RW,RW|RM|ST,Common,63,80,78,62,81,28,56,Aerial Threat|Engine,187,20,cards/FD-020.png
+FD-021,Adrian Yilmaz,NED,Netherlands,CL-09,Nova Borough,Orion League,CB,CB|CDM,Epic,76,67,47,53,62,82,81,Clinical Finisher|Speedster|Press Resistant,189,22,cards/FD-021.png
+FD-022,Leon Novak,ITA,Italy,CL-05,Zenith FC,Zenith League,ST,ST|CF,Common,52,69,73,34,64,17,63,Speedster|Sweeper Keeper,183,29,cards/FD-022.png
+FD-023,Kai Costa,BRA,Brazil,CL-05,Zenith FC,Zenith League,RB,RB|RWB,Epic,74,74,52,64,70,76,66,Leader|Cross Specialist|Long Shot,181,22,cards/FD-023.png
+FD-024,Luca Moretti,BRA,Brazil,CL-05,Zenith FC,Zenith League,CAM,CAM|CM,Rare,71,68,78,88,89,30,64,Clinical Finisher|Counter Runner,190,25,cards/FD-024.png
+FD-025,Bruno Mendes,SWE,Sweden,CL-03,Orion SC,Orion League,LB,LB|LWB,Rare,63,65,42,63,69,66,60,Counter Runner|Engine,183,28,cards/FD-025.png
+FD-026,Dante Berg,ARG,Argentina,CL-03,Orion SC,Orion League,CB,CB|CDM,Legendary,87,72,46,73,67,99,99,Playmaker|Cross Specialist|Press Resistant,182,23,cards/FD-026.png
+FD-027,Milan Alvarez,BRA,Brazil,CL-07,Silvergate,North League,RB,RB|RWB,Rare,73,80,47,70,72,75,70,Clinical Finisher|Press Resistant,173,27,cards/FD-027.png
+FD-028,Ruben Romero,JPN,Japan,CL-08,Asterion FC,Eclipse League,RB,RB|RWB,Common,48,68,31,55,48,50,60,Engine|Sweeper Keeper,197,34,cards/FD-028.png
+FD-029,Theo Rossi,MAR,Morocco,CL-09,Nova Borough,Orion League,CM,CM|CDM|CAM,Common,53,60,60,66,61,54,64,Engine|Speedster,185,34,cards/FD-029.png
+FD-030,Axel Petrov,ENG,England,CL-02,Eclipse FC,Eclipse League,CB,CB|CDM,Icon,88,66,42,70,71,97,94,Playmaker|Engine|Press Resistant,174,31,cards/FD-030.png
+FD-031,Enzo Novak,SWE,Sweden,CL-06,Vortex Athletic,Vortex League,CAM,CAM|CM,Epic,70,74,74,92,87,46,52,Cross Specialist|Engine|Playmaker,185,33,cards/FD-031.png
+FD-032,Noah Reyes,NED,Netherlands,CL-07,Silvergate,North League,LB,LB|LWB,Common,56,55,31,54,63,64,57,Engine|Sweeper Keeper,181,21,cards/FD-032.png
+FD-033,Silas Rossi,SWE,Sweden,CL-05,Zenith FC,Zenith League,RM,RM|RW,Common,45,60,46,56,54,28,44,Engine|Aerial Threat,194,28,cards/FD-033.png
+FD-034,Dario Fischer,ESP,Spain,CL-06,Vortex Athletic,Vortex League,CM,CM|CDM|CAM,Legendary,90,88,74,94,78,73,81,Counter Runner|Press Resistant|Playmaker,177,25,cards/FD-034.png
+FD-035,Soren Romero,USA,United States,CL-06,Vortex Athletic,Vortex League,CDM,CDM|CM,Common,50,47,43,56,43,64,68,Sweeper Keeper|Leader,189,33,cards/FD-035.png
+FD-036,Noah Dubois,NED,Netherlands,CL-07,Silvergate,North League,CAM,CAM|CM,Common,53,61,60,67,70,32,52,Sweeper Keeper|Clinical Finisher,196,21,cards/FD-036.png
+FD-037,Felix Mendes,USA,United States,CL-08,Asterion FC,Eclipse League,CM,CM|CDM|CAM,Rare,70,56,62,84,77,64,69,Cross Specialist|Engine,195,31,cards/FD-037.png
+FD-038,Enzo Reyes,MAR,Morocco,CL-04,Empire City,Empire League,RW,RW|RM|ST,Common,57,84,73,64,79,27,51,Long Shot|Cross Specialist,181,18,cards/FD-038.png
+FD-039,Soren Petrov,ARG,Argentina,CL-03,Orion SC,Orion League,CB,CB|CDM,Common,54,45,28,46,36,69,70,Playmaker|Engine,179,21,cards/FD-039.png
+FD-040,Noah Marin,NED,Netherlands,CL-05,Zenith FC,Zenith League,CM,CM|CDM|CAM,Rare,65,71,65,74,62,65,69,Aerial Threat|Cross Specialist,197,26,cards/FD-040.png
+FD-041,Victor Novak,ESP,Spain,CL-02,Eclipse FC,Eclipse League,RW,RW|RM|ST,Common,56,76,56,59,69,22,41,Sweeper Keeper|Clinical Finisher,198,31,cards/FD-041.png
+FD-042,Luca Bianchi,ITA,Italy,CL-02,Eclipse FC,Eclipse League,CM,CM|CDM|CAM,Common,47,47,43,64,55,49,58,Aerial Threat|Counter Runner,176,34,cards/FD-042.png
+FD-043,Hugo Romero,ESP,Spain,CL-07,Silvergate,North League,CF,CF|ST|CAM,Rare,75,76,89,66,82,38,69,Engine|Cross Specialist,183,34,cards/FD-043.png
+FD-044,Felix Voss,CRO,Croatia,CL-10,Crownside,Empire League,CAM,CAM|CM,Common,53,65,62,71,68,22,49,Counter Runner|Aerial Threat,174,33,cards/FD-044.png
+FD-045,Elian Yilmaz,MAR,Morocco,CL-08,Asterion FC,Eclipse League,RW,RW|RM|ST,Rare,62,78,65,69,83,27,56,Engine|Playmaker,189,32,cards/FD-045.png
+FD-046,Elias Weber,KOR,South Korea,CL-01,North United,North League,CM,CM|CDM|CAM,Epic,70,73,53,76,72,69,68,Ball Winner|Long Shot|Playmaker,183,34,cards/FD-046.png
+FD-047,Hugo Marin,BRA,Brazil,CL-01,North United,North League,LW,LW|LM|ST,Common,58,85,73,64,82,26,47,Speedster|Clinical Finisher,170,25,cards/FD-047.png
+FD-048,Dario Navarro,ENG,England,CL-06,Vortex Athletic,Vortex League,CM,CM|CDM|CAM,Common,53,62,51,68,62,57,48,Leader|Press Resistant,176,22,cards/FD-048.png
+FD-049,Tomas Weber,KOR,South Korea,CL-04,Empire City,Empire League,CM,CM|CDM|CAM,Common,45,46,51,56,60,43,52,Counter Runner|Engine,172,19,cards/FD-049.png
+FD-050,Nico Fischer,CRO,Croatia,CL-05,Zenith FC,Zenith League,CM,CM|CDM|CAM,Common,58,61,52,73,73,57,54,Leader|Speedster,180,19,cards/FD-050.png
+FD-051,Elias Rossi,GER,Germany,CL-08,Asterion FC,Eclipse League,RW,RW|RM|ST,Common,58,85,61,61,77,28,52,Aerial Threat|Speedster,187,32,cards/FD-051.png
+FD-052,Mateo Schneider,ITA,Italy,CL-03,Orion SC,Orion League,CAM,CAM|CM,Common,63,66,76,81,73,28,51,Speedster|Sweeper Keeper,193,28,cards/FD-052.png
+FD-053,Felix Ferreira,SWE,Sweden,CL-09,Nova Borough,Orion League,CM,CM|CDM|CAM,Rare,75,71,69,88,69,67,79,Aerial Threat|Playmaker,179,29,cards/FD-053.png
+FD-054,Noah Sato,MAR,Morocco,CL-06,Vortex Athletic,Vortex League,CM,CM|CDM|CAM,Common,56,64,56,62,65,53,56,Clinical Finisher|Speedster,183,19,cards/FD-054.png
+FD-055,Amir Santos,POR,Portugal,CL-01,North United,North League,LB,LB|LWB,Rare,69,72,46,67,57,73,68,Aerial Threat|Press Resistant,178,20,cards/FD-055.png
+FD-056,Ruben Costa,FRA,France,CL-05,Zenith FC,Zenith League,CDM,CDM|CM,Rare,67,61,50,61,53,91,70,Leader|Aerial Threat,193,25,cards/FD-056.png
+FD-057,Hugo Ferreira,ENG,England,CL-05,Zenith FC,Zenith League,CB,CB|CDM,Epic,72,69,33,54,49,83,80,Aerial Threat|Sweeper Keeper|Engine,190,31,cards/FD-057.png
+FD-058,Marco Nakamura,FRA,France,CL-02,Eclipse FC,Eclipse League,ST,ST|CF,Common,49,58,63,45,63,11,51,Clinical Finisher|Ball Winner,188,28,cards/FD-058.png
+FD-059,Kai Romero,MAR,Morocco,CL-08,Asterion FC,Eclipse League,CM,CM|CDM|CAM,Epic,83,79,74,93,92,77,78,Press Resistant|Clinical Finisher|Counter Runner,196,20,cards/FD-059.png
+FD-060,Ruben Schneider,FRA,France,CL-10,Crownside,Empire League,CM,CM|CDM|CAM,Common,64,66,64,75,70,61,68,Counter Runner|Sweeper Keeper,175,26,cards/FD-060.png
+FD-061,Mateo Fischer,NED,Netherlands,CL-08,Asterion FC,Eclipse League,LW,LW|LM|ST,Epic,82,96,91,75,90,48,71,Leader|Playmaker|Cross Specialist,195,26,cards/FD-061.png
+FD-062,Amir Yilmaz,FRA,France,CL-08,Asterion FC,Eclipse League,CB,CB|CDM,Common,49,39,19,38,31,67,72,Press Resistant|Aerial Threat,169,34,cards/FD-062.png
+FD-063,Axel Fischer,ARG,Argentina,CL-07,Silvergate,North League,CM,CM|CDM|CAM,Icon,88,85,76,86,95,80,85,Clinical Finisher|Aerial Threat|Press Resistant,184,33,cards/FD-063.png
+FD-064,Iker Romero,MAR,Morocco,CL-02,Eclipse FC,Eclipse League,CM,CM|CDM|CAM,Legendary,84,71,67,91,75,79,75,Aerial Threat|Clinical Finisher|Press Resistant,177,26,cards/FD-064.png
+FD-065,Adrian Costa,SWE,Sweden,CL-04,Empire City,Empire League,LM,LM|LW,Rare,70,83,66,66,88,47,60,Engine|Leader,170,25,cards/FD-065.png
+FD-066,Tomas Lind,KOR,South Korea,CL-04,Empire City,Empire League,GK,GK,Common,52,9,7,47,13,31,64,Clinical Finisher|Aerial Threat,185,30,cards/FD-066.png
+FD-067,Iker Alvarez,SWE,Sweden,CL-04,Empire City,Empire League,RM,RM|RW,Rare,68,74,60,75,79,48,57,Counter Runner|Press Resistant,191,26,cards/FD-067.png
+FD-068,Marco Voss,BRA,Brazil,CL-08,Asterion FC,Eclipse League,CM,CM|CDM|CAM,Epic,78,76,65,88,86,66,78,Engine|Leader|Speedster,183,27,cards/FD-068.png
+FD-069,Felix Petrov,ESP,Spain,CL-08,Asterion FC,Eclipse League,CB,CB|CDM,Legendary,87,66,43,65,76,99,98,Sweeper Keeper|Counter Runner|Engine,198,34,cards/FD-069.png
+FD-070,Axel Vale,USA,United States,CL-09,Nova Borough,Orion League,RM,RM|RW,Common,54,68,59,58,66,45,53,Playmaker|Sweeper Keeper,189,35,cards/FD-070.png
+FD-071,Marco Weber,ESP,Spain,CL-05,Zenith FC,Zenith League,CM,CM|CDM|CAM,Common,45,51,54,59,58,52,43,Engine|Leader,168,35,cards/FD-071.png
+FD-072,Soren Voss,KOR,South Korea,CL-07,Silvergate,North League,CDM,CDM|CM,Icon,98,94,80,91,93,99,98,Clinical Finisher|Cross Specialist|Counter Runner,173,31,cards/FD-072.png
+FD-073,Enzo Sato,ESP,Spain,CL-04,Empire City,Empire League,CM,CM|CDM|CAM,Rare,73,68,59,69,70,63,64,Long Shot|Sweeper Keeper,177,25,cards/FD-073.png
+FD-074,Soren Keller,KOR,South Korea,CL-05,Zenith FC,Zenith League,RW,RW|RM|ST,Epic,79,89,90,73,97,44,63,Cross Specialist|Press Resistant|Long Shot,179,32,cards/FD-074.png
+FD-075,Kai Fischer,MAR,Morocco,CL-06,Vortex Athletic,Vortex League,CB,CB|CDM,Common,58,51,25,51,41,72,79,Press Resistant|Leader,171,28,cards/FD-075.png
+FD-076,Dante Weber,NED,Netherlands,CL-08,Asterion FC,Eclipse League,CAM,CAM|CM,Rare,74,74,73,84,89,36,65,Clinical Finisher|Engine,189,19,cards/FD-076.png
+FD-077,Hugo Aoki,SWE,Sweden,CL-07,Silvergate,North League,CB,CB|CDM,Rare,61,57,24,47,47,75,64,Clinical Finisher|Counter Runner,194,22,cards/FD-077.png
+FD-078,Milan Keller,CRO,Croatia,CL-09,Nova Borough,Orion League,CF,CF|ST|CAM,Common,62,77,74,65,68,25,62,Counter Runner|Clinical Finisher,187,24,cards/FD-078.png
+FD-079,Leon Navarro,GER,Germany,CL-02,Eclipse FC,Eclipse League,CM,CM|CDM|CAM,Common,48,57,45,53,60,49,56,Press Resistant|Clinical Finisher,191,35,cards/FD-079.png
+FD-080,Dante Rossi,ITA,Italy,CL-06,Vortex Athletic,Vortex League,LW,LW|LM|ST,Common,56,77,69,62,78,26,46,Aerial Threat|Press Resistant,197,34,cards/FD-080.png
+FD-081,Dante Moretti,CRO,Croatia,CL-09,Nova Borough,Orion League,LW,LW|LM|ST,Rare,75,93,81,72,88,48,71,Aerial Threat|Playmaker,193,22,cards/FD-081.png
+FD-082,Milan Sato,ENG,England,CL-09,Nova Borough,Orion League,RB,RB|RWB,Epic,84,84,64,80,74,85,76,Playmaker|Aerial Threat|Ball Winner,196,30,cards/FD-082.png
+FD-083,Bruno Schneider,ARG,Argentina,CL-04,Empire City,Empire League,CB,CB|CDM,Rare,66,53,33,60,51,82,80,Sweeper Keeper|Long Shot,184,21,cards/FD-083.png
+FD-084,Luca Keller,SWE,Sweden,CL-03,Orion SC,Orion League,LW,LW|LM|ST,Epic,71,89,85,80,90,33,69,Speedster|Engine|Press Resistant,181,24,cards/FD-084.png
+FD-085,Silas Novak,JPN,Japan,CL-09,Nova Borough,Orion League,CB,CB|CDM,Epic,76,69,42,60,52,87,84,Leader|Counter Runner|Engine,197,33,cards/FD-085.png
+FD-086,Mateo Kovac,ITA,Italy,CL-07,Silvergate,North League,ST,ST|CF,Common,52,61,74,47,55,18,70,Leader|Engine,197,28,cards/FD-086.png
+FD-087,Luca Reyes,KOR,South Korea,CL-03,Orion SC,Orion League,RB,RB|RWB,Epic,75,77,56,71,71,77,62,Sweeper Keeper|Long Shot|Playmaker,181,23,cards/FD-087.png
+FD-088,Axel Kovac,CRO,Croatia,CL-08,Asterion FC,Eclipse League,CM,CM|CDM|CAM,Legendary,92,81,74,93,85,79,83,Cross Specialist|Aerial Threat|Clinical Finisher,179,30,cards/FD-088.png
+FD-089,Luca Romero,ENG,England,CL-08,Asterion FC,Eclipse League,CB,CB|CDM,Rare,62,52,26,58,55,78,71,Leader|Cross Specialist,192,20,cards/FD-089.png
+FD-090,Luca Fischer,ESP,Spain,CL-05,Zenith FC,Zenith League,CM,CM|CDM|CAM,Epic,76,76,72,84,75,60,70,Leader|Sweeper Keeper|Ball Winner,173,18,cards/FD-090.png
+FD-091,Orion Weber,GER,Germany,CL-01,North United,North League,CDM,CDM|CM,Rare,63,62,50,67,63,81,72,Engine|Clinical Finisher,181,30,cards/FD-091.png
+FD-092,Felix Lind,MAR,Morocco,CL-04,Empire City,Empire League,CDM,CDM|CM,Epic,71,78,52,67,73,87,78,Engine|Leader|Speedster,174,19,cards/FD-092.png
+FD-093,Victor Costa,ENG,England,CL-09,Nova Borough,Orion League,RW,RW|RM|ST,Common,46,65,58,58,74,18,39,Press Resistant|Engine,193,30,cards/FD-093.png
+FD-094,Elian Marin,KOR,South Korea,CL-06,Vortex Athletic,Vortex League,RW,RW|RM|ST,Common,51,74,59,56,74,19,43,Sweeper Keeper|Press Resistant,177,23,cards/FD-094.png
+FD-095,Hugo Voss,ENG,England,CL-02,Eclipse FC,Eclipse League,RW,RW|RM|ST,Epic,70,85,76,62,93,32,59,Long Shot|Sweeper Keeper|Ball Winner,183,25,cards/FD-095.png
+FD-096,Bruno Silva,ESP,Spain,CL-07,Silvergate,North League,RB,RB|RWB,Icon,98,95,75,82,85,92,92,Leader|Aerial Threat|Speedster,191,34,cards/FD-096.png
+FD-097,Noah Berg,FRA,France,CL-10,Crownside,Empire League,GK,GK,Common,47,3,4,34,21,10,60,Playmaker|Counter Runner,180,28,cards/FD-097.png
+FD-098,Axel Novak,BRA,Brazil,CL-09,Nova Borough,Orion League,CF,CF|ST|CAM,Common,61,64,80,71,77,36,68,Sweeper Keeper|Counter Runner,191,31,cards/FD-098.png
+FD-099,Dante Fischer,BRA,Brazil,CL-08,Asterion FC,Eclipse League,CB,CB|CDM,Common,45,44,14,50,30,68,64,Cross Specialist|Long Shot,170,29,cards/FD-099.png
+FD-100,Iker Lind,GER,Germany,CL-03,Orion SC,Orion League,CF,CF|ST|CAM,Legendary,91,92,99,80,92,37,78,Cross Specialist|Clinical Finisher|Leader,182,22,cards/FD-100.png
+FD-101,Mateo Dubois,USA,United States,CL-05,Zenith FC,Zenith League,CM,CM|CDM|CAM,Common,62,71,50,76,61,57,55,Aerial Threat|Ball Winner,176,28,cards/FD-101.png
+FD-102,Elias Moretti,GER,Germany,CL-07,Silvergate,North League,CF,CF|ST|CAM,Common,53,68,69,59,63,25,59,Engine|Leader,190,30,cards/FD-102.png
+FD-103,Adrian Ferreira,MAR,Morocco,CL-06,Vortex Athletic,Vortex League,CDM,CDM|CM,Common,65,64,50,69,61,64,68,Press Resistant|Engine,186,30,cards/FD-103.png
+FD-104,Kai Petrov,JPN,Japan,CL-10,Crownside,Empire League,CAM,CAM|CM,Rare,66,75,69,83,75,42,48,Press Resistant|Cross Specialist,198,22,cards/FD-104.png
+FD-105,Hugo Vale,ENG,England,CL-04,Empire City,Empire League,CDM,CDM|CM,Rare,64,54,47,71,59,69,73,Ball Winner|Leader,174,34,cards/FD-105.png
+FD-106,Dante Schneider,KOR,South Korea,CL-01,North United,North League,ST,ST|CF,Common,57,73,77,43,60,19,71,Sweeper Keeper|Engine,191,23,cards/FD-106.png
+FD-107,Mateo Marin,CRO,Croatia,CL-06,Vortex Athletic,Vortex League,CB,CB|CDM,Rare,67,61,49,54,52,86,81,Ball Winner|Speedster,188,25,cards/FD-107.png
+FD-108,Ruben Silva,KOR,South Korea,CL-10,Crownside,Empire League,LM,LM|LW,Icon,89,88,77,81,93,64,68,Press Resistant|Counter Runner|Clinical Finisher,173,31,cards/FD-108.png
+FD-109,Bruno Keller,POR,Portugal,CL-07,Silvergate,North League,CDM,CDM|CM,Common,46,51,36,59,51,52,55,Clinical Finisher|Ball Winner,174,29,cards/FD-109.png
+FD-110,Ruben Nakamura,CRO,Croatia,CL-08,Asterion FC,Eclipse League,CF,CF|ST|CAM,Epic,80,83,94,80,81,41,78,Counter Runner|Speedster|Press Resistant,193,34,cards/FD-110.png
+FD-111,Ruben Reyes,ESP,Spain,CL-07,Silvergate,North League,GK,GK,Rare,70,17,23,50,29,30,75,Engine|Long Shot,178,26,cards/FD-111.png
+FD-112,Rafael Navarro,SWE,Sweden,CL-07,Silvergate,North League,CM,CM|CDM|CAM,Rare,64,69,53,67,66,65,73,Ball Winner|Engine,197,24,cards/FD-112.png
+FD-113,Milan Reyes,GER,Germany,CL-02,Eclipse FC,Eclipse League,CM,CM|CDM|CAM,Rare,63,57,54,78,66,55,65,Counter Runner|Playmaker,176,26,cards/FD-113.png
+FD-114,Bruno Lind,MAR,Morocco,CL-07,Silvergate,North League,LB,LB|LWB,Common,46,45,32,47,56,61,48,Sweeper Keeper|Long Shot,171,29,cards/FD-114.png
+FD-115,Marco Dubois,JPN,Japan,CL-02,Eclipse FC,Eclipse League,CDM,CDM|CM,Common,49,43,40,55,50,72,66,Engine|Press Resistant,182,19,cards/FD-115.png
+FD-116,Julian Novak,MAR,Morocco,CL-07,Silvergate,North League,ST,ST|CF,Epic,77,73,87,66,80,35,84,Press Resistant|Ball Winner|Speedster,176,28,cards/FD-116.png
+FD-117,Noah Bianchi,CRO,Croatia,CL-06,Vortex Athletic,Vortex League,CM,CM|CDM|CAM,Common,49,44,52,62,61,60,43,Clinical Finisher|Long Shot,168,24,cards/FD-117.png
+FD-118,Felix Santos,SWE,Sweden,CL-09,Nova Borough,Orion League,RB,RB|RWB,Rare,63,79,37,62,62,68,67,Clinical Finisher|Sweeper Keeper,172,32,cards/FD-118.png
+FD-119,Julian Weber,GER,Germany,CL-09,Nova Borough,Orion League,CDM,CDM|CM,Rare,75,66,64,81,72,81,79,Counter Runner|Ball Winner,178,25,cards/FD-119.png
+FD-120,Noah Moretti,POR,Portugal,CL-10,Crownside,Empire League,LB,LB|LWB,Common,52,59,33,41,56,60,63,Cross Specialist|Speedster,178,19,cards/FD-120.png
+FD-121,Mateo Rossi,ESP,Spain,CL-02,Eclipse FC,Eclipse League,LW,LW|LM|ST,Rare,66,96,71,58,78,44,55,Press Resistant|Sweeper Keeper,176,29,cards/FD-121.png
+FD-122,Kai Reyes,MAR,Morocco,CL-05,Zenith FC,Zenith League,ST,ST|CF,Rare,72,84,96,59,72,28,83,Clinical Finisher|Cross Specialist,185,27,cards/FD-122.png
+FD-123,Noah Silva,BRA,Brazil,CL-02,Eclipse FC,Eclipse League,CAM,CAM|CM,Common,54,63,57,70,79,33,41,Counter Runner|Engine,174,22,cards/FD-123.png
+FD-124,Julian Moretti,CRO,Croatia,CL-04,Empire City,Empire League,CB,CB|CDM,Rare,75,59,36,55,51,81,83,Sweeper Keeper|Press Resistant,194,26,cards/FD-124.png
+FD-125,Dante Marin,BRA,Brazil,CL-04,Empire City,Empire League,GK,GK,Common,48,8,1,41,20,23,54,Aerial Threat|Cross Specialist,186,20,cards/FD-125.png
+FD-126,Victor Aoki,ITA,Italy,CL-08,Asterion FC,Eclipse League,RW,RW|RM|ST,Common,47,72,47,57,76,25,42,Cross Specialist|Ball Winner,198,21,cards/FD-126.png
+FD-127,Elias Voss,SWE,Sweden,CL-01,North United,North League,RM,RM|RW,Common,59,61,62,69,69,41,54,Clinical Finisher|Counter Runner,168,27,cards/FD-127.png
+FD-128,Elias Marin,MAR,Morocco,CL-07,Silvergate,North League,ST,ST|CF,Common,65,77,83,56,61,29,79,Counter Runner|Cross Specialist,174,34,cards/FD-128.png
+FD-129,Elian Schneider,ARG,Argentina,CL-05,Zenith FC,Zenith League,ST,ST|CF,Common,51,64,73,40,60,21,65,Engine|Clinical Finisher,177,33,cards/FD-129.png
+FD-130,Leon Lind,FRA,France,CL-02,Eclipse FC,Eclipse League,CM,CM|CDM|CAM,Common,57,52,57,72,69,57,56,Long Shot|Leader,172,35,cards/FD-130.png
+FD-131,Amir Schneider,ESP,Spain,CL-10,Crownside,Empire League,LM,LM|LW,Epic,78,83,77,84,82,56,66,Ball Winner|Playmaker|Long Shot,172,21,cards/FD-131.png
+FD-132,Elian Costa,USA,United States,CL-07,Silvergate,North League,LM,LM|LW,Rare,69,80,59,76,78,47,56,Clinical Finisher|Engine,176,18,cards/FD-132.png
+FD-133,Tomas Bianchi,ITA,Italy,CL-09,Nova Borough,Orion League,CM,CM|CDM|CAM,Legendary,86,76,75,87,95,73,74,Sweeper Keeper|Leader|Long Shot,183,21,cards/FD-133.png
+FD-134,Adrian Petrov,SWE,Sweden,CL-04,Empire City,Empire League,LW,LW|LM|ST,Epic,83,99,94,75,89,50,66,Ball Winner|Cross Specialist|Speedster,170,34,cards/FD-134.png
+FD-135,Elian Navarro,BRA,Brazil,CL-09,Nova Borough,Orion League,LW,LW|LM|ST,Rare,63,85,68,59,78,28,53,Press Resistant|Speedster,187,30,cards/FD-135.png
+FD-136,Luca Schneider,JPN,Japan,CL-02,Eclipse FC,Eclipse League,LM,LM|LW,Legendary,81,87,67,89,89,53,75,Sweeper Keeper|Counter Runner|Leader,176,27,cards/FD-136.png
+FD-137,Marco Reyes,POR,Portugal,CL-07,Silvergate,North League,CB,CB|CDM,Common,50,57,18,44,35,55,72,Sweeper Keeper|Press Resistant,195,35,cards/FD-137.png
+FD-138,Amir Rossi,NED,Netherlands,CL-08,Asterion FC,Eclipse League,ST,ST|CF,Common,60,67,69,49,69,20,75,Aerial Threat|Sweeper Keeper,170,28,cards/FD-138.png
+FD-139,Dante Nakamura,FRA,France,CL-07,Silvergate,North League,CAM,CAM|CM,Legendary,90,87,90,99,96,52,71,Ball Winner|Long Shot|Speedster,182,31,cards/FD-139.png
+FD-140,Axel Weber,MAR,Morocco,CL-06,Vortex Athletic,Vortex League,LB,LB|LWB,Rare,61,67,43,68,63,59,67,Counter Runner|Long Shot,192,34,cards/FD-140.png
+FD-141,Milan Rossi,MAR,Morocco,CL-03,Orion SC,Orion League,RB,RB|RWB,Epic,76,80,46,68,79,75,71,Cross Specialist|Speedster|Press Resistant,188,23,cards/FD-141.png
+FD-142,Soren Rossi,POR,Portugal,CL-10,Crownside,Empire League,CM,CM|CDM|CAM,Epic,72,70,63,79,72,60,73,Engine|Sweeper Keeper|Counter Runner,187,19,cards/FD-142.png
+FD-143,Soren Costa,USA,United States,CL-08,Asterion FC,Eclipse League,CDM,CDM|CM,Common,50,46,36,54,52,69,68,Cross Specialist|Counter Runner,171,24,cards/FD-143.png
+FD-144,Amir Sato,BRA,Brazil,CL-03,Orion SC,Orion League,RB,RB|RWB,Rare,72,82,52,74,63,84,67,Clinical Finisher|Aerial Threat,194,35,cards/FD-144.png
+FD-145,Axel Berg,ENG,England,CL-08,Asterion FC,Eclipse League,RM,RM|RW,Epic,83,83,75,78,86,61,66,Sweeper Keeper|Playmaker|Leader,192,26,cards/FD-145.png
+FD-146,Nico Silva,ARG,Argentina,CL-09,Nova Borough,Orion League,LB,LB|LWB,Epic,85,83,67,80,78,84,85,Press Resistant|Aerial Threat|Cross Specialist,189,32,cards/FD-146.png
+FD-147,Adrian Bianchi,JPN,Japan,CL-10,Crownside,Empire League,GK,GK,Common,57,14,8,46,28,21,61,Sweeper Keeper|Leader,191,23,cards/FD-147.png
+FD-148,Dario Ferreira,POR,Portugal,CL-03,Orion SC,Orion League,LB,LB|LWB,Rare,65,71,34,59,60,70,63,Long Shot|Counter Runner,194,30,cards/FD-148.png
+FD-149,Kai Weber,CRO,Croatia,CL-08,Asterion FC,Eclipse League,GK,GK,Legendary,89,30,31,64,44,51,91,Engine|Long Shot|Cross Specialist,174,28,cards/FD-149.png
+FD-150,Julian Santos,MAR,Morocco,CL-03,Orion SC,Orion League,CF,CF|ST|CAM,Common,51,62,66,55,71,25,44,Engine|Playmaker,170,27,cards/FD-150.png
+FD-151,Dante Aoki,NED,Netherlands,CL-10,Crownside,Empire League,CB,CB|CDM,Common,61,51,25,44,48,76,70,Sweeper Keeper|Long Shot,190,30,cards/FD-151.png
+FD-152,Soren Sato,BRA,Brazil,CL-07,Silvergate,North League,CB,CB|CDM,Epic,83,64,48,66,56,90,87,Ball Winner|Long Shot|Counter Runner,184,31,cards/FD-152.png
+FD-153,Elian Novak,KOR,South Korea,CL-07,Silvergate,North League,CDM,CDM|CM,Common,57,45,48,63,44,71,70,Cross Specialist|Leader,182,30,cards/FD-153.png
+FD-154,Nico Nakamura,SWE,Sweden,CL-05,Zenith FC,Zenith League,CAM,CAM|CM,Common,52,54,65,72,72,35,45,Cross Specialist|Ball Winner,180,35,cards/FD-154.png
+FD-155,Nico Schneider,KOR,South Korea,CL-08,Asterion FC,Eclipse League,ST,ST|CF,Epic,73,87,88,56,82,29,79,Long Shot|Leader|Engine,184,29,cards/FD-155.png
+FD-156,Julian Navarro,ENG,England,CL-01,North United,North League,CM,CM|CDM|CAM,Epic,81,78,68,92,78,71,79,Clinical Finisher|Cross Specialist|Engine,168,30,cards/FD-156.png
+FD-157,Felix Alvarez,BRA,Brazil,CL-04,Empire City,Empire League,ST,ST|CF,Rare,75,78,94,55,74,29,76,Long Shot|Press Resistant,169,28,cards/FD-157.png
+FD-158,Elian Kovac,ENG,England,CL-03,Orion SC,Orion League,RM,RM|RW,Common,62,70,52,63,69,44,57,Counter Runner|Long Shot,181,32,cards/FD-158.png
+FD-159,Leon Keller,ENG,England,CL-01,North United,North League,CAM,CAM|CM,Common,58,60,70,81,83,35,55,Speedster|Counter Runner,185,27,cards/FD-159.png
+FD-160,Milan Berg,ESP,Spain,CL-09,Nova Borough,Orion League,RB,RB|RWB,Common,65,81,42,63,59,72,63,Sweeper Keeper|Ball Winner,172,25,cards/FD-160.png
+FD-161,Leon Weber,CRO,Croatia,CL-01,North United,North League,ST,ST|CF,Legendary,80,73,87,59,83,42,97,Sweeper Keeper|Speedster|Ball Winner,174,30,cards/FD-161.png
+FD-162,Hugo Kovac,FRA,France,CL-10,Crownside,Empire League,GK,GK,Rare,63,14,9,50,17,22,63,Ball Winner|Leader,181,31,cards/FD-162.png
+FD-163,Axel Dubois,ESP,Spain,CL-10,Crownside,Empire League,RW,RW|RM|ST,Epic,82,96,87,81,97,41,71,Counter Runner|Aerial Threat|Ball Winner,170,30,cards/FD-163.png
+FD-164,Elian Nakamura,POR,Portugal,CL-10,Crownside,Empire League,LW,LW|LM|ST,Common,49,67,60,53,75,25,47,Press Resistant|Speedster,180,34,cards/FD-164.png
+FD-165,Milan Santos,MAR,Morocco,CL-07,Silvergate,North League,GK,GK,Epic,83,39,25,62,48,49,82,Cross Specialist|Engine|Counter Runner,170,34,cards/FD-165.png
+FD-166,Victor Berg,ENG,England,CL-09,Nova Borough,Orion League,ST,ST|CF,Epic,70,79,96,48,65,29,76,Counter Runner|Sweeper Keeper|Ball Winner,168,26,cards/FD-166.png
+FD-167,Bruno Ferreira,ITA,Italy,CL-09,Nova Borough,Orion League,CDM,CDM|CM,Common,54,49,44,67,55,64,74,Leader|Clinical Finisher,198,31,cards/FD-167.png
+FD-168,Adrian Alvarez,NED,Netherlands,CL-06,Vortex Athletic,Vortex League,CAM,CAM|CM,Rare,70,72,63,79,86,43,62,Ball Winner|Press Resistant,186,33,cards/FD-168.png
+FD-169,Elias Mendes,ESP,Spain,CL-09,Nova Borough,Orion League,LW,LW|LM|ST,Rare,75,86,81,72,97,41,57,Engine|Long Shot,196,26,cards/FD-169.png
+FD-170,Noah Ferreira,NED,Netherlands,CL-04,Empire City,Empire League,CB,CB|CDM,Rare,64,58,33,54,48,71,83,Speedster|Counter Runner,190,29,cards/FD-170.png
+FD-171,Rafael Yilmaz,NED,Netherlands,CL-02,Eclipse FC,Eclipse League,LB,LB|LWB,Epic,74,78,51,76,79,77,77,Sweeper Keeper|Leader|Clinical Finisher,193,30,cards/FD-171.png
+FD-172,Milan Ferreira,KOR,South Korea,CL-01,North United,North League,CM,CM|CDM|CAM,Common,57,59,57,71,55,59,60,Clinical Finisher|Engine,176,23,cards/FD-172.png
+FD-173,Adrian Mendes,ITA,Italy,CL-09,Nova Borough,Orion League,CAM,CAM|CM,Icon,99,99,99,92,99,55,83,Clinical Finisher|Leader|Counter Runner,179,31,cards/FD-173.png
+FD-174,Julian Fischer,JPN,Japan,CL-07,Silvergate,North League,CM,CM|CDM|CAM,Rare,67,66,58,79,73,61,65,Engine|Speedster,172,33,cards/FD-174.png
+FD-175,Tomas Romero,CRO,Croatia,CL-08,Asterion FC,Eclipse League,LM,LM|LW,Legendary,87,87,93,82,90,53,84,Clinical Finisher|Counter Runner|Sweeper Keeper,193,20,cards/FD-175.png
+FD-176,Dario Schneider,BRA,Brazil,CL-06,Vortex Athletic,Vortex League,GK,GK,Common,55,20,3,49,22,26,58,Speedster|Aerial Threat,188,25,cards/FD-176.png
+FD-177,Elias Reyes,FRA,France,CL-10,Crownside,Empire League,CF,CF|ST|CAM,Common,49,59,67,63,69,21,43,Sweeper Keeper|Press Resistant,189,20,cards/FD-177.png
+FD-178,Elias Bianchi,ENG,England,CL-04,Empire City,Empire League,ST,ST|CF,Common,54,56,81,51,64,18,71,Press Resistant|Counter Runner,196,33,cards/FD-178.png
+FD-179,Bruno Petrov,KOR,South Korea,CL-05,Zenith FC,Zenith League,RW,RW|RM|ST,Common,52,65,69,58,77,34,40,Clinical Finisher|Engine,170,35,cards/FD-179.png
+FD-180,Theo Moretti,JPN,Japan,CL-02,Eclipse FC,Eclipse League,CM,CM|CDM|CAM,Rare,62,56,66,77,66,51,60,Playmaker|Press Resistant,168,27,cards/FD-180.png
+FD-181,Elias Sato,GER,Germany,CL-08,Asterion FC,Eclipse League,LB,LB|LWB,Icon,92,75,60,92,86,92,84,Long Shot|Playmaker|Sweeper Keeper,190,28,cards/FD-181.png
+FD-182,Victor Alvarez,ESP,Spain,CL-05,Zenith FC,Zenith League,ST,ST|CF,Rare,66,72,85,56,74,29,74,Sweeper Keeper|Playmaker,187,26,cards/FD-182.png
+FD-183,Enzo Lind,BRA,Brazil,CL-03,Orion SC,Orion League,ST,ST|CF,Common,46,53,73,46,53,16,61,Playmaker|Engine,169,32,cards/FD-183.png
+FD-184,Victor Sato,POR,Portugal,CL-04,Empire City,Empire League,CM,CM|CDM|CAM,Legendary,90,73,76,93,85,81,80,Counter Runner|Cross Specialist|Speedster,184,34,cards/FD-184.png
+FD-185,Gabriel Bianchi,SWE,Sweden,CL-01,North United,North League,RB,RB|RWB,Legendary,86,84,52,73,84,79,83,Clinical Finisher|Counter Runner|Engine,169,31,cards/FD-185.png
+FD-186,Iker Voss,ITA,Italy,CL-04,Empire City,Empire League,CAM,CAM|CM,Common,54,54,66,80,77,36,45,Aerial Threat|Cross Specialist,172,34,cards/FD-186.png
+FD-187,Hugo Novak,JPN,Japan,CL-01,North United,North League,RM,RM|RW,Rare,65,79,67,73,75,46,57,Clinical Finisher|Sweeper Keeper,190,27,cards/FD-187.png
+FD-188,Amir Silva,ESP,Spain,CL-08,Asterion FC,Eclipse League,GK,GK,Common,64,13,14,46,28,33,62,Aerial Threat|Playmaker,181,19,cards/FD-188.png
+FD-189,Soren Yilmaz,USA,United States,CL-05,Zenith FC,Zenith League,ST,ST|CF,Rare,65,77,91,60,74,28,71,Engine|Clinical Finisher,178,29,cards/FD-189.png
+FD-190,Adrian Lind,ESP,Spain,CL-03,Orion SC,Orion League,RB,RB|RWB,Epic,75,79,53,79,73,73,73,Counter Runner|Cross Specialist|Speedster,194,30,cards/FD-190.png
+FD-191,Adrian Schneider,USA,United States,CL-08,Asterion FC,Eclipse League,CM,CM|CDM|CAM,Common,47,52,49,62,63,46,57,Long Shot|Cross Specialist,174,31,cards/FD-191.png
+FD-192,Leon Berg,KOR,South Korea,CL-05,Zenith FC,Zenith League,LB,LB|LWB,Common,56,75,34,60,57,67,53,Clinical Finisher|Cross Specialist,173,24,cards/FD-192.png
+FD-193,Ruben Volkov,JPN,Japan,CL-04,Empire City,Empire League,CAM,CAM|CM,Legendary,89,73,87,99,98,54,74,Engine|Cross Specialist|Ball Winner,194,22,cards/FD-193.png
+FD-194,Iker Sato,ARG,Argentina,CL-01,North United,North League,CB,CB|CDM,Common,56,41,25,43,48,79,77,Engine|Aerial Threat,171,31,cards/FD-194.png
+FD-195,Amir Weber,GER,Germany,CL-02,Eclipse FC,Eclipse League,LB,LB|LWB,Rare,70,85,49,62,71,75,66,Playmaker|Ball Winner,182,24,cards/FD-195.png
+FD-196,Kai Volkov,KOR,South Korea,CL-06,Vortex Athletic,Vortex League,ST,ST|CF,Legendary,85,79,98,65,87,40,88,Counter Runner|Ball Winner|Speedster,184,20,cards/FD-196.png
+FD-197,Marco Novak,SWE,Sweden,CL-07,Silvergate,North League,CM,CM|CDM|CAM,Rare,63,59,68,73,67,64,54,Cross Specialist|Engine,188,34,cards/FD-197.png
+FD-198,Bruno Marin,POR,Portugal,CL-02,Eclipse FC,Eclipse League,CB,CB|CDM,Rare,73,52,45,59,59,91,88,Aerial Threat|Clinical Finisher,185,34,cards/FD-198.png
+FD-199,Milan Novak,JPN,Japan,CL-07,Silvergate,North League,RW,RW|RM|ST,Rare,61,68,69,67,78,23,42,Cross Specialist|Press Resistant,174,24,cards/FD-199.png
+FD-200,Luca Berg,GER,Germany,CL-08,Asterion FC,Eclipse League,GK,GK,Epic,85,35,30,61,49,43,79,Cross Specialist|Sweeper Keeper|Long Shot,198,34,cards/FD-200.png
+FD-201,Orion Vale,SWE,Sweden,CL-02,Eclipse FC,Eclipse League,CAM,CAM|CM,Legendary,86,82,86,99,95,55,74,Counter Runner|Sweeper Keeper|Press Resistant,195,25,cards/FD-201.png
+FD-202,Leon Volkov,MAR,Morocco,CL-06,Vortex Athletic,Vortex League,RM,RM|RW,Epic,73,76,76,80,96,47,68,Long Shot|Playmaker|Leader,168,33,cards/FD-202.png
+FD-203,Gabriel Marin,ITA,Italy,CL-05,Zenith FC,Zenith League,CAM,CAM|CM,Common,51,52,71,75,72,27,44,Clinical Finisher|Playmaker,173,35,cards/FD-203.png
+FD-204,Kai Voss,BRA,Brazil,CL-02,Eclipse FC,Eclipse League,CDM,CDM|CM,Rare,72,57,59,76,69,82,73,Press Resistant|Leader,185,34,cards/FD-204.png
+FD-205,Ruben Navarro,KOR,South Korea,CL-01,North United,North League,LW,LW|LM|ST,Common,55,79,66,63,78,28,54,Counter Runner|Ball Winner,198,31,cards/FD-205.png
+FD-206,Bruno Dubois,KOR,South Korea,CL-01,North United,North League,LW,LW|LM|ST,Common,47,84,64,55,63,17,38,Engine|Ball Winner,195,21,cards/FD-206.png
+FD-207,Noah Yilmaz,JPN,Japan,CL-07,Silvergate,North League,RW,RW|RM|ST,Common,54,87,69,60,75,25,45,Cross Specialist|Long Shot,178,31,cards/FD-207.png
+FD-208,Nico Kovac,ITA,Italy,CL-03,Orion SC,Orion League,CB,CB|CDM,Epic,82,60,47,62,67,86,90,Ball Winner|Cross Specialist|Engine,170,20,cards/FD-208.png
+FD-209,Soren Schneider,POR,Portugal,CL-07,Silvergate,North League,ST,ST|CF,Rare,65,69,76,56,68,25,73,Clinical Finisher|Playmaker,185,19,cards/FD-209.png
+FD-210,Dante Silva,POR,Portugal,CL-05,Zenith FC,Zenith League,GK,GK,Rare,71,24,25,50,33,35,73,Playmaker|Cross Specialist,175,32,cards/FD-210.png
+FD-211,Nico Romero,ESP,Spain,CL-10,Crownside,Empire League,RW,RW|RM|ST,Common,56,80,66,61,74,27,43,Aerial Threat|Cross Specialist,178,19,cards/FD-211.png
+FD-212,Kai Yilmaz,ARG,Argentina,CL-07,Silvergate,North League,LM,LM|LW,Epic,80,85,84,85,75,50,73,Engine|Long Shot|Clinical Finisher,169,20,cards/FD-212.png
+FD-213,Amir Romero,USA,United States,CL-06,Vortex Athletic,Vortex League,CM,CM|CDM|CAM,Epic,74,78,65,88,79,67,77,Sweeper Keeper|Aerial Threat|Cross Specialist,192,20,cards/FD-213.png
+FD-214,Theo Aoki,ITA,Italy,CL-09,Nova Borough,Orion League,CB,CB|CDM,Common,59,53,23,53,39,68,71,Engine|Sweeper Keeper,186,19,cards/FD-214.png
+FD-215,Theo Berg,CRO,Croatia,CL-01,North United,North League,ST,ST|CF,Legendary,92,86,98,78,99,55,93,Cross Specialist|Sweeper Keeper|Counter Runner,168,19,cards/FD-215.png
+FD-216,Silas Petrov,MAR,Morocco,CL-09,Nova Borough,Orion League,CM,CM|CDM|CAM,Rare,63,70,59,72,74,54,60,Leader|Engine,191,18,cards/FD-216.png
+FD-217,Ruben Rossi,JPN,Japan,CL-08,Asterion FC,Eclipse League,CM,CM|CDM|CAM,Epic,78,72,65,83,82,76,75,Counter Runner|Ball Winner|Leader,192,30,cards/FD-217.png
+FD-218,Dario Romero,CRO,Croatia,CL-08,Asterion FC,Eclipse League,ST,ST|CF,Common,47,58,62,41,62,14,63,Cross Specialist|Long Shot,193,25,cards/FD-218.png
+FD-219,Ruben Kovac,SWE,Sweden,CL-02,Eclipse FC,Eclipse League,LB,LB|LWB,Rare,73,78,55,72,84,83,78,Aerial Threat|Engine,171,33,cards/FD-219.png
+FD-220,Silas Kovac,USA,United States,CL-01,North United,North League,RB,RB|RWB,Rare,71,75,59,80,73,77,71,Cross Specialist|Engine,173,23,cards/FD-220.png
+FD-221,Dante Lind,ITA,Italy,CL-03,Orion SC,Orion League,ST,ST|CF,Epic,70,80,85,62,73,27,82,Playmaker|Press Resistant|Speedster,169,32,cards/FD-221.png
+FD-222,Milan Lind,MAR,Morocco,CL-09,Nova Borough,Orion League,LB,LB|LWB,Epic,81,77,60,83,71,81,69,Engine|Press Resistant|Leader,193,26,cards/FD-222.png
+FD-223,Tomas Dubois,ARG,Argentina,CL-08,Asterion FC,Eclipse League,RB,RB|RWB,Rare,71,78,57,69,62,74,65,Press Resistant|Long Shot,186,31,cards/FD-223.png
+FD-224,Dario Kovac,CRO,Croatia,CL-05,Zenith FC,Zenith League,ST,ST|CF,Epic,74,81,82,64,80,33,86,Long Shot|Playmaker|Counter Runner,180,18,cards/FD-224.png
+FD-225,Dario Keller,ARG,Argentina,CL-10,Crownside,Empire League,RB,RB|RWB,Common,49,55,31,43,55,54,51,Engine|Aerial Threat,189,30,cards/FD-225.png
+FD-226,Iker Reyes,CRO,Croatia,CL-07,Silvergate,North League,RW,RW|RM|ST,Epic,84,89,95,80,96,44,74,Playmaker|Engine|Press Resistant,189,35,cards/FD-226.png
+FD-227,Enzo Nakamura,ESP,Spain,CL-08,Asterion FC,Eclipse League,CAM,CAM|CM,Legendary,87,91,83,95,97,59,76,Cross Specialist|Leader|Press Resistant,178,24,cards/FD-227.png
+FD-228,Amir Fischer,GER,Germany,CL-07,Silvergate,North League,ST,ST|CF,Common,58,69,81,48,59,26,64,Clinical Finisher|Leader,186,22,cards/FD-228.png
+FD-229,Gabriel Lind,KOR,South Korea,CL-06,Vortex Athletic,Vortex League,CB,CB|CDM,Rare,74,54,36,61,61,88,88,Sweeper Keeper|Long Shot,174,19,cards/FD-229.png
+FD-230,Julian Berg,ARG,Argentina,CL-02,Eclipse FC,Eclipse League,CDM,CDM|CM,Common,55,58,48,61,61,72,70,Ball Winner|Counter Runner,170,34,cards/FD-230.png
+FD-231,Julian Bianchi,ESP,Spain,CL-05,Zenith FC,Zenith League,CM,CM|CDM|CAM,Epic,81,72,73,91,87,76,70,Engine|Leader|Counter Runner,198,18,cards/FD-231.png
+FD-232,Bruno Kovac,JPN,Japan,CL-06,Vortex Athletic,Vortex League,LB,LB|LWB,Common,58,69,33,59,58,63,58,Sweeper Keeper|Playmaker,190,26,cards/FD-232.png
+FD-233,Rafael Schneider,ENG,England,CL-08,Asterion FC,Eclipse League,LB,LB|LWB,Rare,70,79,49,72,66,75,72,Sweeper Keeper|Clinical Finisher,196,23,cards/FD-233.png
+FD-234,Julian Schneider,MAR,Morocco,CL-02,Eclipse FC,Eclipse League,LW,LW|LM|ST,Icon,88,99,99,83,96,52,74,Sweeper Keeper|Speedster|Cross Specialist,173,22,cards/FD-234.png
+FD-235,Amir Mendes,ARG,Argentina,CL-05,Zenith FC,Zenith League,CDM,CDM|CM,Rare,65,65,52,67,63,73,81,Long Shot|Leader,186,19,cards/FD-235.png
+FD-236,Soren Navarro,POR,Portugal,CL-09,Nova Borough,Orion League,CM,CM|CDM|CAM,Legendary,85,79,76,85,91,64,81,Sweeper Keeper|Press Resistant|Clinical Finisher,186,35,cards/FD-236.png
+FD-237,Silas Silva,POR,Portugal,CL-02,Eclipse FC,Eclipse League,LB,LB|LWB,Common,54,67,35,59,57,66,58,Playmaker|Ball Winner,191,35,cards/FD-237.png
+FD-238,Victor Marin,ARG,Argentina,CL-07,Silvergate,North League,CAM,CAM|CM,Rare,71,85,83,95,81,37,61,Counter Runner|Speedster,179,19,cards/FD-238.png
+FD-239,Kai Marin,USA,United States,CL-06,Vortex Athletic,Vortex League,ST,ST|CF,Rare,60,71,80,46,71,19,70,Cross Specialist|Long Shot,197,22,cards/FD-239.png
+FD-240,Axel Ferreira,MAR,Morocco,CL-05,Zenith FC,Zenith League,CM,CM|CDM|CAM,Common,45,58,42,58,55,47,44,Engine|Aerial Threat,192,19,cards/FD-240.png
+FD-241,Silas Moretti,CRO,Croatia,CL-06,Vortex Athletic,Vortex League,CM,CM|CDM|CAM,Common,58,66,68,64,69,57,61,Speedster|Leader,172,31,cards/FD-241.png
+FD-242,Julian Kovac,GER,Germany,CL-05,Zenith FC,Zenith League,GK,GK,Epic,75,32,17,55,38,46,70,Engine|Leader|Sweeper Keeper,187,31,cards/FD-242.png
+FD-243,Ruben Berg,ESP,Spain,CL-05,Zenith FC,Zenith League,CB,CB|CDM,Rare,72,54,35,63,50,89,79,Press Resistant|Aerial Threat,169,27,cards/FD-243.png
+FD-244,Iker Rossi,POR,Portugal,CL-04,Empire City,Empire League,ST,ST|CF,Common,46,58,71,43,54,14,72,Playmaker|Leader,184,23,cards/FD-244.png
+FD-245,Dante Reyes,FRA,France,CL-09,Nova Borough,Orion League,CB,CB|CDM,Common,46,57,20,38,32,64,63,Aerial Threat|Counter Runner,187,32,cards/FD-245.png
+FD-246,Felix Vale,ENG,England,CL-10,Crownside,Empire League,ST,ST|CF,Common,47,57,86,45,64,13,71,Leader|Press Resistant,182,34,cards/FD-246.png
+FD-247,Nico Moretti,ARG,Argentina,CL-02,Eclipse FC,Eclipse League,LW,LW|LM|ST,Common,47,69,64,47,68,15,51,Cross Specialist|Long Shot,190,28,cards/FD-247.png
+FD-248,Tomas Nakamura,GER,Germany,CL-06,Vortex Athletic,Vortex League,CB,CB|CDM,Epic,74,51,43,65,55,88,91,Playmaker|Cross Specialist|Press Resistant,181,35,cards/FD-248.png
+FD-249,Ruben Dubois,ESP,Spain,CL-01,North United,North League,LW,LW|LM|ST,Common,54,68,61,56,81,22,53,Press Resistant|Ball Winner,190,25,cards/FD-249.png
+FD-250,Julian Dubois,NED,Netherlands,CL-07,Silvergate,North League,CB,CB|CDM,Rare,63,55,24,51,48,76,78,Engine|Press Resistant,184,19,cards/FD-250.png
+FD-251,Enzo Alvarez,GER,Germany,CL-02,Eclipse FC,Eclipse League,RW,RW|RM|ST,Rare,61,80,64,64,82,25,51,Speedster|Clinical Finisher,174,33,cards/FD-251.png
+FD-252,Leon Kovac,FRA,France,CL-02,Eclipse FC,Eclipse League,GK,GK,Epic,76,36,21,49,39,36,68,Long Shot|Press Resistant|Speedster,185,35,cards/FD-252.png
+FD-253,Noah Alvarez,JPN,Japan,CL-07,Silvergate,North League,GK,GK,Epic,82,33,28,54,42,48,86,Clinical Finisher|Ball Winner|Aerial Threat,189,22,cards/FD-253.png
+FD-254,Enzo Yilmaz,POR,Portugal,CL-08,Asterion FC,Eclipse League,RB,RB|RWB,Rare,70,67,48,65,72,80,71,Engine|Ball Winner,181,27,cards/FD-254.png
+FD-255,Dario Volkov,CRO,Croatia,CL-05,Zenith FC,Zenith League,ST,ST|CF,Common,51,60,73,53,73,6,58,Long Shot|Press Resistant,186,22,cards/FD-255.png
+FD-256,Theo Sato,MAR,Morocco,CL-02,Eclipse FC,Eclipse League,CAM,CAM|CM,Common,45,43,68,60,59,25,28,Ball Winner|Counter Runner,174,24,cards/FD-256.png
+FD-257,Tomas Sato,KOR,South Korea,CL-04,Empire City,Empire League,LB,LB|LWB,Rare,67,72,53,66,70,78,66,Long Shot|Engine,176,21,cards/FD-257.png
+FD-258,Victor Romero,JPN,Japan,CL-07,Silvergate,North League,CF,CF|ST|CAM,Rare,75,87,88,82,82,40,75,Counter Runner|Aerial Threat,187,28,cards/FD-258.png
+FD-259,Theo Alvarez,SWE,Sweden,CL-01,North United,North League,LW,LW|LM|ST,Epic,74,97,85,77,87,47,63,Ball Winner|Clinical Finisher|Counter Runner,184,23,cards/FD-259.png
+FD-260,Adrian Volkov,BRA,Brazil,CL-05,Zenith FC,Zenith League,ST,ST|CF,Common,55,63,83,57,58,16,64,Cross Specialist|Speedster,192,21,cards/FD-260.png
+FD-261,Gabriel Berg,ESP,Spain,CL-08,Asterion FC,Eclipse League,ST,ST|CF,Rare,61,71,83,54,71,30,76,Cross Specialist|Leader,191,23,cards/FD-261.png
+FD-262,Milan Navarro,GER,Germany,CL-05,Zenith FC,Zenith League,CB,CB|CDM,Rare,63,56,38,59,45,78,72,Clinical Finisher|Ball Winner,196,19,cards/FD-262.png
+FD-263,Rafael Keller,MAR,Morocco,CL-09,Nova Borough,Orion League,RM,RM|RW,Legendary,88,93,87,80,88,62,70,Speedster|Playmaker|Cross Specialist,170,35,cards/FD-263.png
+FD-264,Milan Silva,NED,Netherlands,CL-05,Zenith FC,Zenith League,ST,ST|CF,Rare,60,63,87,52,74,17,70,Press Resistant|Ball Winner,195,22,cards/FD-264.png
+FD-265,Dario Dubois,BRA,Brazil,CL-02,Eclipse FC,Eclipse League,CAM,CAM|CM,Common,64,64,72,74,79,26,60,Leader|Counter Runner,183,27,cards/FD-265.png
+FD-266,Marco Kovac,CRO,Croatia,CL-02,Eclipse FC,Eclipse League,LB,LB|LWB,Epic,79,91,62,75,78,79,65,Leader|Counter Runner|Long Shot,180,30,cards/FD-266.png
+FD-267,Enzo Navarro,USA,United States,CL-02,Eclipse FC,Eclipse League,CB,CB|CDM,Legendary,90,78,46,75,65,92,99,Sweeper Keeper|Cross Specialist|Engine,186,21,cards/FD-267.png
+FD-268,Ruben Vale,NED,Netherlands,CL-06,Vortex Athletic,Vortex League,LW,LW|LM|ST,Rare,75,90,78,72,97,36,62,Playmaker|Leader,192,19,cards/FD-268.png
+FD-269,Mateo Lind,USA,United States,CL-09,Nova Borough,Orion League,CB,CB|CDM,Common,49,47,19,41,34,69,76,Long Shot|Speedster,168,34,cards/FD-269.png
+FD-270,Noah Volkov,JPN,Japan,CL-01,North United,North League,CDM,CDM|CM,Common,60,61,51,54,47,71,70,Playmaker|Aerial Threat,192,18,cards/FD-270.png
+FD-271,Hugo Volkov,CRO,Croatia,CL-01,North United,North League,RB,RB|RWB,Common,52,56,31,61,53,57,60,Cross Specialist|Counter Runner,185,21,cards/FD-271.png
+FD-272,Dante Keller,ESP,Spain,CL-01,North United,North League,CAM,CAM|CM,Common,51,59,50,78,75,28,43,Press Resistant|Sweeper Keeper,187,23,cards/FD-272.png
+FD-273,Felix Silva,ESP,Spain,CL-08,Asterion FC,Eclipse League,LW,LW|LM|ST,Icon,88,95,99,89,97,49,71,Sweeper Keeper|Press Resistant|Playmaker,181,21,cards/FD-273.png
+FD-274,Enzo Ferreira,FRA,France,CL-02,Eclipse FC,Eclipse League,ST,ST|CF,Common,62,75,81,57,75,37,71,Press Resistant|Long Shot,170,32,cards/FD-274.png
+FD-275,Silas Keller,JPN,Japan,CL-08,Asterion FC,Eclipse League,CB,CB|CDM,Epic,83,61,43,79,58,91,95,Cross Specialist|Engine|Press Resistant,183,27,cards/FD-275.png
+FD-276,Marco Rossi,SWE,Sweden,CL-06,Vortex Athletic,Vortex League,CAM,CAM|CM,Rare,73,73,70,93,79,45,58,Sweeper Keeper|Aerial Threat,186,32,cards/FD-276.png
+FD-277,Ruben Lind,JPN,Japan,CL-03,Orion SC,Orion League,CAM,CAM|CM,Common,58,53,71,79,70,31,52,Leader|Speedster,170,27,cards/FD-277.png
+FD-278,Leon Romero,USA,United States,CL-08,Asterion FC,Eclipse League,ST,ST|CF,Epic,75,83,96,70,80,29,82,Sweeper Keeper|Clinical Finisher|Playmaker,194,18,cards/FD-278.png
+FD-279,Julian Costa,NED,Netherlands,CL-01,North United,North League,CM,CM|CDM|CAM,Rare,68,60,68,79,75,64,61,Clinical Finisher|Engine,175,23,cards/FD-279.png
+FD-280,Soren Alvarez,USA,United States,CL-08,Asterion FC,Eclipse League,LM,LM|LW,Rare,72,79,66,72,83,48,66,Clinical Finisher|Aerial Threat,183,29,cards/FD-280.png
+FD-281,Amir Kovac,FRA,France,CL-08,Asterion FC,Eclipse League,GK,GK,Rare,62,26,22,45,18,27,67,Aerial Threat|Engine,198,26,cards/FD-281.png
+FD-282,Marco Keller,NED,Netherlands,CL-02,Eclipse FC,Eclipse League,CM,CM|CDM|CAM,Common,64,64,53,66,69,57,74,Clinical Finisher|Leader,192,35,cards/FD-282.png
+FD-283,Felix Berg,FRA,France,CL-07,Silvergate,North League,LM,LM|LW,Legendary,88,87,77,82,91,59,69,Ball Winner|Counter Runner|Leader,195,23,cards/FD-283.png
+FD-284,Dante Vale,ARG,Argentina,CL-04,Empire City,Empire League,GK,GK,Rare,75,22,17,53,43,40,79,Clinical Finisher|Sweeper Keeper,185,34,cards/FD-284.png
+FD-285,Julian Yilmaz,FRA,France,CL-06,Vortex Athletic,Vortex League,LM,LM|LW,Rare,68,72,69,76,78,46,62,Clinical Finisher|Counter Runner,190,35,cards/FD-285.png
+FD-286,Enzo Weber,ESP,Spain,CL-03,Orion SC,Orion League,LB,LB|LWB,Rare,68,82,43,74,68,76,74,Leader|Ball Winner,185,26,cards/FD-286.png
+FD-287,Adrian Santos,KOR,South Korea,CL-05,Zenith FC,Zenith League,CDM,CDM|CM,Rare,60,58,54,59,53,72,78,Sweeper Keeper|Clinical Finisher,197,25,cards/FD-287.png
+FD-288,Noah Vale,ENG,England,CL-10,Crownside,Empire League,CB,CB|CDM,Legendary,89,64,48,68,72,94,99,Leader|Cross Specialist|Clinical Finisher,186,20,cards/FD-288.png
+FD-289,Mateo Alvarez,ENG,England,CL-10,Crownside,Empire League,ST,ST|CF,Epic,71,77,95,64,79,41,69,Press Resistant|Counter Runner|Ball Winner,195,29,cards/FD-289.png
+FD-290,Victor Dubois,NED,Netherlands,CL-03,Orion SC,Orion League,CB,CB|CDM,Rare,70,61,36,65,54,84,83,Leader|Aerial Threat,169,33,cards/FD-290.png
+FD-291,Bruno Novak,FRA,France,CL-10,Crownside,Empire League,CB,CB|CDM,Common,56,37,30,46,44,75,77,Counter Runner|Leader,181,20,cards/FD-291.png
+FD-292,Adrian Berg,SWE,Sweden,CL-08,Asterion FC,Eclipse League,RB,RB|RWB,Common,51,56,27,53,66,62,55,Cross Specialist|Speedster,193,20,cards/FD-292.png
+FD-293,Elian Romero,ESP,Spain,CL-03,Orion SC,Orion League,CM,CM|CDM|CAM,Epic,72,75,62,76,71,64,65,Engine|Long Shot|Ball Winner,174,27,cards/FD-293.png
+FD-294,Enzo Dubois,KOR,South Korea,CL-05,Zenith FC,Zenith League,CB,CB|CDM,Rare,69,55,32,55,48,84,88,Counter Runner|Leader,195,23,cards/FD-294.png
+FD-295,Tomas Vale,ESP,Spain,CL-07,Silvergate,North League,CF,CF|ST|CAM,Rare,74,79,86,79,88,47,68,Playmaker|Leader,185,28,cards/FD-295.png
+FD-296,Axel Yilmaz,POR,Portugal,CL-05,Zenith FC,Zenith League,GK,GK,Common,53,1,11,52,20,15,57,Cross Specialist|Sweeper Keeper,177,32,cards/FD-296.png
+FD-297,Enzo Mendes,FRA,France,CL-07,Silvergate,North League,RW,RW|RM|ST,Common,48,68,52,51,71,22,46,Cross Specialist|Sweeper Keeper,170,27,cards/FD-297.png
+FD-298,Rafael Vale,MAR,Morocco,CL-07,Silvergate,North League,RB,RB|RWB,Common,54,74,33,49,55,62,60,Speedster|Playmaker,193,29,cards/FD-298.png
+FD-299,Elias Vale,JPN,Japan,CL-05,Zenith FC,Zenith League,GK,GK,Common,64,24,6,46,27,31,67,Sweeper Keeper|Long Shot,179,21,cards/FD-299.png
+FD-300,Amir Voss,ITA,Italy,CL-10,Crownside,Empire League,CDM,CDM|CM,Legendary,92,78,73,99,76,99,99,Playmaker|Sweeper Keeper|Aerial Threat,195,34,cards/FD-300.png

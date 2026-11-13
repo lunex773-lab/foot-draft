@@ -28,12 +28,12 @@ export const GAME_CONFIG = {
   standingsSeconds: 6,
   /** delay before a CPU makes its pick (UX only) */
   cpuPickDelayMs: 1200,
-  /** provisional: number of player cards in the catalog */
-  catalogSize: 240,
+  /** number of player cards (player database v1) */
+  catalogSize: 300,
 } as const;
 
-export const CATALOG_SEED = 'FOOTBALL-DRAFT-CATALOG-V1';
-export const CATALOG_VERSION = 1;
+/** v1 = generated 240 cards (retired), v2 = FOOTBALL DRAFT 300 Player Database v1 */
+export const CATALOG_VERSION = 2;
 
 /** Bump whenever the simulation logic changes (stored with every match, spec 6-4). */
 export const SIM_VERSION = '0.1.0';

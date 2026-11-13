@@ -17,13 +17,13 @@ export function cpuTactics(starters: Player[], rng: Rng, opponent?: Player[]): T
   const mf = starters.filter((p) => POSITION_GROUP[p.primaryPosition] === 'MF');
   const pace = avg(fw, (p) => (p.attributes.sprintSpeed + p.attributes.acceleration) / 2);
   const passing = avg(mf, (p) => (p.attributes.shortPassing + p.attributes.vision) / 2);
-  const aerial = fw.some((p) => p.role === 'target_man' || p.traits.includes('aerial_king'));
+  const aerial = fw.some((p) => p.role === 'target_man' || p.traits.includes('aerial_threat'));
   const engine = avg([...fw, ...mf], (p) => p.attributes.stamina);
 
   const t: Tactics = { ...DEFAULT_TACTICS };
   const offenseScores = {
     possession: passing - 70 + (mf.some((p) => p.role === 'deep_playmaker' || p.role === 'advanced_playmaker') ? 4 : 0),
-    counter: pace - 72 + (fw.some((p) => p.traits.includes('speedster')) ? 4 : 0),
+    counter: pace - 72 + (fw.some((p) => p.traits.includes('speedster') || p.traits.includes('counter_runner')) ? 4 : 0),
     long_ball: aerial ? 4 : -6,
   };
   t.offense = (Object.entries(offenseScores).sort((a, b) => b[1] - a[1] + rng.normal(0, 1.5))[0][0] as Tactics['offense']) ?? 'possession';

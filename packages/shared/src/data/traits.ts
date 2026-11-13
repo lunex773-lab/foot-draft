@@ -2,105 +2,87 @@ import type { RoleId, TraitId } from '../types';
 
 export interface TraitInfo {
   id: TraitId;
+  /** name used in the player database */
   name: string;
   nameJa: string;
   /** when / how the trait works in the simulation (spec 4-4: conditions must be explicit) */
   effectJa: string;
-  gkOnly?: boolean;
 }
 
+/**
+ * The 12 special abilities of the player database v1. The database assigns
+ * them as-is; a trait whose condition does not apply to the player's slot
+ * simply never activates (e.g. Sweeper Keeper on an outfield player).
+ */
 export const TRAITS: Record<TraitId, TraitInfo> = {
-  sniper: {
-    id: 'sniper',
-    name: 'Sniper',
-    nameJa: 'スナイパー',
-    effectJa: 'ペナルティエリア外からのシュートと直接FKのゴール期待値が1.5倍。ミドルシュートを選びやすくなる。',
-  },
-  playmaker: {
-    id: 'playmaker',
-    name: 'Playmaker',
-    nameJa: 'プレーメーカー',
-    effectJa: '出場中、中盤の前進成功率が上がる。本人のパスから生まれた決定機のゴール期待値が1.15倍。',
-  },
-  speedster: {
-    id: 'speedster',
-    name: 'Speedster',
-    nameJa: 'スピードスター',
-    effectJa: 'カウンター・裏への抜け出しの局面だけ、スピードに+8の補正。',
-  },
-  wall: {
-    id: 'wall',
-    name: 'Wall',
-    nameJa: 'ウォール',
-    effectJa: '自陣ゴール前で守備をしている時、守備力+4、シュートブロック率が上がる。',
-  },
-  aerial_king: {
-    id: 'aerial_king',
-    name: 'Aerial King',
-    nameJa: 'エアリアルキング',
-    effectJa: 'クロス・セットプレーの空中戦で+8。本人のヘディングシュートのゴール期待値が1.4倍。',
-  },
-  pressing_machine: {
-    id: 'pressing_machine',
-    name: 'Pressing Machine',
-    nameJa: 'プレッシングマシン',
-    effectJa: 'チームの守備戦術がハイプレスの時、プレス力+4、本人のスタミナ消費が15%減る。',
-  },
-  clutch: {
-    id: 'clutch',
-    name: 'Clutch',
-    nameJa: 'クラッチ',
-    effectJa: '75分以降、チームが同点か負けている時、決定力+10でシュートを任されやすくなる。',
+  engine: { id: 'engine', name: 'Engine', nameJa: 'エンジン', effectJa: 'スタミナの消費が25%減る（全ポジション）。' },
+  counter_runner: {
+    id: 'counter_runner',
+    name: 'Counter Runner',
+    nameJa: 'カウンターランナー',
+    effectJa: 'FW・MFとして出場中、ボールを奪った時にカウンターになりやすい（1人につき+8%、2人まで）。カウンターの局面でスピード+5。',
   },
   sweeper_keeper: {
     id: 'sweeper_keeper',
     name: 'Sweeper Keeper',
     nameJa: 'スイーパーキーパー',
-    effectJa: '相手のカウンター・裏への抜け出しの成功率を下げる（守備ラインが高いほど効果が大きい）。',
-    gkOnly: true,
+    effectJa: 'GKとして出場している時だけ発動。相手のカウンター・裏への抜け出しの成功率を下げる（守備ラインが高いほど効果が大きい）。GK以外では効果なし。',
   },
-  trickster: {
-    id: 'trickster',
-    name: 'Trickster',
-    nameJa: 'トリックスター',
-    effectJa: 'ドリブル突破の局面でドリブル+8。ファウルを受けやすい。',
+  cross_specialist: {
+    id: 'cross_specialist',
+    name: 'Cross Specialist',
+    nameJa: 'クロススペシャリスト',
+    effectJa: 'サイド（左右の枠）で出場中、そのサイドの攻撃でクロスを選びやすくなり、本人のクロスからの決定機のゴール期待値が1.2倍。出場中はCK・FKの質+3。',
   },
-  engine: {
-    id: 'engine',
-    name: 'Engine',
-    nameJa: 'エンジン',
-    effectJa: 'スタミナの消費が25%減る。',
+  press_resistant: {
+    id: 'press_resistant',
+    name: 'Press Resistant',
+    nameJa: 'プレス耐性',
+    effectJa: 'DF・MFとして出場中、相手のプレスを受けるビルドアップで保持力+2（最大+4）、中盤の前進+1（最大+2）。',
   },
-  set_piece: {
-    id: 'set_piece',
-    name: 'Set-Piece Specialist',
-    nameJa: 'セットプレー職人',
-    effectJa: 'キッカーを担当し、直接FKのゴール期待値が1.6倍、CK・FKからの決定機の質が上がる。',
+  clinical_finisher: {
+    id: 'clinical_finisher',
+    name: 'Clinical Finisher',
+    nameJa: 'クリニカルフィニッシャー',
+    effectJa: '本人がシュートを打つ時（ミドルシュート・ヘディング以外）、ゴール期待値が1.15倍。GKとして出場中は効果なし。',
   },
   leader: {
     id: 'leader',
     name: 'Leader',
     nameJa: 'リーダー',
-    effectJa: '出場中、チームのケミストリー+3。負けている時の終盤に全員の能力が少し下がりにくい。',
+    effectJa: '出場中、チームのケミストリー+3（2人まで）。負けている時の終盤に全員の能力が少し下がりにくい。',
   },
-  shot_stopper: {
-    id: 'shot_stopper',
-    name: 'Shot Stopper',
-    nameJa: 'ショットストッパー',
-    effectJa: '至近距離（ゴール期待値0.2以上）のシュートに対してセーブ力+6。',
-    gkOnly: true,
+  long_shot: {
+    id: 'long_shot',
+    name: 'Long Shot',
+    nameJa: 'ロングシュート',
+    effectJa: 'ペナルティエリア外からのシュートと直接FKのゴール期待値が1.5倍。ミドルシュートを任されやすい。GKとして出場中は効果なし。',
   },
-  commanding: {
-    id: 'commanding',
-    name: 'Commanding',
-    nameJa: 'コマンディング',
-    effectJa: 'クロス・セットプレーへの空中戦の守備+6。',
-    gkOnly: true,
+  aerial_threat: {
+    id: 'aerial_threat',
+    name: 'Aerial Threat',
+    nameJa: 'エアリアルスレット',
+    effectJa: 'クロス・セットプレーの空中戦で+8（攻撃・守備とも）。本人のヘディングシュートのゴール期待値が1.4倍。',
+  },
+  ball_winner: {
+    id: 'ball_winner',
+    name: 'Ball Winner',
+    nameJa: 'ボールウィナー',
+    effectJa: 'DF・MFとして出場中、中盤の守備+2（最大+4）・プレス+1（最大+3）。タックル・インターセプトの記録に絡みやすい。',
+  },
+  speedster: { id: 'speedster', name: 'Speedster', nameJa: 'スピードスター', effectJa: 'カウンター・裏への抜け出しの局面だけ、スピードに+8の補正（2人まで）。' },
+  playmaker: {
+    id: 'playmaker',
+    name: 'Playmaker',
+    nameJa: 'プレーメーカー',
+    effectJa: 'MF・FWとして出場中、中盤の前進成功率が上がる（+2、2人まで）。本人のパスから生まれた決定機のゴール期待値が1.15倍。',
   },
 };
 
-export const OUTFIELD_TRAITS: TraitId[] = (Object.keys(TRAITS) as TraitId[]).filter((t) => !TRAITS[t].gkOnly);
-export const GK_TRAITS: TraitId[] = ['sweeper_keeper', 'shot_stopper', 'commanding', 'leader'];
+export const TRAIT_IDS = Object.keys(TRAITS) as TraitId[];
+
+/** "Counter Runner" -> "counter_runner" */
+export const TRAIT_BY_NAME: Record<string, TraitId> = Object.fromEntries(TRAIT_IDS.map((t) => [TRAITS[t].name, t]));
 
 export interface RoleInfo {
   id: RoleId;
