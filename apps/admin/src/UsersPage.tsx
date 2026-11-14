@@ -128,7 +128,11 @@ interface Detail {
     ledger: { currency: string; amount: number; balance_after: number; reason: string; created_at: number }[];
     gacha: { draw_id: string; idx: number; name: string; rarity: string; guarantee: string; is_duplicate: number; points: number; created_at: number; banner_id: string }[];
   };
-  purchases: { implemented: boolean };
+  purchases: null | {
+    implemented: boolean;
+    items: { id: string; product_name: string; store: string; status: string; price_jpy: number; gems_purchased: number; gems_granted: number; is_renewal: number; created_at: number }[];
+    membership: { active: boolean; autoRenew: boolean; periodEnd: number | null };
+  };
 }
 
 const EVENT_LABEL: Record<string, string> = { login_succeeded: 'ログイン', session_started: 'ゲームを開いた', login_failed: 'ログイン失敗' };
@@ -276,7 +280,34 @@ function UserDetail({ id, canWrite, canWallet, onBack }: { id: string; canWrite:
               </table>
             </div>
             <h3 style={{ marginTop: 12 }}>購入履歴</h3>
-            <div className="small muted">課金は未実装（Phase 6）</div>
+            {d.purchases && (
+              <>
+                <div className="small">
+                  Premium Membership：{d.purchases.membership.active ? `会員（${d.purchases.membership.autoRenew ? '自動更新あり' : '自動更新なし'}・${time(d.purchases.membership.periodEnd)}まで）` : 'なし'}
+                </div>
+                <table className="tbl tiny">
+                  <tbody>
+                    {d.purchases.items.length === 0 && (
+                      <tr>
+                        <td className="muted">なし</td>
+                      </tr>
+                    )}
+                    {d.purchases.items.map((p) => (
+                      <tr key={p.id}>
+                        <td>{time(p.created_at)}</td>
+                        <td>
+                          {p.product_name}
+                          {p.is_renewal ? '（更新）' : ''}
+                        </td>
+                        <td>¥{fmtInt(p.price_jpy)}</td>
+                        <td>{p.status}</td>
+                        <td>{p.store === 'mock' ? '模擬' : p.store}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </>
+            )}
           </div>
         </div>
       )}

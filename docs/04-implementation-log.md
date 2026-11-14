@@ -1,5 +1,30 @@
 # 実装記録
 
+## 2026-11-14 Phase 6（課金・運営）
+
+計画：`docs/09-phase6-plan.md`。決定事項：`docs/02-decisions.md` の 52〜58。
+
+| 区分 | 内容 | 主なファイル |
+| --- | --- | --- |
+| 商品 | GEMS パック6種類（¥300〜¥10,000、決定 53）と Premium Membership（¥500・30日）。管理サイトで名前・おまけ・初回ボーナス・表示順・販売中かを変更（購入分の GEMS は価格と同じ数でなければ保存できない）。変更は操作ログに記録 | `shared/src/economy/shop.ts`, `routes/adminShop.ts`, `admin/src/ShopAdminPages.tsx` |
+| 購入とレシート検証 | 「開始 → ストアで支払い → レシート検証 → 付与」をサーバーで行う。レシートは「どのユーザー・どの購入・どの商品か」を確認し、同じストアの取引IDは1回しか使えない（DB の一意制約）。同時に2回検証しても付与は1回。購入分は「有償GEMS（購入）」、おまけ・初回分は「有償GEMS（配布）」として台帳に記録。失敗も記録（購入失敗率） | `lib/purchases.ts`, `routes/purchases.ts` |
+| ストアの接続 | Apple・Google は接続口だけ（「未接続」として購入を拒否）。iOS・Android アプリとストアの設定ができてから接続する（決定 52）。ローカルと staging では「模擬ストア」（レシートをサーバーが署名）で通しで確認できる。本番では模擬ストアは使えず、ショップは「現在は購入できません」と表示 | `lib/purchases.ts`, `web/src/pages/ShopPage.tsx` |
+| 返金 | 残っている GEMS を回収し、足りない分は「未回収」として記録（決定 57）。残高は0未満にならない。同じ返金の通知が2回来ても回収は1回。未回収は管理サイトの Purchases に表示し、admin がメモを付けて「対応済み」にする。会員の返金は会員をその場で終了。模擬の返金ボタンは staging・ローカルだけ | `lib/purchases.ts`, `routes/adminShop.ts` |
+| Premium Membership | 30日ごとの自動更新（決定 55）。会員の間は毎日 無償GEMS 20（ログインボーナスと一緒に受け取る）と会員バッジ（ヘッダー・ルームの席・ランキング）。能力の強化・ランク戦の優遇はなし。自動更新を止めても期間の終わりまでは会員。模擬ストアの更新・解約・期限切れは管理サイトから操作 | `lib/purchases.ts`, `lib/rewards.ts`, `RoomDO` |
+| Season Pass | ランク戦と同じ月単位・30段階（決定 54）。リーグを最後まで遊ぶと 100 XP（1位は 150）、1日の対戦報酬と同じ10リーグまで。無料コース：COINS と無償GEMS（合計300）。プレミアムコース（800 GEMS、無償GEMS から先に使う：決定 56）：COINS・交換ポイント・Epic と Legendary のカード（持っていないカードから選ぶ。全部持っている時は Standard の交換ポイント）。報酬は1回だけ（報酬キーの一意制約） | `shared/src/economy/pass.ts`, `routes/pass.ts`, `web/src/pages/PassPage.tsx` |
+| ガシャ管理 | 管理サイトで下書き作成 → 公開 → 変更 → 終了。排出率（合計100%）・候補（レアリティと除外する選手）・価格・天井を設定。公開後の変更は変更内容の入力が必須で、新しい版として記録（決定 58）。抽選履歴にどの版で引いたかが残り、版ごとの抽選回数を表示。ゲームのガシャ詳細に変更履歴を表示 | `routes/adminGacha.ts`, `admin/src/GachaAdminPage.tsx`, `web/src/pages/GachaPage.tsx` |
+| 売上分析（Revenue） | 期間（日本時間）・日次／週次／月次で、売上（総額・返金・返金後）・課金者数・課金率・ARPU・ARPPU・初回課金率・購入失敗率・未使用の有償GEMS・未回収、商品別・ストア別・ガシャ別の有償GEMS（購入分）消費。模擬ストアの売上は「実際の売上ではない」と表示。Overview の売上も実装済みに変更（ストア未接続の表示つき） | `routes/adminShop.ts`, `admin/src/ShopAdminPages.tsx` |
+| 権限 | 商品の変更・返金の対応・ガシャの変更：owner・admin。購入の閲覧：support も可。売上の集計とガシャの閲覧：viewer も可（個人の購入は見られない） | `lib/auth.ts` |
+| D1 | マイグレーション `0007_purchases.sql`（purchase_products・purchase_transactions・purchase_receipts・refund_records・subscriptions・season_pass_progress・season_pass_xp・gacha_banner_versions、user_collections を作り直して入手経路に season_pass を追加） | `apps/api/migrations/` |
+
+検証：
+- 単体テスト：shared 64件（商品・GEMS の内訳・Season Pass の報酬と段階・無償GEMS からの支払い）、API 4件（ストアの接続状態・模擬レシートの署名と改ざん・本番では模擬ストア不可）
+- 結合テスト `npm run e2e:phase6` すべて成功：ショップ（7商品・Apple は拒否）、模擬ストアで購入（購入分 300＋初回 150、2回目は初回なし）、同じレシートの再送・別の購入への流用・改ざんを拒否、同時に2回検証しても1回だけ付与、Premium ガシャの支払い（配布分→購入分）、返金（1,000 回収・250 未回収、残高は0未満にならない、2回目の通知で追加の回収なし、support は閲覧のみ、admin が対応済みに）、会員（30日・二重に入れない・毎日20・ルームの席のバッジ・更新・解約・期限切れ・返金で終了）、Season Pass（プレミアムは1シーズン1回・交換ポイント・持っていない Epic と Legendary・報酬は1回だけ）、ガシャ管理（合計100%以外は拒否・viewer は作れない・下書きは選手に見えない・公開で v1・変更内容なしの変更は拒否・v2・選手に新しい排出率と変更履歴・次の抽選は v2・版ごとの回数・終了）、商品（購入分＝価格・support は変更不可）、売上（課金者・ARPPU・失敗率・商品別・ガシャ別・Overview）、viewer は個人の購入を見られない、ユーザー詳細の購入履歴
+- Phase 2〜5 の結合テストもすべて成功（Phase 5 は売上・購入履歴が実装済みになったことに合わせてテストを更新）
+- ブラウザ：ショップ → 模擬ストアで Starter Pack と会員 → ヘッダーの会員バッジと会員特典の表示 → Season Pass のプレミアムと報酬の受け取り（22個）→ 管理サイト（Overview の売上・Revenue・Purchases の模擬返金と未回収・会員の一覧・商品・ガシャの作成と公開と変更で v2）→ ゲームのガシャ詳細に変更履歴。スマートフォン幅でショップ・パスに横スクロールなし。コンソールエラーなし
+
+未実装（今回の範囲外）：Apple・Google との実際の接続（アプリとストアの設定が必要：決定 52）、ストアからの返金・更新の通知の受信（接続時に作る）、Season Pass の見た目の報酬（決定 54）、ガシャの予約公開（今は開始日時の指定まで）。
+
 ## 2026-11-14 Phase 5（運営管理サイト）
 
 計画：`docs/08-phase5-plan.md`。決定事項：`docs/02-decisions.md` の 45〜51。

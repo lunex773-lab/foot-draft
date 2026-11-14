@@ -31,6 +31,11 @@ function Rewards({ snap }: { snap: RoomSnapshot }) {
         {r.bonus > 0 && <span className="chip on">{snap.mode === 'event' ? 'イベント順位ボーナス' : 'ソロ課題の達成報酬'} +{fmt(r.bonus)}</span>}
         {r.matchRewardGiven && <span className="chip">今日 {r.leaguesToday}/10 リーグ</span>}
       </div>
+      {!!r.passXp && (
+        <div className="small" style={{ marginTop: 6 }}>
+          Season Pass +{r.passXp} XP　<Link to="/pass">パスを見る</Link>
+        </div>
+      )}
       {r.missionsCompleted.length > 0 && (
         <div className="small" style={{ marginTop: 6 }}>
           ミッション達成：{r.missionsCompleted.map((id) => MISSION_BY_ID[id]?.titleJa ?? id).join('・')}　<Link to="/missions">受け取る</Link>

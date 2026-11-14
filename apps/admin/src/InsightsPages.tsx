@@ -94,7 +94,17 @@ interface Overview {
   before: Summary;
   series: { day: string; active: number; sessions: number; playtimeMs: number; matches: number; newUsers: number }[];
   retention: Record<string, number | null>;
-  revenue: { implemented: boolean };
+  revenue: {
+    implemented: boolean;
+    storesConnected: boolean;
+    cumulativeNet: number;
+    net: number;
+    mockGross: number;
+    payers: number;
+    payerRate: number | null;
+    arpu: number | null;
+    arppu: number | null;
+  };
 }
 
 const dec = (n: number) => n.toLocaleString('ja-JP', { maximumFractionDigits: 1 });
@@ -128,11 +138,15 @@ export function OverviewPage({ onOpen }: { onOpen?: (page: string) => void }) {
               <div className="tiny muted">うち新着 {d.totals.new_feedback}</div>
             </button>
             <StatTile label="エラー件数（API）" value={d.current.errors} prev={d.before.errors} upIsGood={false} />
-            <div className="stat-tile">
-              <div className="label">売上・課金率・ARPU・ARPPU</div>
-              <div className="value small muted">課金は未実装</div>
-              <div className="tiny muted">アプリ内課金（Phase 6）の後に集計します</div>
-            </div>
+            <button type="button" className="stat-tile link" onClick={() => onOpen?.('revenue')}>
+              <div className="label">累計売上（返金後）</div>
+              <div className="value">¥{fmtInt(d.revenue.cumulativeNet)}</div>
+              <div className="tiny muted">
+                期間 ¥{fmtInt(d.revenue.net)}・課金率 {d.revenue.payerRate === null ? '—' : `${(d.revenue.payerRate * 100).toFixed(1)}%`}・ARPU {d.revenue.arpu === null ? '—' : `¥${Math.round(d.revenue.arpu)}`}・ARPPU{' '}
+                {d.revenue.arppu === null ? '—' : `¥${Math.round(d.revenue.arppu)}`}
+              </div>
+              {!d.revenue.storesConnected && <div className="tiny muted">ストア未接続（模擬ストアの購入はテスト）</div>}
+            </button>
           </div>
           <div className="grid2">
             <div className="panel">

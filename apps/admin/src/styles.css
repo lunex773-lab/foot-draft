@@ -703,3 +703,17 @@ form textarea {
     display: none;
   }
 }
+
+/* ---------------------------------------------------------- Phase 6 */
+.notice-admin {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #6b5420;
+  background: #2a2412;
+  color: #f2d27a;
+}
+.form-grid1 {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}

@@ -1247,3 +1247,123 @@ textarea {
   background: #2a2412;
   border: 1px solid var(--gold2);
 }
+
+/* ---------------------------------------------------------- phase 6: shop / pass / membership */
+.member-badge {
+  display: inline-block;
+  color: #1a1408;
+  background: var(--gold);
+  border-radius: 999px;
+  font-size: 10px;
+  line-height: 16px;
+  width: 16px;
+  text-align: center;
+  margin-right: 4px;
+  vertical-align: 1px;
+}
+
+.notice {
+  margin-top: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: #0f1118;
+}
+
+.notice.test {
+  border-color: var(--warn);
+  color: var(--warn);
+}
+
+.member-card {
+  border-color: var(--gold2);
+  background: linear-gradient(135deg, #2a2412, var(--panel) 60%);
+}
+
+.member-card .title {
+  font-family: var(--display);
+  font-size: 20px;
+  letter-spacing: 0.04em;
+}
+
+.shop-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.shop-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+}
+
+.shop-item .gems {
+  font-size: 32px;
+  color: #7fd3ff;
+  line-height: 1.1;
+}
+
+.shop-item .btn {
+  width: 100%;
+  margin-top: 6px;
+}
+
+.mock-store {
+  border-color: var(--warn);
+}
+
+table.pass-track {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+table.pass-track th,
+table.pass-track td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+}
+
+table.pass-track th {
+  color: var(--muted);
+  font-weight: 500;
+  font-size: 12px;
+}
+
+table.pass-track td.lv {
+  font-family: var(--display);
+  width: 48px;
+  color: var(--muted);
+}
+
+table.pass-track tr.reached td.lv {
+  color: var(--gold);
+}
+
+table.pass-track td.locked {
+  opacity: 0.55;
+}
+
+.pass-reward {
+  display: inline-block;
+  margin: 2px 6px 2px 0;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.pass-reward.ready {
+  border-color: var(--gold2);
+  color: var(--gold);
+}
+
+.pass-reward.claimed {
+  color: var(--muted);
+  text-decoration: line-through;
+}

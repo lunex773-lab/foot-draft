@@ -4,7 +4,8 @@
  * CPU teams, lineups, match simulation (CPU time on Workers), standings,
  * history, the Phase 3 endpoints and the Phase 4 economy (wallet, login bonus,
  * gacha refusal without funds, match reward and missions after the league) and
- * Phase 5 (app sessions, feedback, admin APIs closed to players).
+ * Phase 5 (app sessions, feedback, admin APIs closed to players) and Phase 6
+ * (shop, one mock-store purchase where the mock store is open, Season Pass XP).
  *
  *   FD_API_URL=https://<api> npx tsx scripts/remote-check.ts
  *
@@ -69,7 +70,9 @@ async function main() {
   const lb2 = await api('/api/rewards/login', { token, body: {} });
   check(lb2.data.paid === 0, 'login bonus only once per day');
   const banners = await api('/api/gacha/banners', { token });
-  check(banners.status === 200 && banners.data.items?.length === 2, 'two gacha banners are open');
+  // operators can add banners in the admin site (Phase 6), so only the two first ones are required
+  const open = new Set((banners.data.items ?? []).map((b: { id: string }) => b.id));
+  check(banners.status === 200 && open.has('standard') && open.has('premium-s1'), `gacha banners open: ${[...open].join(', ')}`);
   const details = await api('/api/gacha/banners/premium-s1', { token });
   check(details.status === 200 && details.data.cards?.length === 180, 'Premium details: 180 cards');
   const poor = await api('/api/gacha/banners/standard/draw', { token, body: { count: 1, requestId: `check-${Math.random().toString(36).slice(2, 12)}` } });
@@ -98,6 +101,28 @@ async function main() {
 
   const badAdmin = await api('/api/admin/auth/login', { body: { username: 'nobody', password: 'wrong-password-123' } });
   check(badAdmin.status === 401, 'admin login rejects unknown accounts');
+
+  // ---------------------------------------------------------------- Phase 6 (shop, mock store, Season Pass)
+  const shop6 = await api('/api/purchases/shop', { token });
+  check(shop6.status === 200 && shop6.data.products?.length === 7, `shop: ${shop6.data.products?.length} products`);
+  check(shop6.data.stores?.apple?.available === false && shop6.data.stores?.google?.available === false, 'Apple / Google stores are not connected (decision 52)');
+  if (shop6.data.stores?.mock?.available) {
+    const start = await api('/api/purchases', { token, body: { productId: 'gems_300', store: 'mock' } });
+    const pay = await api(`/api/purchases/${start.data.purchaseId}/mock-checkout`, { token, body: {} });
+    const done = await api(`/api/purchases/${start.data.purchaseId}/verify`, { token, body: { receipt: pay.data.receipt } });
+    const g = done.data.wallet?.gems;
+    check(done.status === 200 && done.data.purchase?.status === 'completed' && g?.paidPurchased === 300 && g?.paidGranted === 150, 'mock store: Starter Pack -> 300 purchased + 150 first-time GEMS');
+  } else {
+    const start = await api('/api/purchases', { token, body: { productId: 'gems_300', store: 'mock' } });
+    check(start.status === 409 && start.data.error?.code === 'STORE_UNAVAILABLE', 'mock store is closed here');
+  }
+  const pass0 = await api('/api/pass', { token });
+  check(pass0.status === 200 && pass0.data.xp === 0 && pass0.data.levels?.length === 30, 'Season Pass: 30 levels, 0 XP');
+  let shopClosed = true;
+  for (const p of ['/api/admin/products', '/api/admin/purchases', '/api/admin/revenue', '/api/admin/gacha/banners']) {
+    if ((await api(p, { token })).status !== 401) shopClosed = false;
+  }
+  check(shopClosed, 'admin shop / revenue / gacha APIs refuse player tokens');
 
   // ---------------------------------------------------------------- league
   const room = await api<{ roomId: string }>('/api/rooms', { token, body: { settings: { pickSeconds: 5, fillWithCpu: true } } });
@@ -174,6 +199,9 @@ async function main() {
   check(claim.status === 200 && claim.data.paid === 100, 'claim the daily mission');
   const w1 = await api('/api/currency', { token });
   check(w1.data.wallet?.coins === 100 + (reward?.coins ?? 0) + 100, `wallet: ${w1.data.wallet?.coins} COINS (login + match reward + mission)`);
+  const pass1 = await api('/api/pass', { token });
+  const wantXp = myRank === 1 ? 150 : 100;
+  check(reward?.passXp === wantXp && pass1.data.xp === wantXp, `Season Pass: +${pass1.data.xp} XP for rank ${myRank}`);
   check((await api('/api/sessions/end', { token, body: { sessionId: sid, durationMs: Date.now() - t0 } })).status === 200, 'app session ended');
   if (errors.length) console.log(`  (server errors received: ${errors.join(', ')})`);
 

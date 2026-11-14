@@ -7,6 +7,8 @@ import { AdminsPage, SettingsPage } from './AdminsPage';
 import { DistributionsPage } from './DistributionsPage';
 import { EconomyPage } from './EconomyPage';
 import { FeedbackPage } from './FeedbackPage';
+import { GachaAdminPage } from './GachaAdminPage';
+import { ProductsPage, PurchasesPage, RevenuePage } from './ShopAdminPages';
 import { AnalyticsPage, OverviewPage, RetentionPage } from './InsightsPages';
 import { UsersPage } from './UsersPage';
 import { EventsPage } from './EventsPage';
@@ -89,7 +91,7 @@ function Login({ onDone }: { onDone: () => void }) {
   );
 }
 
-type Page = 'overview' | 'users' | 'analytics' | 'retention' | 'economy' | 'feedback' | 'distributions' | 'cards' | 'events' | 'seasons' | 'audit' | 'admins' | 'settings';
+type Page = 'overview' | 'users' | 'analytics' | 'retention' | 'economy' | 'revenue' | 'feedback' | 'distributions' | 'purchases' | 'products' | 'gacha' | 'cards' | 'events' | 'seasons' | 'audit' | 'admins' | 'settings';
 
 interface NavItem {
   page: Page;
@@ -106,6 +108,7 @@ const NAV: { group: string; items: NavItem[] }[] = [
       { page: 'analytics', label: 'Analytics', any: ['analytics.read'] },
       { page: 'retention', label: 'Retention', any: ['analytics.read'] },
       { page: 'economy', label: 'Economy', any: ['economy.read', 'users.wallet', 'economy.test_grant'] },
+      { page: 'revenue', label: 'Revenue', any: ['revenue.read'] },
     ],
   },
   {
@@ -114,6 +117,9 @@ const NAV: { group: string; items: NavItem[] }[] = [
       { page: 'users', label: 'Users', any: ['users.read'] },
       { page: 'feedback', label: 'Feedback', any: ['feedback.read'] },
       { page: 'distributions', label: 'GEMS 配布', any: ['distribution.read'] },
+      { page: 'purchases', label: 'Purchases', any: ['purchases.read'] },
+      { page: 'products', label: '商品', any: ['products.write', 'revenue.read', 'purchases.read'] },
+      { page: 'gacha', label: 'ガシャ管理', any: ['gacha.read'] },
       { page: 'events', label: 'イベント管理', any: ['events.read'] },
       { page: 'seasons', label: 'シーズン・ランキング', any: ['seasons.read'] },
       { page: 'cards', label: 'カード一覧', any: ['cards.read'] },
@@ -202,6 +208,10 @@ export default function App() {
         {current === 'users' && <UsersPage canWrite={can('users.write')} canWallet={can('users.wallet')} />}
         {current === 'feedback' && <FeedbackPage canWrite={can('feedback.write')} />}
         {current === 'distributions' && <DistributionsPage canWrite={can('distribution.write')} />}
+        {current === 'revenue' && <RevenuePage />}
+        {current === 'purchases' && <PurchasesPage canWrite={can('purchases.write')} />}
+        {current === 'products' && <ProductsPage canWrite={can('products.write')} />}
+        {current === 'gacha' && <GachaAdminPage canWrite={can('gacha.write')} />}
         {current === 'cards' && <CardsPage />}
         {current === 'events' && <EventsPage canWrite={can('events.write')} />}
         {current === 'seasons' && <SeasonsPage />}

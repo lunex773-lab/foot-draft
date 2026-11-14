@@ -20,7 +20,7 @@ interface RankedMe {
 
 interface Board {
   season: { id: string; name: string };
-  items: { position: number; userId: string; displayName: string; rating: number; games: number; wins: number }[];
+  items: { position: number; userId: string; displayName: string; rating: number; games: number; wins: number; member?: boolean }[];
   me: { position: number | null; players: number };
 }
 
@@ -143,7 +143,10 @@ export default function RankedPage() {
                   {board.items.map((r) => (
                     <tr key={r.userId} className={r.userId === user?.id ? 'me' : ''}>
                       <td className="display">{r.position}</td>
-                      <td>{r.displayName}</td>
+                      <td>
+                        {r.member && <span className="member-badge" title="Premium Membership 会員">★</span>}
+                        {r.displayName}
+                      </td>
                       <td>
                         <TierBadge rating={r.rating} />
                       </td>

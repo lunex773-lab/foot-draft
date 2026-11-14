@@ -16,8 +16,16 @@ export interface LoginStatus {
   amount: number;
 }
 
+export interface MembershipStatus {
+  active: boolean;
+  autoRenew: boolean;
+  periodEnd: number | null;
+}
+
 interface WalletCtx {
   wallet: Wallet | null;
+  /** Premium Membership (badge) */
+  membership: MembershipStatus | null;
   login: LoginStatus | null;
   matchRewards: { leaguesToday: number; cap: number } | null;
   /** message shown once (login bonus received) */
@@ -35,12 +43,16 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [login, setLogin] = useState<LoginStatus | null>(null);
   const [matchRewards, setMatchRewards] = useState<WalletCtx['matchRewards']>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [membership, setMembership] = useState<MembershipStatus | null>(null);
 
   const refresh = useCallback(async () => {
     const r = await api<{ wallet: Wallet; login: LoginStatus; matchRewards: { leaguesToday: number; cap: number } }>('/api/currency');
     setWallet(r.wallet);
     setLogin(r.login);
     setMatchRewards(r.matchRewards);
+    api<{ membership: MembershipStatus }>('/api/users/me')
+      .then((m) => setMembership(m.membership))
+      .catch(() => undefined);
   }, []);
 
   // app sessions for the admin analytics (DAU, play time)
@@ -50,8 +62,12 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     // receive today's login bonus when the app opens (once per Japan day, decided by the server)
     (async () => {
       try {
-        const lb = await api<LoginStatus & { paid: number; wallet: Wallet }>('/api/rewards/login', { body: {} });
-        if (lb.paid > 0) setNotice(`ログインボーナス：${lb.paid.toLocaleString()} COINS を受け取りました（${lb.streak}日連続）`);
+        const lb = await api<LoginStatus & { paid: number; membershipGems: number; wallet: Wallet }>('/api/rewards/login', { body: {} });
+        const parts = [
+          lb.paid > 0 ? `ログインボーナス：${lb.paid.toLocaleString()} COINS（${lb.streak}日連続）` : '',
+          lb.membershipGems > 0 ? `会員特典：無償GEMS ${lb.membershipGems}` : '',
+        ].filter(Boolean);
+        if (parts.length) setNotice(`${parts.join('　')} を受け取りました`);
       } catch {
         /* shown as not received */
       }
@@ -60,7 +76,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, [refresh]);
 
   return (
-    <Ctx.Provider value={{ wallet, login, matchRewards, notice, clearNotice: () => setNotice(null), refresh, setWallet }}>{children}</Ctx.Provider>
+    <Ctx.Provider value={{ wallet, membership, login, matchRewards, notice, clearNotice: () => setNotice(null), refresh, setWallet }}>{children}</Ctx.Provider>
   );
 }
 
@@ -92,6 +108,11 @@ export const REASON_LABEL: Record<string, string> = {
   duplicate: '重複カードの変換',
   redeem: '交換所',
   distribution: '運営からの配布',
+  purchase: '購入',
+  purchase_bonus: '購入のおまけ',
+  refund: '返金による回収',
+  season_pass: 'Season Pass',
+  membership_daily: '会員特典',
 };
 
 export const CURRENCY_SHORT: Record<string, string> = {

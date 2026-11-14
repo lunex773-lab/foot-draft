@@ -246,6 +246,8 @@ interface Details {
   cards: { playerId: string; name: string; rarity: Rarity; position: string | null; ovr: number | null; ratePpm: number; owned: boolean }[];
   duplicatePoints: { type: 'standard' | 'premium'; values: Record<Rarity, number> };
   paidGemsSpendOrder: string[] | null;
+  /** change history (decision 58) */
+  versions?: { version: number; change_note: string | null; created_at: number }[];
 }
 
 /** transparency page (spec 9-6) */
@@ -320,6 +322,18 @@ export function GachaDetailPage() {
           </tbody>
         </table>
       </div>
+      {d.versions && d.versions.length > 0 && (
+        <div className="panel">
+          <h3>変更履歴</h3>
+          {d.versions.map((v) => (
+            <div key={v.version} className="small" style={{ padding: '3px 0' }}>
+              v{v.version}　{formatJst(v.created_at)}　{v.change_note ?? ''}
+              {v.version === b.ratesVersion && <span className="chip on" style={{ marginLeft: 6 }}>現在</span>}
+            </div>
+          ))}
+          <div className="tiny muted">抽選履歴には、どの版で引いたかが記録されます。</div>
+        </div>
+      )}
       <div className="panel">
         <h3>レアリティごとの提供割合</h3>
         <table className="tbl" style={{ maxWidth: 560 }}>

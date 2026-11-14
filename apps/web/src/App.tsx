@@ -22,6 +22,18 @@ const ExchangePage = lazy(() => import('./pages/ExchangePage'));
 const MissionsPage = lazy(() => import('./pages/MissionsPage'));
 const WalletPage = lazy(() => import('./pages/WalletPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+const ShopPage = lazy(() => import('./pages/ShopPage'));
+const PassPage = lazy(() => import('./pages/PassPage'));
+
+/** Premium Membership badge (decision 55) */
+function MemberBadge() {
+  const { membership } = useWallet();
+  return membership?.active ? (
+    <span className="member-badge" title="Premium Membership 会員">
+      ★
+    </span>
+  ) : null;
+}
 
 /** unread replies to the player's feedback (badge on 設定) */
 function useUnreadReplies(enabled: boolean) {
@@ -87,7 +99,10 @@ function ShellInner() {
         {me && (
           <div className="who">
             <WalletBar />
-            <span className="uname">{me.displayName}</span>
+            <span className="uname">
+              <MemberBadge />
+              {me.displayName}
+            </span>
             <button className="btn small ghost" onClick={logout}>
               ログアウト
             </button>
@@ -103,6 +118,8 @@ function ShellInner() {
           <NavLink to="/collection">コレクション</NavLink>
           <NavLink to="/exchange">交換所</NavLink>
           <NavLink to="/missions">ミッション</NavLink>
+          <NavLink to="/pass">パス</NavLink>
+          <NavLink to="/shop">ショップ</NavLink>
           <NavLink to="/ranked">ランク</NavLink>
           <NavLink to="/events">イベント</NavLink>
           <NavLink to="/cards">図鑑</NavLink>
@@ -133,6 +150,8 @@ function ShellInner() {
             <Route path="/missions" element={<MissionsPage />} />
             <Route path="/wallet" element={<WalletPage />} />
             <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/shop" element={<ShopPage />} />
+            <Route path="/pass" element={<PassPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         ) : (

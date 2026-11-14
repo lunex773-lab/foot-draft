@@ -179,8 +179,11 @@ export default function HomePage() {
             <Link className="btn small" to="/missions">
               ミッション{missionsReady > 0 && <span className="chip on">{missionsReady}</span>}
             </Link>
-            <Link className="btn small ghost" to="/exchange">
-              交換所
+            <Link className="btn small" to="/pass">
+              Season Pass
+            </Link>
+            <Link className="btn small ghost" to="/shop">
+              ショップ
             </Link>
           </div>
         </div>

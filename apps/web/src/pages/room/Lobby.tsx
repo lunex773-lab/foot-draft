@@ -19,7 +19,10 @@ function RankedLobby({ snap, onLeave, serverNow }: { snap: RoomSnapshot; onLeave
             <div key={s.seat} className="seat" style={{ borderColor: s.userId ? seatColor(s.seat) : undefined }}>
               {s.userId ? (
                 <>
-                  <div className="name">{s.displayName}</div>
+                  <div className="name">
+                    {s.member && <span className="member-badge" title="Premium Membership 会員">★</span>}
+                    {s.displayName}
+                  </div>
                   <div className="tiny muted row" style={{ marginTop: 4 }}>
                     <span className={`dot ${s.connected ? 'on' : ''}`} /> {s.connected ? '接続中' : '未接続'}
                     {s.seat === snap.you && <span className="chip on">あなた</span>}
@@ -104,7 +107,10 @@ function StandardLobby({ snap, send, onLeave }: { snap: RoomSnapshot; send: (m: 
             <div key={s.seat} className="seat" style={{ borderColor: s.userId ? seatColor(s.seat) : undefined }}>
               {s.userId ? (
                 <>
-                  <div className="name">{s.displayName}</div>
+                  <div className="name">
+                    {s.member && <span className="member-badge" title="Premium Membership 会員">★</span>}
+                    {s.displayName}
+                  </div>
                   <div className="tiny muted row" style={{ marginTop: 4 }}>
                     <span className={`dot ${s.connected ? 'on' : ''}`} /> {s.connected ? '接続中' : '未接続'}
                     {s.isHost && <span className="chip">ホスト</span>}

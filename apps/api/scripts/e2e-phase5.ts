@@ -192,7 +192,7 @@ async function main() {
   check(s1?.active === 1 && series.data.series.find((r: any) => r.day === day0)?.newUsers === 1, 'daily series: registration on day 0, active on day 1');
   check(ret.data.groups && 'friend_tester' in ret.data.groups, 'retention compares friend testers, beta testers and normal players');
   const ov = await api('/api/admin/overview', { token: vt2 });
-  check(ov.status === 200 && ov.data.totals.users > 0 && ov.data.current.dau >= 1 && ov.data.revenue.implemented === false, 'overview: totals, DAU, revenue reported as not implemented');
+  check(ov.status === 200 && ov.data.totals.users > 0 && ov.data.current.dau >= 1 && ov.data.revenue.implemented === true && ov.data.revenue.storesConnected === false, 'overview: totals, DAU, revenue (stores not connected yet)');
   check(ov.data.series.length === 14 && ov.data.previous.to === addDays(ov.data.period.from, -1), 'overview: 14 days and the previous period for comparison');
 
   // ------------------------------------------------------------ feedback
@@ -232,7 +232,7 @@ async function main() {
   const search = await api(`/api/admin/users?q=${player.username}`, { token: st });
   check(search.data.items.length === 1 && search.data.items[0].id === player.id && search.data.items[0].tags.includes('normal'), 'search by username');
   const detail = await api(`/api/admin/users/${player.id}`, { token: at });
-  check(detail.data.feedback.length === 1 && detail.data.logins.length >= 1 && detail.data.purchases.implemented === false, 'details: feedback, login history, purchases not implemented');
+  check(detail.data.feedback.length === 1 && detail.data.logins.length >= 1 && Array.isArray(detail.data.purchases.items), 'details: feedback, login history, purchases');
   const tags = await api(`/api/admin/users/${player.id}`, { method: 'PATCH', token: at, body: { tags: ['friend_tester', 'beta_tester'] } });
   check(tags.status === 200 && tags.data.user.tags.sort().join() === 'beta_tester,friend_tester', 'admin sets tags');
   const sus = await api(`/api/admin/users/${other.id}`, { method: 'PATCH', token: at, body: { status: 'suspended', reason: 'test' } });
