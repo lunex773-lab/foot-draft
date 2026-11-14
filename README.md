@@ -1,6 +1,7 @@
 # FOOTBALL DRAFT
 
 サッカー選手のドラフトとチーム編成で戦う、最大4人のオンライン対戦ゲーム。
+モード：クイックドラフト・ランク戦（レーティング・月間シーズン・ランキング）・ソロ課題（日替わり）・イベント（期間限定の候補）・プライベートルーム。
 設計書：`docs/` 配下（現状分析・開発計画・決定事項・SIM仕様・実装記録）。
 
 ![カード](docs/screenshots/cards.png)
@@ -59,7 +60,8 @@ npm run admin:create:local -- --username あなたの管理者名
 ```bash
 npm test -w @fd/shared          # 単体テスト（乱数・選手データ・ドラフト・編成・SIM・順位）
 npm run sim:balance -- 150      # SIMのバランス検証（大量の自動試合）
-npm run e2e -w @fd/api          # API起動中に実行：4人のWebSocketクライアントでリーグを1回通しで対戦
+npm run e2e -w @fd/api          # API起動中に実行：4人のWebSocketクライアントでリーグを1回通しで対戦＋Phase 3（ランク・ソロ・イベント・管理）
+npm run e2e:phase3 -w @fd/api   # Phase 3 だけ
 npm run typecheck
 ```
 
@@ -81,3 +83,4 @@ npm run typecheck
 - `docs/02-decisions.md` 決定事項・暫定値・提案中の事項
 - `docs/03-sim.md` 試合シミュレーションの仕様とバランス検証結果
 - `docs/04-implementation-log.md` 実装記録（実装済み・未実装・検証結果・既知の課題）
+- `docs/05-phase3-plan.md` Phase 3（競争機能）の計画

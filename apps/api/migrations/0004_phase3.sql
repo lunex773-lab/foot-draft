@@ -128,8 +128,8 @@ CREATE INDEX idx_solo_attempts_challenge ON solo_attempts(challenge_id, user_id)
 
 -- initial events (drafts: an admin sets the period and publishes them)
 INSERT INTO events (id, name, description, starts_at, ends_at, status, rules_json, created_at, updated_at) VALUES
-  ('ev-young-talents', 'Young Talents', '23歳以下の若手選手が全員候補に入るイベント。足りないポジションは通常の選手で補います。', 1763046000000, 1763650800000, 'draft', '{"pool":{"maxAge":23}}', 1763020800000, 1763020800000),
-  ('ev-goalkeeper-legends', 'Goalkeeper Legends', '全20人のGKが候補に入るイベント。GKの取り合いが勝負を分けます。', 1763046000000, 1763650800000, 'draft', '{"pool":{"positions":["GK"]}}', 1763020800000, 1763020800000),
-  ('ev-world-legends', 'World Legends', 'Legendary と Icon の36人が全員候補に入るイベント。', 1763046000000, 1763650800000, 'draft', '{"pool":{"rarities":["legendary","icon"]}}', 1763020800000, 1763020800000),
-  ('ev-japanese-stars', 'Japanese Stars', '日本国籍の23人が全員候補に入るイベント。', 1763046000000, 1763650800000, 'draft', '{"pool":{"nationalities":["JPN"]}}', 1763020800000, 1763020800000),
-  ('ev-attacking-masters', 'Attacking Masters', 'ST・CF・LW・RW・CAM の攻撃的な選手を中心にした候補で戦うイベント。', 1763046000000, 1763650800000, 'draft', '{"pool":{"positions":["ST","CF","LW","RW","CAM"]}}', 1763020800000, 1763020800000);
+  ('ev-young-talents', 'Young Talents', '23歳以下の若手選手が全員候補に入るイベント。足りないポジションは通常の選手で補います。', 1794582000000, 1795186800000, 'draft', '{"pool":{"maxAge":23}}', 1794582000000, 1794582000000),
+  ('ev-goalkeeper-legends', 'Goalkeeper Legends', '全20人のGKが候補に入るイベント。GKの取り合いが勝負を分けます。', 1794582000000, 1795186800000, 'draft', '{"pool":{"positions":["GK"]}}', 1794582000000, 1794582000000),
+  ('ev-world-legends', 'World Legends', 'Legendary と Icon の36人が全員候補に入るイベント。', 1794582000000, 1795186800000, 'draft', '{"pool":{"rarities":["legendary","icon"]}}', 1794582000000, 1794582000000),
+  ('ev-japanese-stars', 'Japanese Stars', '日本国籍の23人が全員候補に入るイベント。', 1794582000000, 1795186800000, 'draft', '{"pool":{"nationalities":["JPN"]}}', 1794582000000, 1794582000000),
+  ('ev-attacking-masters', 'Attacking Masters', 'ST・CF・LW・RW・CAM の攻撃的な選手を中心にした候補で戦うイベント。', 1794582000000, 1795186800000, 'draft', '{"pool":{"positions":["ST","CF","LW","RW","CAM"]}}', 1794582000000, 1794582000000);

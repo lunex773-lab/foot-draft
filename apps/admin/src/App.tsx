@@ -2,9 +2,11 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { adminApi, hasToken, setAdminToken, AdminApiError } from './api';
 import { CardsPage } from './CardsPage';
 import { AuditPage } from './AuditPage';
+import { EventsPage } from './EventsPage';
+import { SeasonsPage } from './SeasonsPage';
 
 interface AdminMe {
-  admin: { id: string; username: string; role: 'owner' | 'admin' | 'viewer' };
+  admin: { id: string; username: string; role: 'owner' | 'admin' | 'viewer'; permissions: string[] };
   environment: string;
 }
 
@@ -61,7 +63,7 @@ function Login({ onDone }: { onDone: () => void }) {
 export default function App() {
   const [me, setMe] = useState<AdminMe | null>(null);
   const [checking, setChecking] = useState(hasToken());
-  const [page, setPage] = useState<'cards' | 'audit'>('cards');
+  const [page, setPage] = useState<'cards' | 'events' | 'seasons' | 'audit'>('cards');
 
   const loadMe = () =>
     adminApi<AdminMe>('/auth/me')
@@ -79,7 +81,8 @@ export default function App() {
   if (checking) return <div className="muted" style={{ padding: 40 }}>確認中…</div>;
   if (!me) return <Login onDone={loadMe} />;
 
-  const canAudit = me.admin.role !== 'viewer';
+  const can = (p: string) => me.admin.permissions?.includes(p) ?? false;
+  const canAudit = can('audit.read');
   return (
     <div className="layout">
       <aside className="side">
@@ -93,6 +96,16 @@ export default function App() {
         <button className={`nav ${page === 'cards' ? 'on' : ''}`} onClick={() => setPage('cards')}>
           カード一覧
         </button>
+        {can('events.read') && (
+          <button className={`nav ${page === 'events' ? 'on' : ''}`} onClick={() => setPage('events')}>
+            イベント管理
+          </button>
+        )}
+        {can('seasons.read') && (
+          <button className={`nav ${page === 'seasons' ? 'on' : ''}`} onClick={() => setPage('seasons')}>
+            シーズン・ランキング
+          </button>
+        )}
         {canAudit && (
           <button className={`nav ${page === 'audit' ? 'on' : ''}`} onClick={() => setPage('audit')}>
             管理者操作ログ
@@ -113,7 +126,12 @@ export default function App() {
           ログアウト
         </button>
       </aside>
-      <main className="main">{page === 'cards' ? <CardsPage /> : <AuditPage />}</main>
+      <main className="main">
+        {page === 'cards' && <CardsPage />}
+        {page === 'events' && <EventsPage canWrite={can('events.write')} />}
+        {page === 'seasons' && <SeasonsPage />}
+        {page === 'audit' && canAudit && <AuditPage />}
+      </main>
     </div>
   );
 }
