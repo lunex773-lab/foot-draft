@@ -10,6 +10,8 @@ import { FeedbackPage } from './FeedbackPage';
 import { GachaAdminPage } from './GachaAdminPage';
 import { ProductsPage, PurchasesPage, RevenuePage } from './ShopAdminPages';
 import { AnalyticsPage, OverviewPage, RetentionPage } from './InsightsPages';
+import { BetaPage } from './BetaPage';
+import { DraftAnalyticsPage, MatchesPage } from './GameStatsPages';
 import { UsersPage } from './UsersPage';
 import { EventsPage } from './EventsPage';
 import { SeasonsPage } from './SeasonsPage';
@@ -91,7 +93,7 @@ function Login({ onDone }: { onDone: () => void }) {
   );
 }
 
-type Page = 'overview' | 'users' | 'analytics' | 'retention' | 'economy' | 'revenue' | 'feedback' | 'distributions' | 'purchases' | 'products' | 'gacha' | 'cards' | 'events' | 'seasons' | 'audit' | 'admins' | 'settings';
+type Page = 'overview' | 'users' | 'analytics' | 'retention' | 'economy' | 'revenue' | 'matches' | 'drafts' | 'beta' | 'feedback' | 'distributions' | 'purchases' | 'products' | 'gacha' | 'cards' | 'events' | 'seasons' | 'audit' | 'admins' | 'settings';
 
 interface NavItem {
   page: Page;
@@ -109,11 +111,14 @@ const NAV: { group: string; items: NavItem[] }[] = [
       { page: 'retention', label: 'Retention', any: ['analytics.read'] },
       { page: 'economy', label: 'Economy', any: ['economy.read', 'users.wallet', 'economy.test_grant'] },
       { page: 'revenue', label: 'Revenue', any: ['revenue.read'] },
+      { page: 'matches', label: 'Matches', any: ['analytics.read'] },
+      { page: 'drafts', label: 'Draft Analytics', any: ['analytics.read'] },
     ],
   },
   {
     group: '運営',
     items: [
+      { page: 'beta', label: 'Beta Testing', any: ['analytics.read', 'users.read', 'beta.manage'] },
       { page: 'users', label: 'Users', any: ['users.read'] },
       { page: 'feedback', label: 'Feedback', any: ['feedback.read'] },
       { page: 'distributions', label: 'GEMS 配布', any: ['distribution.read'] },
@@ -209,6 +214,9 @@ export default function App() {
         {current === 'feedback' && <FeedbackPage canWrite={can('feedback.write')} />}
         {current === 'distributions' && <DistributionsPage canWrite={can('distribution.write')} />}
         {current === 'revenue' && <RevenuePage />}
+        {current === 'matches' && <MatchesPage />}
+        {current === 'drafts' && <DraftAnalyticsPage />}
+        {current === 'beta' && <BetaPage canUsers={can('users.read')} canManage={can('beta.manage')} canGrant={can('economy.test_grant')} testTools={!!me.testGrantsEnabled} />}
         {current === 'purchases' && <PurchasesPage canWrite={can('purchases.write')} />}
         {current === 'products' && <ProductsPage canWrite={can('products.write')} />}
         {current === 'gacha' && <GachaAdminPage canWrite={can('gacha.write')} />}

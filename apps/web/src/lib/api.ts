@@ -1,6 +1,15 @@
 /** Small fetch wrapper for the FOOTBALL DRAFT API. */
 const BASE = import.meta.env.VITE_API_URL ?? '';
-export const APP_VERSION = '0.1.0';
+export const APP_VERSION = '0.7.0';
+
+/** "pwa" when opened from the home screen (decision 64), for the analytics */
+export const PLATFORM = (() => {
+  try {
+    return window.matchMedia('(display-mode: standalone)').matches || (navigator as unknown as { standalone?: boolean }).standalone === true ? 'pwa' : 'web';
+  } catch {
+    return 'web';
+  }
+})();
 
 export class ApiFailure extends Error {
   constructor(
@@ -44,7 +53,7 @@ export async function api<T = unknown>(path: string, opts: { method?: string; bo
     method: opts.method ?? (opts.body !== undefined ? 'POST' : 'GET'),
     headers: {
       'Content-Type': 'application/json',
-      'X-FD-Platform': 'web',
+      'X-FD-Platform': PLATFORM,
       'X-FD-App-Version': APP_VERSION,
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },

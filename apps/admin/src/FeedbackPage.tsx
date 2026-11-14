@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { adminApi } from './api';
+import { MODE_LABEL, tagLabel } from './InsightsPages';
 
 const STATUS = ['new', 'reviewing', 'investigating', 'resolved', 'closed'] as const;
 const PRIORITY = ['low', 'medium', 'high', 'critical'] as const;
@@ -132,6 +133,16 @@ interface Detail {
   notes: { id: string; body: string; created_at: number; admin: string | null }[];
   replies: { id: string; body: string; created_at: number; read_at: number | null; admin: string | null }[];
   history: { action: string; detail_json: string | null; created_at: number; admin: string | null }[];
+  /** the sender's use of the game (spec 23-5) */
+  activity?: {
+    tags: string[];
+    activeDays: number;
+    lastActive: string | null;
+    matches: number;
+    playtimeMs: number;
+    leaguesBefore: { id: string; mode: string; status: string; created_at: number; final_rank: number | null; pick_seconds: number | null }[];
+    ratings: { n: number; draftFun: number | null; resultFair: number | null };
+  };
 }
 
 function FeedbackDetail({ id, canWrite, onBack }: { id: string; canWrite: boolean; onBack: () => void }) {
@@ -193,6 +204,49 @@ function FeedbackDetail({ id, canWrite, onBack }: { id: string; canWrite: boolea
             <dt>直前のエラーコード</dt>
             <dd>{f.error_code ?? '—'}</dd>
           </dl>
+          {d.activity && (
+            <>
+              <h3 style={{ marginTop: 12 }}>送った人の利用状況</h3>
+              <dl className="kv small">
+                <dt>タグ</dt>
+                <dd>{d.activity.tags.map(tagLabel).join('・') || '—'}</dd>
+                <dt>遊んだ日数・最後に遊んだ日</dt>
+                <dd>
+                  {d.activity.activeDays}日・{d.activity.lastActive ?? '—'}
+                </dd>
+                <dt>対戦（完了した試合）</dt>
+                <dd>{d.activity.matches}試合</dd>
+                <dt>リーグ後の評価</dt>
+                <dd>
+                  {d.activity.ratings.n
+                    ? `${d.activity.ratings.n}回（ドラフト ${Number(d.activity.ratings.draftFun).toFixed(1)}・納得感 ${Number(d.activity.ratings.resultFair).toFixed(1)}）`
+                    : 'なし'}
+                </dd>
+              </dl>
+              {d.activity.leaguesBefore.length > 0 && (
+                <table className="tbl small" style={{ marginTop: 6 }}>
+                  <thead>
+                    <tr>
+                      <th>送信前のリーグ</th>
+                      <th>モード</th>
+                      <th>順位</th>
+                      <th>制限時間</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {d.activity.leaguesBefore.map((l) => (
+                      <tr key={l.id}>
+                        <td>{time(l.created_at)}</td>
+                        <td>{MODE_LABEL[l.mode] ?? l.mode}</td>
+                        <td>{l.final_rank ? `${l.final_rank}位` : l.status === 'finished' ? '—' : '途中'}</td>
+                        <td>{l.pick_seconds ? `${l.pick_seconds}秒` : '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </>
+          )}
         </div>
         <div className="panel">
           <h3>状態・優先度</h3>

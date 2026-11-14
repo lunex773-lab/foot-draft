@@ -44,12 +44,27 @@ export function PeriodFilter({ value, onChange, children }: { value: Period; onC
   );
 }
 
+/** Developer accounts (Staging check, the team) are left out unless shown (decision 60) */
+export function DevToggle({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <label className="tiny muted check-inline">
+      <input type="checkbox" checked={value} onChange={(e) => onChange(e.target.checked)} />
+      Developer を除く
+    </label>
+  );
+}
+
+export function useDev(): [boolean, (v: boolean) => void, string] {
+  const [exclude, setExclude] = useState(true);
+  return [exclude, setExclude, exclude ? '' : '&dev=include'];
+}
+
 export function usePeriod(days = 14): [Period, (p: Period) => void] {
   const today = jstDay(Date.now());
   return useState<Period>({ from: addDays(today, -(days - 1)), to: today });
 }
 
-function useLoad<T>(path: string | null): { data: T | null; error: string | null; loading: boolean } {
+export function useLoad<T>(path: string | null): { data: T | null; error: string | null; loading: boolean } {
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -111,11 +126,14 @@ const dec = (n: number) => n.toLocaleString('ja-JP', { maximumFractionDigits: 1 
 
 export function OverviewPage({ onOpen }: { onOpen?: (page: string) => void }) {
   const [period, setPeriod] = usePeriod(14);
-  const { data: d, error, loading } = useLoad<Overview>(`/overview?from=${period.from}&to=${period.to}`);
+  const [noDev, setNoDev, devQs] = useDev();
+  const { data: d, error, loading } = useLoad<Overview>(`/overview?from=${period.from}&to=${period.to}${devQs}`);
   return (
     <div>
       <h1>Overview</h1>
-      <PeriodFilter value={period} onChange={setPeriod} />
+      <PeriodFilter value={period} onChange={setPeriod}>
+        <DevToggle value={noDev} onChange={setNoDev} />
+      </PeriodFilter>
       {error && <div className="error">{error}</div>}
       {d && (
         <div style={{ opacity: loading ? 0.5 : 1, display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -171,7 +189,7 @@ export function OverviewPage({ onOpen }: { onOpen?: (page: string) => void }) {
   );
 }
 
-const MODE_LABEL: Record<string, string> = { quick: 'クイック', private: 'プライベート', ranked: 'ランク戦', solo: 'ソロ課題', event: 'イベント', collection: 'Collection Draft' };
+export const MODE_LABEL: Record<string, string> = { quick: 'クイック', private: 'プライベート', ranked: 'ランク戦', solo: 'ソロ課題', event: 'イベント', collection: 'Collection Draft' };
 const TAG_LABEL: Record<string, string> = { founder: 'Founder', beta_tester: 'Beta Tester', friend_tester: 'Friend Tester', developer: 'Developer', normal: 'Normal' };
 export const TAGS = Object.keys(TAG_LABEL);
 export const tagLabel = (t: string) => TAG_LABEL[t] ?? t;
@@ -191,8 +209,9 @@ export function AnalyticsPage() {
   const [platform, setPlatform] = useState('');
   const [version, setVersion] = useState('');
   const [tag, setTag] = useState('');
+  const [noDev, setNoDev, devQs] = useDev();
   const qs = new URLSearchParams({ from: period.from, to: period.to, ...(platform ? { platform } : {}), ...(version ? { version } : {}), ...(tag ? { tag } : {}) });
-  const { data: d, error, loading } = useLoad<Analytics>(`/analytics?${qs}`);
+  const { data: d, error, loading } = useLoad<Analytics>(`/analytics?${qs}${devQs}`);
   return (
     <div>
       <h1>Analytics</h1>
@@ -217,6 +236,7 @@ export function AnalyticsPage() {
             </option>
           ))}
         </select>
+        <DevToggle value={noDev} onChange={setNoDev} />
       </PeriodFilter>
       {error && <div className="error">{error}</div>}
       {d && (
@@ -284,7 +304,8 @@ interface Retention {
 export function RetentionPage() {
   const [period, setPeriod] = usePeriod(45);
   const [tag, setTag] = useState('');
-  const { data: d, error, loading } = useLoad<Retention>(`/retention?from=${period.from}&to=${period.to}${tag ? `&tag=${tag}` : ''}`);
+  const [noDev, setNoDev, devQs] = useDev();
+  const { data: d, error, loading } = useLoad<Retention>(`/retention?from=${period.from}&to=${period.to}${tag ? `&tag=${tag}` : ''}${devQs}`);
   return (
     <div>
       <h1>Retention</h1>
@@ -297,6 +318,7 @@ export function RetentionPage() {
             </option>
           ))}
         </select>
+        <DevToggle value={noDev} onChange={setNoDev} />
       </PeriodFilter>
       {error && <div className="error">{error}</div>}
       {d && (

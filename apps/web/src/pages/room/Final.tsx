@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { MatchDetailModal } from '../../components/MatchDetailModal';
 import { Standings } from '../../components/Standings';
 import { TierBadge } from '../../components/TierBadge';
+import { LeagueRating } from '../../lib/beta';
 import { seatColor, signed } from '../../lib/labels';
 import { fmt, useWallet } from '../../lib/wallet';
 
@@ -131,6 +132,7 @@ export function Final({ snap }: { snap: RoomSnapshot }) {
           ))}
         </div>
       </div>
+      <LeagueRating snap={snap} />
       <div className="grid2">
         <div className="panel">
           <h3>順位表</h3>

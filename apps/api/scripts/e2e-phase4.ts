@@ -249,7 +249,9 @@ async function main() {
   // ------------------------------------------------------------ standard gacha
   console.log('\n[standard gacha]');
   const banners = await api('/api/gacha/banners', { token: a.token });
-  check(banners.data.items.map((x: any) => x.id).join(',') === 'standard,premium-s1', 'two open banners');
+  // banners added in the admin site (Phase 6) may be open too; the two first ones must be
+  const openIds: string[] = banners.data.items.map((x: any) => x.id);
+  check(openIds.includes('standard') && openIds.includes('premium-s1'), `open banners: ${openIds.join(', ')}`);
   const details = await api('/api/gacha/banners/premium-s1', { token: a.token });
   const rateSum = Object.values(details.data.banner.ratesPpm as Record<string, number>).reduce((s, v) => s + v, 0);
   const cardSum = (details.data.cards as any[]).reduce((s, c) => s + c.ratePpm, 0);

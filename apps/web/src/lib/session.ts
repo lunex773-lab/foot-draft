@@ -1,4 +1,4 @@
-import { APP_VERSION, getToken } from './api';
+import { APP_VERSION, PLATFORM, getToken } from './api';
 
 /**
  * App sessions (spec 16-1). A session starts when the game is shown and ends
@@ -20,7 +20,7 @@ function post(path: string, body: unknown) {
   fetch(`${BASE}${path}`, {
     method: 'POST',
     keepalive: true,
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, 'X-FD-Platform': 'web', 'X-FD-App-Version': APP_VERSION },
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, 'X-FD-Platform': PLATFORM, 'X-FD-App-Version': APP_VERSION },
     body: JSON.stringify(body),
   }).catch(() => undefined);
 }

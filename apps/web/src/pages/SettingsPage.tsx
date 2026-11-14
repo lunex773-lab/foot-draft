@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { api, getLastErrorCode } from '../lib/api';
 import { useAuth } from '../lib/auth';
+import { InstallGuide } from '../lib/beta';
 import { errorText, formatDateTime } from '../lib/labels';
 
 const CATEGORIES = [
@@ -88,6 +89,11 @@ export default function SettingsPage() {
         </div>
         {nameMsg && <div className="small muted" style={{ marginTop: 6 }}>{nameMsg}</div>}
       </form>
+
+      <div className="panel">
+        <h3>ホーム画面に追加</h3>
+        <InstallGuide />
+      </div>
 
       <form className="panel" onSubmit={send} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <h3 style={{ margin: 0 }}>フィードバックを送信</h3>

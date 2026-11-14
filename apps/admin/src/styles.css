@@ -717,3 +717,25 @@ form textarea {
   flex-direction: column;
   gap: 8px;
 }
+
+/* ---------------------------------------------------------------- Phase 7 */
+.check-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+.ratebar {
+  display: inline-block;
+  width: 48px;
+  height: 6px;
+  margin-right: 6px;
+  vertical-align: middle;
+  border-radius: 3px;
+  background: #232836;
+  overflow: hidden;
+}
+.ratebar > span {
+  display: block;
+  height: 100%;
+}

@@ -1,4 +1,4 @@
-import { GAME_CONFIG, describeFilter, type ClientMessage, type RoomSnapshot } from '@fd/shared';
+import { GAME_CONFIG, TIMER_EXPERIMENT_MODES, describeFilter, type ClientMessage, type RoomSnapshot } from '@fd/shared';
 import { useState } from 'react';
 import { Countdown } from '../../components/Countdown';
 import { seatColor } from '../../lib/labels';
@@ -41,7 +41,7 @@ function RankedLobby({ snap, onLeave, serverNow }: { snap: RoomSnapshot; onLeave
       <div className="panel">
         <h2>ランク戦のルール</h2>
         <ul className="small muted" style={{ lineHeight: 1.8, paddingLeft: 18, marginTop: 0 }}>
-          <li>ルールはクイックドラフトと同じ（1ピック{snap.settings.pickSeconds}秒・候補84人・総当たり3試合）</li>
+          <li>ルールはクイックドラフトと同じ（1ピック{snap.settings.pickSeconds}秒・候補84人・総当たり3試合）。ベータ中は制限時間を8秒と12秒で比べています</li>
           <li>最終順位で人間同士のレートが変わります。CPUの順位は計算に入りません</li>
           <li>人間が1人だけの時はレートは変わりません</li>
           <li>開始後に退出しても、あなたの席はサーバーが自動で操作し、結果はレートに反映されます</li>
@@ -132,7 +132,10 @@ function StandardLobby({ snap, send, onLeave }: { snap: RoomSnapshot; send: (m: 
             候補は84人{event ? '（イベントの対象選手が全員入り、足りない分は通常の選手）' : ''}
             {snap.mode === 'collection' ? '＋各自の専用枠のカード（最大3枚・本人だけが指名できます）' : ''}。同じ選手は1チームだけ。GKは3人まで
           </li>
-          <li>時間切れはサーバーが自動で指名します</li>
+          <li>
+            1ピックの制限時間は{snap.settings.pickSeconds}秒。時間切れはサーバーが自動で指名します
+            {TIMER_EXPERIMENT_MODES.includes(snap.mode as (typeof TIMER_EXPERIMENT_MODES)[number]) && '（ベータ中は8秒と12秒を比べるため、ルームによって秒数が変わります）'}
+          </li>
           <li>ドラフト後、総当たりリーグ（3試合）で順位を決定</li>
           <li>各試合の前にフォーメーション・戦術・スタメンを変更できます</li>
         </ul>

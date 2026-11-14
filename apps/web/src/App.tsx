@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useState } from 'react';
 import { BrowserRouter, Link, NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { api } from './lib/api';
 import { AuthProvider, useAuth } from './lib/auth';
+import { BetaWelcome, VersionBanner } from './lib/beta';
 import { WalletProvider, fmt, useWallet } from './lib/wallet';
 import AuthPage from './pages/AuthPage';
 import HomePage, { JoinByLink } from './pages/HomePage';
@@ -95,6 +96,7 @@ function ShellInner() {
       <header className="topbar">
         <Link to="/" className="brand">
           FOOTBALL <span>DRAFT</span>
+          <span className="beta-tag" title="ベータテスト中">BETA</span>
         </Link>
         {me && (
           <div className="who">
@@ -129,6 +131,8 @@ function ShellInner() {
           </NavLink>
         </nav>
       )}
+      <VersionBanner />
+      {me && <BetaWelcome />}
       <Suspense fallback={<div className="muted">読み込み中…</div>}>
         {me ? (
           <Routes>
