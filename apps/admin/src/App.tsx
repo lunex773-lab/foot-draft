@@ -3,12 +3,17 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { adminApi, hasToken, setAdminToken, AdminApiError } from './api';
 import { CardsPage } from './CardsPage';
 import { AuditPage } from './AuditPage';
+import { AdminsPage, SettingsPage } from './AdminsPage';
+import { DistributionsPage } from './DistributionsPage';
 import { EconomyPage } from './EconomyPage';
+import { FeedbackPage } from './FeedbackPage';
+import { AnalyticsPage, OverviewPage, RetentionPage } from './InsightsPages';
+import { UsersPage } from './UsersPage';
 import { EventsPage } from './EventsPage';
 import { SeasonsPage } from './SeasonsPage';
 
 interface AdminMe {
-  admin: { id: string; username: string; role: 'owner' | 'admin' | 'viewer'; permissions: string[] };
+  admin: { id: string; username: string; role: 'owner' | 'admin' | 'support' | 'viewer'; permissions: string[] };
   environment: string;
   /** test grants are only available in staging / local (decision 42) */
   testGrantsEnabled?: boolean;
@@ -84,10 +89,50 @@ function Login({ onDone }: { onDone: () => void }) {
   );
 }
 
+type Page = 'overview' | 'users' | 'analytics' | 'retention' | 'economy' | 'feedback' | 'distributions' | 'cards' | 'events' | 'seasons' | 'audit' | 'admins' | 'settings';
+
+interface NavItem {
+  page: Page;
+  label: string;
+  /** shown when the admin has any of these permissions */
+  any: string[];
+}
+
+const NAV: { group: string; items: NavItem[] }[] = [
+  {
+    group: '分析',
+    items: [
+      { page: 'overview', label: 'Overview', any: ['analytics.read'] },
+      { page: 'analytics', label: 'Analytics', any: ['analytics.read'] },
+      { page: 'retention', label: 'Retention', any: ['analytics.read'] },
+      { page: 'economy', label: 'Economy', any: ['economy.read', 'users.wallet', 'economy.test_grant'] },
+    ],
+  },
+  {
+    group: '運営',
+    items: [
+      { page: 'users', label: 'Users', any: ['users.read'] },
+      { page: 'feedback', label: 'Feedback', any: ['feedback.read'] },
+      { page: 'distributions', label: 'GEMS 配布', any: ['distribution.read'] },
+      { page: 'events', label: 'イベント管理', any: ['events.read'] },
+      { page: 'seasons', label: 'シーズン・ランキング', any: ['seasons.read'] },
+      { page: 'cards', label: 'カード一覧', any: ['cards.read'] },
+    ],
+  },
+  {
+    group: '管理',
+    items: [
+      { page: 'audit', label: '管理者操作ログ', any: ['audit.read'] },
+      { page: 'admins', label: '管理者', any: ['admins.manage'] },
+      { page: 'settings', label: '設定', any: [] },
+    ],
+  },
+];
+
 export default function App() {
   const [me, setMe] = useState<AdminMe | null>(null);
   const [checking, setChecking] = useState(hasToken());
-  const [page, setPage] = useState<'cards' | 'events' | 'seasons' | 'economy' | 'audit'>('cards');
+  const [page, setPage] = useState<Page | null>(null);
 
   const loadMe = () =>
     adminApi<AdminMe>('/auth/me')
@@ -106,7 +151,9 @@ export default function App() {
   if (!me) return <Login onDone={loadMe} />;
 
   const can = (p: string) => me.admin.permissions?.includes(p) ?? false;
-  const canAudit = can('audit.read');
+  const visible = (i: NavItem) => i.any.length === 0 || i.any.some(can);
+  // the first page the role can open
+  const current: Page = page ?? NAV.flatMap((g) => g.items).find((i) => visible(i) && i.page !== 'settings')?.page ?? 'settings';
   return (
     <div className="layout">
       <aside className="side">
@@ -117,29 +164,20 @@ export default function App() {
         <div style={{ marginBottom: 10 }}>
           <span className={`env ${me.environment}`}>{me.environment.toUpperCase()}</span>
         </div>
-        <button className={`nav ${page === 'cards' ? 'on' : ''}`} onClick={() => setPage('cards')}>
-          カード一覧
-        </button>
-        {can('events.read') && (
-          <button className={`nav ${page === 'events' ? 'on' : ''}`} onClick={() => setPage('events')}>
-            イベント管理
-          </button>
-        )}
-        {can('seasons.read') && (
-          <button className={`nav ${page === 'seasons' ? 'on' : ''}`} onClick={() => setPage('seasons')}>
-            シーズン・ランキング
-          </button>
-        )}
-        {can('economy.read') && (
-          <button className={`nav ${page === 'economy' ? 'on' : ''}`} onClick={() => setPage('economy')}>
-            通貨{me.testGrantsEnabled ? '・テスト付与' : ''}
-          </button>
-        )}
-        {canAudit && (
-          <button className={`nav ${page === 'audit' ? 'on' : ''}`} onClick={() => setPage('audit')}>
-            管理者操作ログ
-          </button>
-        )}
+        {NAV.map((g) => {
+          const items = g.items.filter(visible);
+          if (items.length === 0) return null;
+          return (
+            <div key={g.group} className="nav-group">
+              <div className="nav-head">{g.group}</div>
+              {items.map((i) => (
+                <button key={i.page} className={`nav ${current === i.page ? 'on' : ''}`} onClick={() => setPage(i.page)}>
+                  {i.page === 'economy' && me.testGrantsEnabled && can('economy.test_grant') ? 'Economy・テスト付与' : i.label}
+                </button>
+              ))}
+            </div>
+          );
+        })}
         <div style={{ flex: 1 }} />
         <div className="tiny muted">
           {me.admin.username}（{me.admin.role}）
@@ -156,11 +194,19 @@ export default function App() {
         </button>
       </aside>
       <main className="main">
-        {page === 'cards' && <CardsPage />}
-        {page === 'events' && <EventsPage canWrite={can('events.write')} />}
-        {page === 'seasons' && <SeasonsPage />}
-        {page === 'economy' && <EconomyPage canGrant={can('economy.test_grant')} />}
-        {page === 'audit' && canAudit && <AuditPage />}
+        {current === 'overview' && <OverviewPage onOpen={(p) => setPage(p as Page)} />}
+        {current === 'analytics' && <AnalyticsPage />}
+        {current === 'retention' && <RetentionPage />}
+        {current === 'economy' && <EconomyPage canGrant={can('economy.test_grant')} canWallet={can('users.wallet')} canInsights={can('economy.read')} />}
+        {current === 'users' && <UsersPage canWrite={can('users.write')} canWallet={can('users.wallet')} />}
+        {current === 'feedback' && <FeedbackPage canWrite={can('feedback.write')} />}
+        {current === 'distributions' && <DistributionsPage canWrite={can('distribution.write')} />}
+        {current === 'cards' && <CardsPage />}
+        {current === 'events' && <EventsPage canWrite={can('events.write')} />}
+        {current === 'seasons' && <SeasonsPage />}
+        {current === 'audit' && can('audit.read') && <AuditPage />}
+        {current === 'admins' && can('admins.manage') && <AdminsPage meId={me.admin.id} />}
+        {current === 'settings' && <SettingsPage me={me.admin} />}
       </main>
     </div>
   );

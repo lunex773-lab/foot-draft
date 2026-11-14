@@ -242,8 +242,9 @@ async function main() {
   check(g3.data.wallet.gems.paidGranted === 600 && g3.data.wallet.gems.paidPurchased === 1000 && g3.data.wallet.gems.paid === 1600, 'PAID GEMS granted (distributed 600, purchased 1,000) and kept separately');
   const logs = await api('/api/admin/audit-logs', { token: at });
   check(logs.data.items.filter((l: any) => l.action === 'test_grant' && l.target_id === a.id).length === 3, 'every grant is in the audit log');
-  const lookup = await api(`/api/admin/economy/users/${a.username}`, { token: vt });
+  const lookup = await api(`/api/admin/economy/users/${a.username}`, { token: at });
   check(lookup.status === 200 && lookup.data.wallet.coins === 50_100 && lookup.data.ledger[0].reason === 'test_grant', 'admin can look up the wallet and ledger');
+  check((await api(`/api/admin/economy/users/${a.username}`, { token: vt })).status === 403, 'viewer cannot look up an individual wallet (decision 45)');
 
   // ------------------------------------------------------------ standard gacha
   console.log('\n[standard gacha]');

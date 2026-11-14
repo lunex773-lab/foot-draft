@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { AdminApiError, adminApi } from './api';
+import { EconomyInsights } from './InsightsPages';
 
 interface Wallet {
   coins: number;
@@ -36,7 +37,7 @@ const time = (ms: number) => new Date(ms).toLocaleString('ja-JP', { timeZone: 'A
  * Currencies (Phase 4): wallet lookup and test grants. Test grants exist only
  * in staging / local (decision 42); production refuses them on the server.
  */
-export function EconomyPage({ canGrant }: { canGrant: boolean }) {
+export function EconomyPage({ canGrant, canWallet, canInsights }: { canGrant: boolean; canWallet: boolean; canInsights: boolean }) {
   const [status, setStatus] = useState<Status | null>(null);
   const [username, setUsername] = useState('');
   const [lookup, setLookup] = useState<Lookup | null>(null);
@@ -86,8 +87,11 @@ export function EconomyPage({ canGrant }: { canGrant: boolean }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <h1>Economy</h1>
+      {canInsights && <EconomyInsights />}
+      {canWallet && (
       <div className="panel">
-        <h2 style={{ marginTop: 0 }}>通貨</h2>
+        <h2 style={{ marginTop: 0 }}>プレイヤーの残高</h2>
         {status && (
           <div className="small">
             残高のあるプレイヤー {n(status.totals.wallets)}人・COINS 合計 {n(status.totals.coins)}・無償GEMS {n(status.totals.gems_free)}・有償GEMS（購入）{n(status.totals.gems_paid_purchased)}・有償GEMS（配布）
@@ -100,6 +104,7 @@ export function EconomyPage({ canGrant }: { canGrant: boolean }) {
         </form>
         {error && <div className="error" style={{ marginTop: 8 }}>{error}</div>}
       </div>
+      )}
 
       {lookup && (
         <div className="panel">

@@ -71,13 +71,65 @@ export const requireAdmin: MiddlewareHandler<AppEnv> = async (c, next) => {
   await next();
 };
 
-/** RBAC (provisional roles: owner / admin / viewer, spec 24-11 undecided) */
-export type AdminPermission = 'cards.read' | 'audit.read' | 'events.read' | 'events.write' | 'seasons.read' | 'economy.read' | 'economy.test_grant';
+/** RBAC (decision 45): owner / admin / support / viewer */
+export type AdminPermission =
+  | 'cards.read'
+  | 'audit.read'
+  | 'events.read'
+  | 'events.write'
+  | 'seasons.read'
+  /** aggregated economy figures */
+  | 'economy.read'
+  /** staging / local only (decision 42) */
+  | 'economy.test_grant'
+  /** aggregated analytics (overview, analytics, retention) */
+  | 'analytics.read'
+  /** individual players: search and details */
+  | 'users.read'
+  /** individual players: balances and ledgers */
+  | 'users.wallet'
+  /** tags, suspend */
+  | 'users.write'
+  | 'feedback.read'
+  | 'feedback.write'
+  | 'distribution.read'
+  | 'distribution.write'
+  /** add admins, change roles, disable, reset 2FA */
+  | 'admins.manage';
+
+const ALL: AdminPermission[] = [
+  'cards.read',
+  'audit.read',
+  'events.read',
+  'events.write',
+  'seasons.read',
+  'economy.read',
+  'economy.test_grant',
+  'analytics.read',
+  'users.read',
+  'users.wallet',
+  'users.write',
+  'feedback.read',
+  'feedback.write',
+  'distribution.read',
+  'distribution.write',
+  'admins.manage',
+];
+
 const ROLE_PERMISSIONS: Record<AuthAdmin['role'], AdminPermission[]> = {
-  owner: ['cards.read', 'audit.read', 'events.read', 'events.write', 'seasons.read', 'economy.read', 'economy.test_grant'],
-  admin: ['cards.read', 'audit.read', 'events.read', 'events.write', 'seasons.read', 'economy.read', 'economy.test_grant'],
-  viewer: ['cards.read', 'events.read', 'seasons.read', 'economy.read'],
+  owner: ALL,
+  admin: ALL.filter((p) => p !== 'admins.manage'),
+  // player search and feedback; balances read only
+  support: ['cards.read', 'events.read', 'seasons.read', 'users.read', 'users.wallet', 'feedback.read', 'feedback.write'],
+  // aggregated figures only, nothing that identifies a player
+  viewer: ['cards.read', 'events.read', 'seasons.read', 'analytics.read', 'economy.read'],
 };
+
+export const ADMIN_ROLES: AuthAdmin['role'][] = ['owner', 'admin', 'support', 'viewer'];
+
+export function can(role: AuthAdmin['role'], p: AdminPermission): boolean {
+  return ROLE_PERMISSIONS[role]?.includes(p) ?? false;
+}
 
 /** test grants of currencies (decision 42): never in production */
 export function testGrantsEnabled(env: { ENVIRONMENT: string }): boolean {

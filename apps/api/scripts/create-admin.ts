@@ -29,7 +29,7 @@ async function main() {
   const username = opt('username');
   if (!username || !/^[a-zA-Z0-9_.-]{3,40}$/.test(username)) throw new Error('--username is required (3-40 chars)');
   const role = opt('role') ?? 'owner';
-  if (!['owner', 'admin', 'viewer'].includes(role)) throw new Error('--role must be owner, admin or viewer');
+  if (!['owner', 'admin', 'support', 'viewer'].includes(role)) throw new Error('--role must be owner, admin, support or viewer');
   const noTotp = flag('no-totp');
   if (noTotp && !local) throw new Error('--no-totp is only allowed for --local');
   const totpLater = flag('totp-on-first-login');

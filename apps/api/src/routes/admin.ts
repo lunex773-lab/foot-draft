@@ -2,11 +2,17 @@ import { CLUB_BY_ID, ECONOMY_CONFIG, LEAGUE_BY_ID, NATION_BY_CODE, RARITY_INFO, 
 import { Hono } from 'hono';
 import { createAdminSession, permissionsOf, requireAdmin, requirePermission, testGrantsEnabled } from '../lib/auth';
 import { base32Encode, randomBytes, randomId, verifyPassword, verifyTotp } from '../lib/crypto';
+import { audit, ipOf } from '../lib/audit';
 import { currencyStmts, ensureWalletStmts, pointStmts, walletOf } from '../lib/economy';
 import { ApiError, readJson, str } from '../lib/http';
 import { loadCatalog } from '../lib/players';
 import { ensureCurrentSeason, leaderboard, seasonView } from '../lib/seasons';
+import { adminAccountRoutes } from './adminAdmins';
+import { adminDistributionRoutes } from './adminDistributions';
+import { adminInsightRoutes } from './adminInsights';
+import { adminUserRoutes } from './adminUsers';
 import { eventView, type EventRow } from './events';
+import { adminFeedbackRoutes } from './feedback';
 import type { AppEnv, Env } from '../env';
 
 /**
@@ -14,14 +20,6 @@ import type { AppEnv, Env } from '../env';
  * players; every login and sensitive action is written to admin_audit_logs.
  */
 export const adminRoutes = new Hono<AppEnv>();
-
-function audit(env: Env, adminId: string | null, action: string, target: { type?: string; id?: string } = {}, detail?: Record<string, unknown>, ip?: string | null) {
-  return env.DB.prepare('INSERT INTO admin_audit_logs (id, admin_id, action, target_type, target_id, detail_json, ip, created_at) VALUES (?,?,?,?,?,?,?,?)')
-    .bind(randomId(), adminId, action, target.type ?? null, target.id ?? null, detail ? JSON.stringify(detail) : null, ip ?? null, Date.now())
-    .run();
-}
-
-const ipOf = (c: { req: { header: (n: string) => string | undefined } }) => c.req.header('CF-Connecting-IP') ?? null;
 
 adminRoutes.post('/auth/login', async (c) => {
   const body = await readJson(c);
@@ -180,11 +178,43 @@ adminRoutes.get('/cards/:id', requirePermission('cards.read'), async (c) => {
 });
 
 adminRoutes.get('/audit-logs', requirePermission('audit.read'), async (c) => {
+  const q = c.req.query();
+  const where: string[] = [];
+  const binds: unknown[] = [];
+  if (q.action) {
+    where.push('l.action = ?');
+    binds.push(q.action);
+  }
+  if (q.admin) {
+    where.push('a.username = ?');
+    binds.push(q.admin);
+  }
+  if (q.targetType) {
+    where.push('l.target_type = ?');
+    binds.push(q.targetType);
+  }
+  if (q.from) {
+    where.push('l.created_at >= ?');
+    binds.push(Number(q.from) || 0);
+  }
+  if (q.to) {
+    where.push('l.created_at < ?');
+    binds.push(Number(q.to) || 0);
+  }
+  if (q.before) {
+    where.push('l.created_at < ?');
+    binds.push(Number(q.before) || 0);
+  }
+  const limit = Math.min(Math.max(Number(q.limit ?? 100) || 100, 1), 200);
   const rows = await c.env.DB.prepare(
     `SELECT l.id, l.action, l.target_type, l.target_id, l.detail_json, l.ip, l.created_at, a.username AS admin_username
-       FROM admin_audit_logs l LEFT JOIN admin_users a ON a.id = l.admin_id ORDER BY l.created_at DESC LIMIT 200`,
-  ).all();
-  return c.json({ items: rows.results });
+       FROM admin_audit_logs l LEFT JOIN admin_users a ON a.id = l.admin_id${where.length ? ` WHERE ${where.join(' AND ')}` : ''}
+      ORDER BY l.created_at DESC LIMIT ?`,
+  )
+    .bind(...binds, limit)
+    .all<{ created_at: number }>();
+  const actions = await c.env.DB.prepare('SELECT DISTINCT action FROM admin_audit_logs ORDER BY action').all<{ action: string }>();
+  return c.json({ items: rows.results, actions: actions.results.map((r) => r.action), next: rows.results.length === limit ? rows.results[rows.results.length - 1].created_at : null });
 });
 
 // ------------------------------------------------------------------ events
@@ -323,7 +353,7 @@ adminRoutes.get('/economy/status', requirePermission('economy.read'), async (c) 
 });
 
 /** wallet, recent ledger and collection size of one player (to check a grant) */
-adminRoutes.get('/economy/users/:username', requirePermission('economy.read'), async (c) => {
+adminRoutes.get('/economy/users/:username', requirePermission('users.wallet'), async (c) => {
   const user = await c.env.DB.prepare('SELECT id, username, display_name FROM users WHERE username = ?').bind(c.req.param('username')).first<{ id: string; username: string; display_name: string }>();
   if (!user) throw new ApiError('NOT_FOUND', 'player not found');
   const ledger = await c.env.DB.prepare('SELECT currency, amount, balance_after, reason, ref_type, ref_id, created_at FROM currency_transactions WHERE user_id = ? ORDER BY created_at DESC, rowid DESC LIMIT 30')
@@ -373,3 +403,10 @@ adminRoutes.post('/economy/test-grants', requirePermission('economy.test_grant')
   ]);
   return c.json({ grantId, user: { id: user.id, username: user.username }, kind, amount, wallet: await walletOf(c.env, user.id) });
 });
+
+// ------------------------------------------------------------------ Phase 5 (admin platform)
+adminRoutes.route('/', adminInsightRoutes);
+adminRoutes.route('/', adminUserRoutes);
+adminRoutes.route('/', adminFeedbackRoutes);
+adminRoutes.route('/', adminDistributionRoutes);
+adminRoutes.route('/', adminAccountRoutes);

@@ -35,7 +35,7 @@ authRoutes.post('/register', async (c) => {
     throw new ApiError('CONFLICT', 'username is already taken');
   }
   const token = await createUserSession(c.env, id, c.req.header('User-Agent') ?? null);
-  await track(c.env, { name: 'session_started', userId: id, platform: platformOf(c) });
+  // app sessions (session_started / session_ended) are sent by the game itself (routes/sessions.ts)
   return c.json({ token, user: { id, username, displayName } }, 201);
 });
 

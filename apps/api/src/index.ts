@@ -3,6 +3,7 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { HTTPException } from 'hono/http-exception';
 import type { AppEnv } from './env';
+import { track } from './lib/analytics';
 import { ApiError, errorBody } from './lib/http';
 import { adminRoutes } from './routes/admin';
 import { authRoutes } from './routes/auth';
@@ -10,11 +11,13 @@ import { collectionRoutes, exchangeRoutes } from './routes/collection';
 import { draftRoutes } from './routes/drafts';
 import { currencyRoutes, missionRoutes, rewardRoutes } from './routes/economy';
 import { eventRoutes } from './routes/events';
+import { feedbackRoutes } from './routes/feedback';
 import { gachaRoutes } from './routes/gacha';
 import { matchRoutes } from './routes/matches';
 import { playerRoutes } from './routes/players';
 import { rankedRoutes } from './routes/ranked';
 import { roomRoutes } from './routes/rooms';
+import { sessionRoutes } from './routes/sessions';
 import { soloRoutes } from './routes/solo';
 import { userRoutes } from './routes/users';
 
@@ -49,6 +52,8 @@ app.route('/api/missions', missionRoutes);
 app.route('/api/gacha', gachaRoutes);
 app.route('/api/collection', collectionRoutes);
 app.route('/api/exchange', exchangeRoutes);
+app.route('/api/feedback', feedbackRoutes);
+app.route('/api/sessions', sessionRoutes);
 app.route('/api/admin', adminRoutes);
 
 app.notFound((c) => c.json(errorBody('NOT_FOUND', 'not found'), 404));
@@ -57,6 +62,13 @@ app.onError((err, c) => {
   if (err instanceof ApiError) return c.json(errorBody(err.code, err.message), err.status);
   if (err instanceof HTTPException) return c.json(errorBody('HTTP_ERROR', err.message), err.status);
   console.error('unhandled error', err);
+  // counted on the admin overview (only the kind of error and the route, no request data)
+  const logged = track(c.env, { name: 'server_error', properties: { route: c.req.routePath, method: c.req.method, error: err instanceof Error ? err.name : 'unknown' } });
+  try {
+    c.executionCtx.waitUntil(logged);
+  } catch {
+    /* no execution context (tests) */
+  }
   return c.json(errorBody('INTERNAL', 'internal error'), 500);
 });
 

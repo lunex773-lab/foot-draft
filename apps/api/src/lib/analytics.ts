@@ -31,7 +31,10 @@ export type AnalyticsEventName =
   | 'exchange_completed'
   | 'mission_completed'
   | 'reward_claimed'
-  | 'collection_player_registered';
+  | 'collection_player_registered'
+  | 'session_ended'
+  | 'feedback_submitted'
+  | 'server_error';
 
 export interface AnalyticsInput {
   name: AnalyticsEventName;

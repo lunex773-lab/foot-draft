@@ -1,5 +1,6 @@
-import { lazy, Suspense } from 'react';
-import { BrowserRouter, Link, NavLink, Navigate, Route, Routes } from 'react-router-dom';
+import { lazy, Suspense, useEffect, useState } from 'react';
+import { BrowserRouter, Link, NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { api } from './lib/api';
 import { AuthProvider, useAuth } from './lib/auth';
 import { WalletProvider, fmt, useWallet } from './lib/wallet';
 import AuthPage from './pages/AuthPage';
@@ -20,6 +21,20 @@ const CollectionPage = lazy(() => import('./pages/CollectionPage'));
 const ExchangePage = lazy(() => import('./pages/ExchangePage'));
 const MissionsPage = lazy(() => import('./pages/MissionsPage'));
 const WalletPage = lazy(() => import('./pages/WalletPage'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+
+/** unread replies to the player's feedback (badge on 設定) */
+function useUnreadReplies(enabled: boolean) {
+  const [n, setN] = useState(0);
+  const loc = useLocation();
+  useEffect(() => {
+    if (!enabled) return;
+    api<{ unread: number }>('/api/feedback')
+      .then((r) => setN(r.unread))
+      .catch(() => undefined);
+  }, [enabled, loc.pathname]);
+  return n;
+}
 
 /** balances in the top bar (from the server) and the login bonus message */
 function WalletBar() {
@@ -56,6 +71,7 @@ function Shell() {
 
 function ShellInner() {
   const { me, logout } = useAuth();
+  const unread = useUnreadReplies(!!me);
   return (
     <div className="app">
       <header className="topbar">
@@ -85,6 +101,9 @@ function ShellInner() {
           <NavLink to="/events">イベント</NavLink>
           <NavLink to="/cards">図鑑</NavLink>
           <NavLink to="/history">履歴</NavLink>
+          <NavLink to="/settings">
+            設定{unread > 0 && <span className="nav-badge">{unread}</span>}
+          </NavLink>
         </nav>
       )}
       <Suspense fallback={<div className="muted">読み込み中…</div>}>
@@ -107,6 +126,7 @@ function ShellInner() {
             <Route path="/exchange" element={<ExchangePage />} />
             <Route path="/missions" element={<MissionsPage />} />
             <Route path="/wallet" element={<WalletPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         ) : (

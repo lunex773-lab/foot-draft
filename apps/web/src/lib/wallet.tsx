@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import { api } from './api';
+import { trackSessions } from './session';
 
 /** balances as returned by the server (the client never computes them) */
 export interface Wallet {
@@ -41,6 +42,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     setLogin(r.login);
     setMatchRewards(r.matchRewards);
   }, []);
+
+  // app sessions for the admin analytics (DAU, play time)
+  useEffect(() => trackSessions(), []);
 
   useEffect(() => {
     // receive today's login bonus when the app opens (once per Japan day, decided by the server)
@@ -87,6 +91,7 @@ export const REASON_LABEL: Record<string, string> = {
   test_grant: 'テスト用の付与',
   duplicate: '重複カードの変換',
   redeem: '交換所',
+  distribution: '運営からの配布',
 };
 
 export const CURRENCY_SHORT: Record<string, string> = {

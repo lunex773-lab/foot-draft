@@ -13,6 +13,12 @@ export class ApiFailure extends Error {
 }
 
 let token: string | null = null;
+/** last error code returned by the API (sent with feedback, spec 13-3) */
+let lastErrorCode: string | null = null;
+
+export function getLastErrorCode() {
+  return lastErrorCode;
+}
 try {
   token = localStorage.getItem('fd.token');
 } catch {
@@ -48,6 +54,7 @@ export async function api<T = unknown>(path: string, opts: { method?: string; bo
   const data = text ? JSON.parse(text) : null;
   if (!res.ok) {
     if (res.status === 401 && token) window.dispatchEvent(new Event('fd:unauthorized'));
+    lastErrorCode = data?.error?.code ?? `HTTP_${res.status}`;
     throw new ApiFailure(res.status, data?.error?.code ?? 'ERROR', data?.error?.message ?? res.statusText);
   }
   return data as T;

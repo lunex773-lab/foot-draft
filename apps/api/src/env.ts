@@ -24,7 +24,7 @@ export interface AuthUser {
 export interface AuthAdmin {
   id: string;
   username: string;
-  role: 'owner' | 'admin' | 'viewer';
+  role: 'owner' | 'admin' | 'support' | 'viewer';
   sessionId: string;
 }
 
