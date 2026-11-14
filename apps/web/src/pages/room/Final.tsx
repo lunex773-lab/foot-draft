@@ -3,7 +3,74 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { MatchDetailModal } from '../../components/MatchDetailModal';
 import { Standings } from '../../components/Standings';
-import { seatColor } from '../../lib/labels';
+import { TierBadge } from '../../components/TierBadge';
+import { seatColor, signed } from '../../lib/labels';
+
+function Outcome({ snap }: { snap: RoomSnapshot }) {
+  const o = snap.outcome;
+  const you = snap.you;
+  if (snap.mode === 'ranked') {
+    const mine = o?.ranked && you !== null ? o.ranked.changes[you] : undefined;
+    if (!o?.ranked || !mine) return <div className="result-box small muted">レートを集計しています…</div>;
+    return (
+      <div className={`result-box ${mine.delta > 0 ? 'good' : mine.delta < 0 ? 'bad' : ''}`}>
+        <div className="small muted">ランク戦の結果</div>
+        {o.ranked.rated ? (
+          <>
+            <div className="row" style={{ justifyContent: 'center', marginTop: 6 }}>
+              <span className="muted">{mine.before}</span>→<TierBadge rating={mine.after} size="large" />
+              <b className={`display ${mine.delta >= 0 ? 'delta-up' : 'delta-down'}`} style={{ fontSize: 26 }}>
+                {signed(mine.delta)}
+              </b>
+            </div>
+            <div className="row" style={{ justifyContent: 'center', marginTop: 8 }}>
+              {Object.entries(o.ranked.changes).map(([seat, c]) => (
+                <span key={seat} className="chip" style={{ borderColor: seatColor(Number(seat)) }}>
+                  {snap.seats[Number(seat)]?.displayName} {signed(c.delta)}
+                </span>
+              ))}
+            </div>
+          </>
+        ) : (
+          <div style={{ marginTop: 6 }}>人間のプレイヤーが1人だったため、レートは変わりません（{mine.before}）</div>
+        )}
+        <Link className="small" to="/ranked">
+          ランキングを見る
+        </Link>
+      </div>
+    );
+  }
+  if (snap.variant.kind === 'solo') {
+    const c = snap.variant.challenge;
+    if (!o?.solo) return null;
+    return (
+      <div className={`result-box ${o.solo.cleared ? 'good' : 'bad'}`}>
+        <div className="small muted">SOLO CHALLENGE：{c.goalJa}</div>
+        <div className={`display ${o.solo.cleared ? 'delta-up' : 'delta-down'}`} style={{ fontSize: 34 }}>
+          {o.solo.cleared ? '課題達成！' : '課題未達成'}
+        </div>
+        <div className="small muted">
+          {o.solo.record.won}勝{o.solo.record.drawn}分{o.solo.record.lost}敗・{o.solo.record.goalsFor}得点・{o.solo.record.goalsAgainst}失点・無失点 {o.solo.record.cleanSheets}試合
+        </div>
+        <Link className="small" to="/solo">
+          課題の画面へ
+        </Link>
+      </div>
+    );
+  }
+  if (snap.variant.kind === 'event') {
+    return (
+      <div className="result-box">
+        <div className="small muted">イベント</div>
+        <div style={{ fontWeight: 700 }}>{snap.variant.name}</div>
+        <Link className="small" to={`/events/${snap.variant.eventId}`}>
+          イベントの成績を見る
+        </Link>
+      </div>
+    );
+  }
+  return null;
+}
 
 export function Final({ snap }: { snap: RoomSnapshot }) {
   const [detail, setDetail] = useState<string | null>(null);
@@ -15,6 +82,7 @@ export function Final({ snap }: { snap: RoomSnapshot }) {
         <div className={`display rank-${myRank}`} style={{ fontSize: 64, lineHeight: 1.1 }}>
           {myRank ? `${myRank}位` : '-'}
         </div>
+        <Outcome snap={snap} />
         <div className="row" style={{ justifyContent: 'center', marginTop: 8 }}>
           {snap.standings.map((r) => (
             <span key={r.seat} className="chip" style={{ borderColor: seatColor(r.seat) }}>

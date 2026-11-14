@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { ModeBanner } from '../components/ModeBanner';
 import { api } from '../lib/api';
 import { errorText } from '../lib/labels';
 import { useRoom } from '../lib/useRoom';
@@ -43,7 +44,8 @@ export default function RoomPage() {
           {conn === 'reconnecting' ? '接続が切れました。再接続しています…（ドラフトの時間切れはサーバーが自動で指名します）' : '接続していません'}
         </div>
       )}
-      {snap.phase === 'lobby' && <Lobby snap={snap} send={send} onLeave={leave} />}
+      {snap.phase !== 'lobby' && <ModeBanner snap={snap} />}
+      {snap.phase === 'lobby' && <Lobby snap={snap} send={send} onLeave={leave} serverNow={serverNow} />}
       {snap.phase === 'drafting' && snap.draft && <Draft snap={snap} players={players} send={send} serverNow={serverNow} />}
       {snap.phase === 'lineup' && <Lineup snap={snap} players={players} send={send} serverNow={serverNow} />}
       {snap.phase === 'playing' && <Playing snap={snap} players={players} serverNow={serverNow} />}

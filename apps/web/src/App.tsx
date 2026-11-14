@@ -8,6 +8,10 @@ const RoomPage = lazy(() => import('./pages/RoomPage'));
 const HistoryPage = lazy(() => import('./pages/HistoryPage'));
 const CatalogPage = lazy(() => import('./pages/CatalogPage'));
 const MatchReplayPage = lazy(() => import('./pages/MatchReplayPage'));
+const RankedPage = lazy(() => import('./pages/RankedPage'));
+const SoloPage = lazy(() => import('./pages/SoloPage'));
+const EventsPage = lazy(() => import('./pages/EventsPage'));
+const EventDetailPage = lazy(() => import('./pages/EventsPage').then((m) => ({ default: m.EventDetailPage })));
 
 function Shell() {
   const { me, loading, logout } = useAuth();
@@ -20,6 +24,9 @@ function Shell() {
         </Link>
         {me && (
           <div className="who">
+            <Link to="/ranked" className="small">
+              ランク
+            </Link>
             <Link to="/cards" className="small">
               図鑑
             </Link>
@@ -42,6 +49,10 @@ function Shell() {
             <Route path="/history" element={<HistoryPage />} />
             <Route path="/match/:matchId" element={<MatchReplayPage />} />
             <Route path="/cards" element={<CatalogPage />} />
+            <Route path="/ranked" element={<RankedPage />} />
+            <Route path="/solo" element={<SoloPage />} />
+            <Route path="/events" element={<EventsPage />} />
+            <Route path="/events/:eventId" element={<EventDetailPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         ) : (

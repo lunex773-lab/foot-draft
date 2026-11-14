@@ -30,9 +30,9 @@ export function hasToken() {
   return !!token;
 }
 
-export async function adminApi<T>(path: string, body?: unknown): Promise<T> {
+export async function adminApi<T>(path: string, body?: unknown, method?: 'POST' | 'PATCH'): Promise<T> {
   const res = await fetch(`${BASE}/api/admin${path}`, {
-    method: body !== undefined ? 'POST' : 'GET',
+    method: method ?? (body !== undefined ? 'POST' : 'GET'),
     headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });

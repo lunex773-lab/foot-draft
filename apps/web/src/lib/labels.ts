@@ -68,7 +68,9 @@ export const ERROR_TEXT: Record<string, string> = {
   INVALID_TACTICS: '戦術の設定が正しくありません',
   INVALID_FORMATION: 'フォーメーションが正しくありません',
   ROOM_FULL: 'ルームが満員です',
-  ROOM_NOT_JOINABLE: 'ドラフトが始まっているため参加できません',
+  ROOM_NOT_JOINABLE: 'このルームには参加できません（ドラフト開始済み、または招待コードで参加できないモード）',
+  FORMATION_LOCKED: 'この課題ではフォーメーションを変更できません',
+  EVENT_CLOSED: 'このイベントは開催期間外です',
   NOT_FOUND: '見つかりません',
   FORBIDDEN: '権限がありません',
   CONFLICT: 'この操作は今は行えません',
@@ -82,4 +84,24 @@ export function errorText(code: string, fallback?: string) {
 
 export function seatColor(seat: number): string {
   return ['#4fc3f7', '#ff8a65', '#aed581', '#ce93d8'][seat] ?? '#ccc';
+}
+
+export const MODE_LABEL: Record<string, string> = {
+  quick: 'クイック',
+  private: 'プライベート',
+  ranked: 'ランク戦',
+  solo: 'ソロ課題',
+  event: 'イベント',
+};
+
+export function modeLabel(mode: string): string {
+  return MODE_LABEL[mode] ?? mode;
+}
+
+export function formatDateTime(ms: number): string {
+  return new Date(ms).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+export function signed(n: number): string {
+  return n > 0 ? `+${n}` : String(n);
 }

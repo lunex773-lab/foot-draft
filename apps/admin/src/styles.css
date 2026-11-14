@@ -325,3 +325,83 @@ tbody tr:hover {
     padding: 16px;
   }
 }
+
+/* ---------------------------------------------------------- events / seasons */
+.toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.toggle {
+  border: 1px solid var(--line);
+  background: #0d0f15;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  min-height: 28px;
+}
+.toggle.on {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: #3ec7b414;
+}
+.toggle:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 16px;
+}
+.form-grid label,
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.form-grid .wide {
+  grid-column: 1 / -1;
+}
+textarea {
+  background: #0d0f15;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 7px 10px;
+  font: inherit;
+  color: inherit;
+  min-height: 60px;
+  resize: vertical;
+}
+.status {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 1px 9px;
+  font-size: 12px;
+  border: 1px solid var(--line);
+}
+.status.published {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.status.draft {
+  color: var(--gold);
+  border-color: #e3bf5e66;
+}
+.status.archived {
+  color: var(--muted);
+}
+.preview {
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 13px;
+}
+@media (max-width: 860px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+}

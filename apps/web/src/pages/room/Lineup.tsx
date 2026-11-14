@@ -27,12 +27,14 @@ export function Lineup({ snap, players, send, serverNow }: { snap: RoomSnapshot;
   const [lineup, setLineup] = useState<LineupT | null>(serverLineup ?? null);
   const [detail, setDetail] = useState<string | null>(null);
   const ready = !!snap.lineupReady[you];
+  // Solo Challenge rule: formation fixed
+  const locked = snap.variant.kind === 'solo' && snap.variant.challenge.rule.type === 'fixed_formation' ? snap.variant.challenge.rule.formation : null;
   const md = snap.matchday;
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // reset local lineup when a new matchday starts
   useEffect(() => {
-    setLineup(serverLineup ?? (roster.length ? autoLineup(roster) : null));
+    setLineup(serverLineup ?? (roster.length ? autoLineup(roster, locked ?? undefined) : null));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [md, roster.length]);
 
@@ -89,11 +91,12 @@ export function Lineup({ snap, players, send, serverNow }: { snap: RoomSnapshot;
           <div className="spread" style={{ marginBottom: 10 }}>
             <label className="field">
               フォーメーション
-              <select value={lineup.formation} onChange={(e) => setFormation(e.target.value as FormationId)}>
+              <select value={lineup.formation} disabled={!!locked} title={locked ? 'この課題ではフォーメーションは固定です' : undefined} onChange={(e) => setFormation(e.target.value as FormationId)}>
                 {FORMATION_IDS.map((f) => (
                   <option key={f}>{f}</option>
                 ))}
               </select>
+              {locked && <span className="tiny muted">課題のルールで固定</span>}
             </label>
             <button className="btn small" onClick={() => update({ ...autoLineup(roster, lineup.formation), tactics: lineup.tactics })}>
               自動で並べる

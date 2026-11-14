@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { MatchDetailModal } from '../components/MatchDetailModal';
 import { api } from '../lib/api';
 import { useAuth } from '../lib/auth';
+import { modeLabel } from '../lib/labels';
 
 interface LeagueRow {
   room_id: string;
@@ -70,7 +71,7 @@ export default function HistoryPage() {
                 {leagues.map((l) => (
                   <tr key={l.room_id}>
                     <td>{new Date(l.created_at).toLocaleString('ja-JP')}</td>
-                    <td>{l.mode === 'quick' ? 'クイック' : 'プライベート'}</td>
+                    <td>{modeLabel(l.mode)}</td>
                     <td>{l.status === 'finished' ? '終了' : '進行中'}</td>
                     <td className={`num rank-${l.final_rank}`}>{l.final_rank ?? '-'}</td>
                     <td className="num">{l.points ?? '-'}</td>

@@ -1,9 +1,12 @@
-import { GAME_CONFIG } from '@fd/shared';
+import { GAME_CONFIG, type SoloChallenge } from '@fd/shared';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { TierBadge } from '../components/TierBadge';
 import { api } from '../lib/api';
 import { useAuth } from '../lib/auth';
-import { errorText } from '../lib/labels';
+import { errorText, modeLabel } from '../lib/labels';
+import { eventPeriod, type EventItem } from './EventsPage';
+import { Stars } from './SoloPage';
 
 interface HistoryRow {
   room_id: string;
@@ -23,8 +26,16 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null);
   const [active, setActive] = useState<HistoryRow[]>([]);
   const [stats, setStats] = useState<{ leaguesPlayed: number; leaguesWon: number } | null>(null);
+  const [ranked, setRanked] = useState<{ rating: number; games: number; position: number | null; season: { name: string } } | null>(null);
+  const [solo, setSolo] = useState<{ challenge: SoloChallenge; cleared: boolean } | null>(null);
+  const [events, setEvents] = useState<EventItem[]>([]);
 
   useEffect(() => {
+    api<typeof ranked>('/api/ranked/me').then(setRanked).catch(() => undefined);
+    api<typeof solo>('/api/solo/today').then(setSolo).catch(() => undefined);
+    api<{ items: EventItem[] }>('/api/events')
+      .then((r) => setEvents(r.items))
+      .catch(() => undefined);
     api<{ items: HistoryRow[] }>('/api/users/me/history')
       .then((r) => setActive(r.items.filter((x) => x.status !== 'finished')))
       .catch(() => undefined);
@@ -62,7 +73,7 @@ export default function HomePage() {
           {active.map((r) => (
             <div key={r.room_id} className="spread small" style={{ padding: '4px 0' }}>
               <span>
-                {r.mode === 'quick' ? 'クイック' : 'プライベート'}・コード {r.code}・{r.status}
+                {modeLabel(r.mode)}{r.mode === 'quick' || r.mode === 'private' ? `・コード ${r.code}` : ''}・{r.status}
               </span>
               <Link className="btn small" to={`/room/${r.room_id}`}>
                 戻る
@@ -79,6 +90,68 @@ export default function HomePage() {
             クイックドラフト
           </button>
         </div>
+        <div className="panel mode-card">
+          <div className="spread">
+            <div className="title">RANKED</div>
+            {ranked && <TierBadge rating={ranked.rating} />}
+          </div>
+          <div className="small muted">
+            {ranked ? `${ranked.season.name}・${ranked.games}試合${ranked.position ? `・${ranked.position}位` : ''}` : 'レーティング対戦'}。60秒で4人そろわなければCPUが入ります（レートは人間同士の順位で変動）。
+          </div>
+          <div className="row">
+            <button className="btn primary" disabled={busy} onClick={() => go(() => api('/api/ranked/queue', { body: {} }))}>
+              ランク戦を探す
+            </button>
+            <Link className="btn ghost small" to="/ranked">
+              ランキング
+            </Link>
+          </div>
+        </div>
+        <div className="panel mode-card">
+          <div className="spread">
+            <div className="title">SOLO CHALLENGE</div>
+            {solo?.cleared && <span className="chip on">達成済み</span>}
+          </div>
+          <div className="small">
+            {solo ? (
+              <>
+                今日の課題 <Stars n={solo.challenge.difficulty} />
+                <br />
+                <b>{solo.challenge.titleJa}</b>
+              </>
+            ) : (
+              <span className="muted">CPU 3チームと日替わりの課題に挑戦</span>
+            )}
+          </div>
+          <Link className="btn primary" to="/solo">
+            課題を見る
+          </Link>
+        </div>
+      </div>
+      <div className="panel">
+        <div className="spread" style={{ marginBottom: 8 }}>
+          <h3 style={{ margin: 0 }}>SPECIAL EVENTS</h3>
+          <Link className="small" to="/events">
+            すべて見る
+          </Link>
+        </div>
+        {events.length === 0 && <div className="small muted">開催中・開催予定のイベントはありません。</div>}
+        {events.slice(0, 3).map((e) => (
+          <div key={e.id} className="spread small" style={{ padding: '6px 0', borderTop: '1px solid var(--line)' }}>
+            <span>
+              <b>{e.name}</b>　<span className="muted">{eventPeriod(e)}・{e.conditions.join('・')}</span>
+            </span>
+            {e.open ? (
+              <button className="btn small primary" disabled={busy} onClick={() => go(() => api(`/api/events/${e.id}/join`, { body: {} }))}>
+                参加する
+              </button>
+            ) : (
+              <span className="chip">開催予定</span>
+            )}
+          </div>
+        ))}
+      </div>
+      <div className="grid2">
         <div className="panel mode-card">
           <div className="title">PRIVATE ROOM</div>
           <div className="small muted">友だちと対戦。招待コード・招待リンクで参加できます。</div>
@@ -109,6 +182,12 @@ export default function HomePage() {
       <div className="row" style={{ justifyContent: 'center' }}>
         <Link className="btn ghost" to="/history">
           対戦履歴
+        </Link>
+        <Link className="btn ghost" to="/ranked">
+          ランキング
+        </Link>
+        <Link className="btn ghost" to="/events">
+          イベント
         </Link>
         <Link className="btn ghost" to="/cards">
           選手図鑑
