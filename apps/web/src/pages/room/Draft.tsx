@@ -17,6 +17,10 @@ export function Draft({ snap, players, send, serverNow }: { snap: RoomSnapshot; 
   const [view, setView] = useState<number | null>(null);
   const myTurn = d.currentSeat === snap.you;
   const takenBy = useMemo(() => new Map(d.picks.map((p) => [p.playerId, p.seat])), [d.picks]);
+  // Collection Draft: cards reserved for their owners (decision 36)
+  const reserved = d.reserved ?? {};
+  const blocked = (id: string) => !!reserved[id] && (snap.you === null || !reserved[id].includes(snap.you));
+  const reservedLabel = (id: string) => (reserved[id].includes(snap.you ?? -1) ? 'あなたの専用' : `専用：${reserved[id].map((s) => snap.seats[s]?.displayName).join('・')}`);
   const mine = d.picks.filter((p) => p.seat === snap.you).map((p) => players.get(p.playerId)!).filter(Boolean);
   const myGk = mine.filter((p) => p.primaryPosition === 'GK').length;
   const viewSeat = view ?? snap.you ?? 0;
@@ -32,7 +36,7 @@ export function Draft({ snap, players, send, serverNow }: { snap: RoomSnapshot; 
     .sort((a, b) => (sort === 'ovr' ? b.ovr - a.ovr : b.stats[sort] - a.stats[sort]) || a.id.localeCompare(b.id));
 
   const pick = (id: string) => {
-    if (!myTurn || takenBy.has(id)) return;
+    if (!myTurn || takenBy.has(id) || blocked(id)) return;
     send({ type: 'pick', playerId: id });
     setSelected(null);
   };
@@ -70,7 +74,7 @@ export function Draft({ snap, players, send, serverNow }: { snap: RoomSnapshot; 
             <span className="small">
               選択中：<b>{sel.name}</b>（{sel.primaryPosition} {sel.ovr}）
             </span>
-            <button className="btn primary small" disabled={!myTurn || takenBy.has(sel.id) || (sel.primaryPosition === 'GK' && myGk >= GAME_CONFIG.maxGkPerTeam)} onClick={() => pick(sel.id)}>
+            <button className="btn primary small" disabled={!myTurn || takenBy.has(sel.id) || blocked(sel.id) || (sel.primaryPosition === 'GK' && myGk >= GAME_CONFIG.maxGkPerTeam)} onClick={() => pick(sel.id)}>
               指名する
             </button>
             <button className="btn small ghost" onClick={() => setSelected(null)}>
@@ -109,7 +113,8 @@ export function Draft({ snap, players, send, serverNow }: { snap: RoomSnapshot; 
               const by = takenBy.get(p.id);
               return (
                 <div className="slot" key={p.id} onDoubleClick={() => pick(p.id)}>
-                  <PlayerCard player={p} width="100%" disabled={by !== undefined} selected={selected === p.id} onClick={() => by === undefined && setSelected(p.id)} />
+                  <PlayerCard player={p} width="100%" disabled={by !== undefined || blocked(p.id)} selected={selected === p.id} onClick={() => by === undefined && !blocked(p.id) && setSelected(p.id)} />
+                  {reserved[p.id] && by === undefined && <span className="reserved-tag">{reservedLabel(p.id)}</span>}
                   {by !== undefined && (
                     <span className="taken" style={{ color: seatColor(by) }}>
                       {snap.seats[by]?.displayName}

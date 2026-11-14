@@ -3,12 +3,15 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { adminApi, hasToken, setAdminToken, AdminApiError } from './api';
 import { CardsPage } from './CardsPage';
 import { AuditPage } from './AuditPage';
+import { EconomyPage } from './EconomyPage';
 import { EventsPage } from './EventsPage';
 import { SeasonsPage } from './SeasonsPage';
 
 interface AdminMe {
   admin: { id: string; username: string; role: 'owner' | 'admin' | 'viewer'; permissions: string[] };
   environment: string;
+  /** test grants are only available in staging / local (decision 42) */
+  testGrantsEnabled?: boolean;
 }
 
 function Login({ onDone }: { onDone: () => void }) {
@@ -84,7 +87,7 @@ function Login({ onDone }: { onDone: () => void }) {
 export default function App() {
   const [me, setMe] = useState<AdminMe | null>(null);
   const [checking, setChecking] = useState(hasToken());
-  const [page, setPage] = useState<'cards' | 'events' | 'seasons' | 'audit'>('cards');
+  const [page, setPage] = useState<'cards' | 'events' | 'seasons' | 'economy' | 'audit'>('cards');
 
   const loadMe = () =>
     adminApi<AdminMe>('/auth/me')
@@ -127,6 +130,11 @@ export default function App() {
             シーズン・ランキング
           </button>
         )}
+        {can('economy.read') && (
+          <button className={`nav ${page === 'economy' ? 'on' : ''}`} onClick={() => setPage('economy')}>
+            通貨{me.testGrantsEnabled ? '・テスト付与' : ''}
+          </button>
+        )}
         {canAudit && (
           <button className={`nav ${page === 'audit' ? 'on' : ''}`} onClick={() => setPage('audit')}>
             管理者操作ログ
@@ -151,6 +159,7 @@ export default function App() {
         {page === 'cards' && <CardsPage />}
         {page === 'events' && <EventsPage canWrite={can('events.write')} />}
         {page === 'seasons' && <SeasonsPage />}
+        {page === 'economy' && <EconomyPage canGrant={can('economy.test_grant')} />}
         {page === 'audit' && canAudit && <AuditPage />}
       </main>
     </div>

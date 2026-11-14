@@ -2,7 +2,8 @@
  * Plays one full league against a deployed API (staging) to check that the
  * game really works there: accounts, room, WebSocket, server-side draft with
  * CPU teams, lineups, match simulation (CPU time on Workers), standings,
- * history, and the Phase 3 endpoints.
+ * history, the Phase 3 endpoints and the Phase 4 economy (wallet, login bonus,
+ * gacha refusal without funds, match reward and missions after the league).
  *
  *   FD_API_URL=https://<api> npx tsx scripts/remote-check.ts
  *
@@ -59,6 +60,28 @@ async function main() {
     const r = await api(p, { token });
     check(r.status === 200, `GET ${p}`);
   }
+  // ---------------------------------------------------------------- economy (Phase 4)
+  const w0 = await api('/api/currency', { token });
+  check(w0.status === 200 && w0.data.wallet?.coins === 0 && w0.data.wallet?.gems?.total === 0, 'new wallet: all balances 0');
+  const lb = await api('/api/rewards/login', { token, body: {} });
+  check(lb.status === 200 && lb.data.paid === 100 && lb.data.wallet?.coins === 100, 'login bonus: +100 COINS');
+  const lb2 = await api('/api/rewards/login', { token, body: {} });
+  check(lb2.data.paid === 0, 'login bonus only once per day');
+  const banners = await api('/api/gacha/banners', { token });
+  check(banners.status === 200 && banners.data.items?.length === 2, 'two gacha banners are open');
+  const details = await api('/api/gacha/banners/premium-s1', { token });
+  check(details.status === 200 && details.data.cards?.length === 180, 'Premium details: 180 cards');
+  const poor = await api('/api/gacha/banners/standard/draw', { token, body: { count: 1, requestId: `check-${Math.random().toString(36).slice(2, 12)}` } });
+  check(poor.status === 409 && poor.data.error?.code === 'INSUFFICIENT_FUNDS', 'a draw without enough COINS is refused');
+  const missions = await api('/api/missions', { token });
+  check(missions.status === 200 && missions.data.items?.length === 12, 'missions listed');
+  const coll = await api('/api/collection', { token });
+  check(coll.status === 200 && coll.data.counts?.total === 300, 'collection endpoint');
+  const shop = await api('/api/exchange/catalog', { token });
+  check(shop.status === 200 && shop.data.sections?.length === 2, 'exchange shop endpoint');
+  const grant = await api('/api/admin/economy/test-grants', { token, body: { username, kind: 'COINS', amount: 1000 } });
+  check(grant.status === 401, 'a player token cannot use admin test grants');
+
   const badAdmin = await api('/api/admin/auth/login', { body: { username: 'nobody', password: 'wrong-password-123' } });
   check(badAdmin.status === 401, 'admin login rejects unknown accounts');
 
@@ -129,6 +152,14 @@ async function main() {
   ws.close();
   const hist = await api('/api/matches/history', { token });
   check(hist.status === 200 && hist.data.items?.length === 3, 'match history has my 3 matches');
+  const myRank = fin?.you !== null && fin?.you !== undefined ? fin.finalRanks?.[fin.you] : undefined;
+  const reward = fin?.you !== null && fin?.you !== undefined ? fin.outcome?.rewards?.[fin.you] : undefined;
+  check(!!reward && reward.matchRewardGiven && reward.coins === 100 + ({ 1: 150, 2: 100, 3: 50, 4: 25 } as Record<number, number>)[myRank ?? 0], `match reward ${reward?.coins} COINS for rank ${myRank}`);
+  check(!!reward && reward.missionsCompleted.includes('d-league'), `missions completed: ${reward?.missionsCompleted.join(', ')}`);
+  const claim = await api('/api/missions/d-league/claim', { token, body: {} });
+  check(claim.status === 200 && claim.data.paid === 100, 'claim the daily mission');
+  const w1 = await api('/api/currency', { token });
+  check(w1.data.wallet?.coins === 100 + (reward?.coins ?? 0) + 100, `wallet: ${w1.data.wallet?.coins} COINS (login + match reward + mission)`);
   if (errors.length) console.log(`  (server errors received: ${errors.join(', ')})`);
 
   console.log(`\n${failures === 0 ? 'REMOTE CHECK PASSED' : `${failures} CHECK(S) FAILED`} in ${elapsed()}`);

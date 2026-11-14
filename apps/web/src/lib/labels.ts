@@ -70,6 +70,8 @@ export const ERROR_TEXT: Record<string, string> = {
   ROOM_FULL: 'ルームが満員です',
   ROOM_NOT_JOINABLE: 'このルームには参加できません（ドラフト開始済み、または招待コードで参加できないモード）',
   FORMATION_LOCKED: 'この課題ではフォーメーションを変更できません',
+  RESERVED: 'そのカードは別のプレイヤーの専用枠です',
+  INSUFFICIENT_FUNDS: '残高が足りません',
   EVENT_CLOSED: 'このイベントは開催期間外です',
   NOT_FOUND: '見つかりません',
   FORBIDDEN: '権限がありません',
@@ -92,10 +94,16 @@ export const MODE_LABEL: Record<string, string> = {
   ranked: 'ランク戦',
   solo: 'ソロ課題',
   event: 'イベント',
+  collection: 'Collection Draft',
 };
 
 export function modeLabel(mode: string): string {
   return MODE_LABEL[mode] ?? mode;
+}
+
+/** official dates (gacha periods) are shown in Japan time */
+export function formatJst(ms: number): string {
+  return `${new Date(ms).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo', year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}（日本時間）`;
 }
 
 export function formatDateTime(ms: number): string {

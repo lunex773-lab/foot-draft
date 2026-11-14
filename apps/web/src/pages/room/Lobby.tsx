@@ -66,7 +66,7 @@ function StandardLobby({ snap, send, onLeave }: { snap: RoomSnapshot; send: (m: 
   return (
     <div className="grid2">
       <div className="panel">
-        <h2>{event ? `イベント：${event.name}` : snap.mode === 'private' ? 'プライベートルーム' : 'クイックドラフト'}</h2>
+        <h2>{event ? `イベント：${event.name}` : snap.mode === 'private' ? 'プライベートルーム' : snap.mode === 'collection' ? 'Collection Draft' : 'クイックドラフト'}</h2>
         {event && (
           <div className="row" style={{ marginBottom: 10 }}>
             {describeFilter(event.filter).map((c) => (
@@ -78,6 +78,8 @@ function StandardLobby({ snap, send, onLeave }: { snap: RoomSnapshot; send: (m: 
         )}
         {event ? (
           <div className="small muted">{event.description}　参加者はイベント画面の「参加する」から同じルームに入ります。</div>
+        ) : snap.mode === 'collection' ? (
+          <div className="small muted">参加者はホームの「Collection Draft」から同じルームに入ります（招待コードでは参加できません）。専用枠はコレクション画面で登録します。</div>
         ) : (
           <>
             <div className="small muted">招待コード</div>
@@ -120,7 +122,10 @@ function StandardLobby({ snap, send, onLeave }: { snap: RoomSnapshot; send: (m: 
         <h2>ルール</h2>
         <ul className="small muted" style={{ lineHeight: 1.8, paddingLeft: 18, marginTop: 0 }}>
           <li>最大4人。各自14人（スタメン11＋控え3）をスネークドラフトで指名</li>
-          <li>候補は84人{event ? '（イベントの対象選手が全員入り、足りない分は通常の選手）' : ''}。同じ選手は1チームだけ。GKは3人まで</li>
+          <li>
+            候補は84人{event ? '（イベントの対象選手が全員入り、足りない分は通常の選手）' : ''}
+            {snap.mode === 'collection' ? '＋各自の専用枠のカード（最大3枚・本人だけが指名できます）' : ''}。同じ選手は1チームだけ。GKは3人まで
+          </li>
           <li>時間切れはサーバーが自動で指名します</li>
           <li>ドラフト後、総当たりリーグ（3試合）で順位を決定</li>
           <li>各試合の前にフォーメーション・戦術・スタメンを変更できます</li>

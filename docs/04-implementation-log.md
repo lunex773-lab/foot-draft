@@ -1,5 +1,35 @@
 # 実装記録
 
+## 2026-11-14 Phase 4（コレクション・経済）
+
+計画：`docs/07-phase4-plan.md`。決定事項：`docs/02-decisions.md` の 36〜44。
+
+| 区分 | 内容 | 主なファイル |
+| --- | --- | --- |
+| 通貨・台帳 | COINS・無償GEMS・有償GEMS（購入）・有償GEMS（配布）を別の列で保持（0未満は DB の制約で不可）。すべての増減を台帳に1行ずつ（増減後の残高つき）。交換ポイントは Standard・Premium を別に保持し、同じく台帳あり | `migrations/0005_economy.sql`, `api/src/lib/economy.ts` |
+| 二重実行・同時実行の防止 | ガシャ・交換は「ユーザーごとの操作番号」（一意制約）と「クライアントの取引ID」（同じIDの再送は前回の結果を返す）で、同時に来ても二重に引かれない。報酬は「ユーザー×報酬キー」の一意制約で1回だけ支払う | `lib/economy.ts`（`runOperation`, `rewardStmts`） |
+| 報酬 | 対戦報酬（参加100＋順位、1日10リーグまで。上限は DB の枠番号の制約でも保証）、ログインボーナス（アプリを開いた時に自動で受け取り、7日連続目は300）、ソロ課題の初回達成200、イベントの1位100・2位50、シーズン報酬（無償GEMS：1位300・2〜10位200・参加者100）。Phase 3 の間に記録だけしていた報酬（シーズン・ソロ・イベント）も残高の表示時に支払う | `lib/rewards.ts`, `RoomDO.applyRewards`, `lib/seasons.ts` |
+| ミッション | デイリー3・ウィークリー3・初心者6。リーグ終了・ガシャで進み（日本時間で期間が切り替わる）、達成後に受け取り（まとめて受け取りも可） | `shared/economy/missions.ts`, `routes/economy.ts` |
+| ガシャ | Standard（COINS、天井なし）・Premium シリーズ1（有償GEMS、Rare以上の180人）。サーバーで `crypto.getRandomValues` による偏りのない抽選。天井（Epic以上50回・Legendary以上100回、出たら0から）、累計150回ごとにEpic以上確定の1回を無料で自動で追加。重複はポイントに変換。有償GEMSは配布分から先に使う。排出率は版つきで履歴に保存 | `shared/economy/gacha.ts`, `routes/gacha.ts` |
+| 交換所 | Standardポイント→Common〜Legendary、Premiumポイント→Rare〜Icon の未所持カード（Common 100・Rare 300・Epic 1,000・Legendary 3,000・Icon 10,000） | `routes/collection.ts` |
+| コレクション・Collection Draft | 所持カードの一覧、専用枠（最大3枚）の登録。Collection Draft のマッチング。登録カードは候補に追加され、登録した本人だけが指名できる（CPU・自動指名も守る） | `routes/collection.ts`, `shared/draft.ts`（`reserved`）, `RoomDO.collectionReservations` |
+| テスト用の付与 | 管理サイトの「通貨・テスト付与」から、local・staging でだけ付与できる（本番の API は常に拒否）。台帳（理由 test_grant）と管理者操作ログに記録。プレイヤーの残高・台帳の確認（economy.read） | `routes/admin.ts`, `admin/src/EconomyPage.tsx` |
+| ゲーム画面 | 上部に残高（COINS・GEMS）とメニュー、ガシャ（排出率・全候補と1人ずつの確率・天井の状態・終了日時（日本時間）・引き継ぎ条件・抽選履歴）、コレクション（専用枠）、交換所、ミッション、残高と履歴（GEMS の内訳）、ホームに Collection Draft と報酬、結果画面に獲得した報酬とミッション達成、ドラフトで「専用」表示 | `apps/web/src/pages/*` |
+| 分析イベント | currency_earned・currency_spent・gacha_started・gacha_completed・duplicate_converted・exchange_completed・mission_completed・reward_claimed・collection_player_registered | `lib/analytics.ts` |
+
+検証：
+- 単体テスト62件成功（排出率の合計100%、20万回の抽選が排出率どおり、Standard は Icon なし・天井なし、Premium の天井（50回目・100回目）と途中で出た時の数え直し、150回特典の位置と天井への影響なし、3,000回の連続抽選で天井を超えない、重複→ポイント、有償GEMSの消費順、ミッションの日本時間の週の境目、専用枠の指名制限（自動指名も守る）、本番ではテスト付与が無効）
+- 結合テスト `npm run e2e:phase4` すべて成功：新規の残高0、ログインボーナス1日1回（同時に2回送っても1回）、残高不足のガシャは何も変わらない、テスト付与（viewer・選手のトークンは拒否、操作ログ）、10連、同じ取引IDの再送で二重に引かれない、単発5回の同時実行、COINSが3回分しかない時の10連5回の同時実行で3回だけ成功・残高が負にならない、台帳の合計＝残高、重複→ポイント、有償GEMSの消費順（配布600→購入400）、天井の残り回数、交換所の規則、専用枠の規則、Collection Draft（専用カードは本人だけ、他人は RESERVED で拒否）、対戦報酬とミッション、受け取りは1回だけ、11リーグ目は対戦報酬なし（ミッションは進む）、シーズン報酬（1位300）
+- Phase 1/2・Phase 3 の結合テストもすべて成功
+- ブラウザ：ホーム（ログインボーナスの通知）、ガシャ（確認→結果、有償GEMSの内訳）、提供割合の詳細、抽選履歴、コレクションの専用枠、交換所、Collection Draft（ロビー→「専用」表示つきドラフト→結果の報酬）、ミッションの受け取り、残高と履歴、スマートフォン幅（横スクロールなし）、管理サイトの通貨・テスト付与。コンソールエラーなし
+- Staging check にも経済の確認（残高・ログインボーナス・ガシャの拒否・対戦報酬・ミッション）を追加し、ローカルで成功
+
+設計上の注意：
+- Cloudflare の資料をこの環境から読めなかったため、無料プランの「1回の処理あたりの問い合わせ数」の上限を超えないよう、複数行の書き込みは1文にまとめた（10連でも約20文）。staging で実際に確認する
+- Collection Draft の参加条件・報酬、同じカードを複数人が登録した時の扱いは暫定（`docs/02-decisions.md` の「提案中」）
+
+未実装（今回の範囲外）：GEMS の購入（アプリ内課金、Phase 6）、本格的な GEMS 配布（二人承認など、Phase 5）、交換所のスキン・エンブレム等、ガシャの管理画面での作成・編集、管理画面でのプレイヤー管理。
+
 ## 2026-11-14 本番（production）に公開
 
 ユーザーの承認（GitHub の Environments の承認制）を受けて Deploy（production）を実行し、成功。D1（football-draft-production）の作成とマイグレーション、API、署名キー、ゲームと管理サイトの公開、動作確認（API の応答・画面・カード画像・CORS）がすべて通った。

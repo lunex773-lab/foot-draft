@@ -5,6 +5,7 @@ import { TierBadge } from '../components/TierBadge';
 import { api } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { errorText, modeLabel } from '../lib/labels';
+import { fmt, useWallet } from '../lib/wallet';
 import { eventPeriod, type EventItem } from './EventsPage';
 import { Stars } from './SoloPage';
 
@@ -29,6 +30,9 @@ export default function HomePage() {
   const [ranked, setRanked] = useState<{ rating: number; games: number; position: number | null; season: { name: string } } | null>(null);
   const [solo, setSolo] = useState<{ challenge: SoloChallenge; cleared: boolean } | null>(null);
   const [events, setEvents] = useState<EventItem[]>([]);
+  const { wallet, login, matchRewards } = useWallet();
+  const [missionsReady, setMissionsReady] = useState(0);
+  const [roster, setRoster] = useState<number | null>(null);
 
   useEffect(() => {
     api<typeof ranked>('/api/ranked/me').then(setRanked).catch(() => undefined);
@@ -38,6 +42,12 @@ export default function HomePage() {
       .catch(() => undefined);
     api<{ items: HistoryRow[] }>('/api/users/me/history')
       .then((r) => setActive(r.items.filter((x) => x.status !== 'finished')))
+      .catch(() => undefined);
+    api<{ items: { completed: boolean; claimed: boolean }[] }>('/api/missions')
+      .then((r) => setMissionsReady(r.items.filter((m) => m.completed && !m.claimed).length))
+      .catch(() => undefined);
+    api<{ roster: (string | null)[] }>('/api/collection')
+      .then((r) => setRoster(r.roster.filter(Boolean).length))
       .catch(() => undefined);
     api<{ stats: { leaguesPlayed: number; leaguesWon: number } }>('/api/users/me')
       .then((r) => setStats(r.stats))
@@ -73,7 +83,8 @@ export default function HomePage() {
           {active.map((r) => (
             <div key={r.room_id} className="spread small" style={{ padding: '4px 0' }}>
               <span>
-                {modeLabel(r.mode)}{r.mode === 'quick' || r.mode === 'private' ? `・コード ${r.code}` : ''}・{r.status}
+                {modeLabel(r.mode)}
+                {r.mode === 'quick' || r.mode === 'private' ? `・コード ${r.code}` : ''}・{r.status}
               </span>
               <Link className="btn small" to={`/room/${r.room_id}`}>
                 戻る
@@ -126,6 +137,52 @@ export default function HomePage() {
           <Link className="btn primary" to="/solo">
             課題を見る
           </Link>
+        </div>
+      </div>
+      <div className="grid2">
+        <div className="panel mode-card">
+          <div className="spread">
+            <div className="title">COLLECTION DRAFT</div>
+            {roster !== null && <span className="chip">専用枠 {roster}/3</span>}
+          </div>
+          <div className="small muted">所持カードから最大3枚を「自分専用枠」に登録して参加。登録カードはあなただけが指名できます。ほかの候補は通常どおり共通です。</div>
+          <div className="row">
+            <button className="btn primary" disabled={busy} onClick={() => go(() => api('/api/collection/draft/quick', { body: {} }))}>
+              Collection Draft
+            </button>
+            <Link className="btn ghost small" to="/collection">
+              専用枠を選ぶ
+            </Link>
+          </div>
+        </div>
+        <div className="panel mode-card">
+          <div className="title">GACHA・REWARDS</div>
+          <div className="small">
+            {wallet ? (
+              <>
+                COINS <b>{fmt(wallet.coins)}</b>　GEMS <b>{fmt(wallet.gems.total)}</b>
+                <span className="muted">（無償 {fmt(wallet.gems.free)}・有償 {fmt(wallet.gems.paid)}）</span>
+              </>
+            ) : (
+              <span className="muted">残高を読み込み中…</span>
+            )}
+            <br />
+            <span className="muted">
+              {login?.claimedToday ? `ログインボーナス受け取り済み（${login.streak}日連続）` : 'ログインボーナス未受け取り'}
+              {matchRewards && `・今日の対戦報酬 ${matchRewards.leaguesToday}/${matchRewards.cap}リーグ`}
+            </span>
+          </div>
+          <div className="row">
+            <Link className="btn primary small" to="/gacha">
+              ガシャ
+            </Link>
+            <Link className="btn small" to="/missions">
+              ミッション{missionsReady > 0 && <span className="chip on">{missionsReady}</span>}
+            </Link>
+            <Link className="btn small ghost" to="/exchange">
+              交換所
+            </Link>
+          </div>
         </div>
       </div>
       <div className="panel">

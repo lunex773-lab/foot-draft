@@ -1,10 +1,44 @@
-import type { RoomSnapshot } from '@fd/shared';
-import { useState } from 'react';
+import { MISSION_BY_ID, type RoomSnapshot } from '@fd/shared';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { MatchDetailModal } from '../../components/MatchDetailModal';
 import { Standings } from '../../components/Standings';
 import { TierBadge } from '../../components/TierBadge';
 import { seatColor, signed } from '../../lib/labels';
+import { fmt, useWallet } from '../../lib/wallet';
+
+/** COINS and missions earned by this league (decided by the server) */
+function Rewards({ snap }: { snap: RoomSnapshot }) {
+  const { refresh } = useWallet();
+  const r = snap.you !== null ? snap.outcome?.rewards?.[snap.you] : undefined;
+  useEffect(() => {
+    if (r) refresh().catch(() => undefined);
+  }, [r, refresh]);
+  if (snap.you === null || !snap.seats[snap.you]?.userId) return null;
+  if (!r) return <div className="small muted" style={{ marginTop: 8 }}>報酬を集計しています…</div>;
+  return (
+    <div className="result-box" style={{ marginTop: 10 }}>
+      <div className="small muted">獲得した報酬</div>
+      <div className="display" style={{ fontSize: 28, color: 'var(--gold)' }}>
+        +{fmt(r.coins)} COINS
+      </div>
+      <div className="reward-line small">
+        {r.matchRewardGiven ? (
+          <span className="chip">対戦報酬 {fmt(r.coins - r.bonus)}</span>
+        ) : (
+          <span className="chip">今日の対戦報酬は上限（{r.leaguesToday}リーグ）に達しています</span>
+        )}
+        {r.bonus > 0 && <span className="chip on">{snap.mode === 'event' ? 'イベント順位ボーナス' : 'ソロ課題の達成報酬'} +{fmt(r.bonus)}</span>}
+        {r.matchRewardGiven && <span className="chip">今日 {r.leaguesToday}/10 リーグ</span>}
+      </div>
+      {r.missionsCompleted.length > 0 && (
+        <div className="small" style={{ marginTop: 6 }}>
+          ミッション達成：{r.missionsCompleted.map((id) => MISSION_BY_ID[id]?.titleJa ?? id).join('・')}　<Link to="/missions">受け取る</Link>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function Outcome({ snap }: { snap: RoomSnapshot }) {
   const o = snap.outcome;
@@ -83,6 +117,7 @@ export function Final({ snap }: { snap: RoomSnapshot }) {
           {myRank ? `${myRank}位` : '-'}
         </div>
         <Outcome snap={snap} />
+        <Rewards snap={snap} />
         <div className="row" style={{ justifyContent: 'center', marginTop: 8 }}>
           {snap.standings.map((r) => (
             <span key={r.seat} className="chip" style={{ borderColor: seatColor(r.seat) }}>

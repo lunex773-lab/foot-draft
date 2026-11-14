@@ -32,5 +32,13 @@ export function ModeBanner({ snap }: { snap: RoomSnapshot }) {
       </div>
     );
   }
+  if (v.kind === 'collection') {
+    return (
+      <div className="mode-banner event">
+        <span className="chip on">COLLECTION DRAFT</span>
+        <span className="small">「専用」と表示されたカードは、登録した本人だけが指名できます。ほかの候補は共通です。</span>
+      </div>
+    );
+  }
   return null;
 }

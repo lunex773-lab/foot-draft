@@ -1003,3 +1003,175 @@ table.tbl th.num {
   font-size: 20px;
   letter-spacing: 0.04em;
 }
+
+/* ---------------------------------------------------------- phase 4: economy */
+.topbar {
+  margin-bottom: 0;
+  border-bottom: none;
+}
+
+.mainnav {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  padding: 0 0 10px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid var(--line);
+  scrollbar-width: none;
+}
+
+.mainnav::-webkit-scrollbar {
+  display: none;
+}
+
+.mainnav a {
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: 14px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+
+.mainnav a.active {
+  color: var(--gold);
+  border-color: var(--gold2);
+  background: #2a2412;
+}
+
+.wallet-bar {
+  display: inline-flex;
+  gap: 6px;
+  font-family: var(--display);
+  font-size: 13px;
+  letter-spacing: 0.03em;
+}
+
+.wallet-bar span {
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #0f1118;
+}
+
+.wallet-bar .coin {
+  color: var(--gold);
+}
+
+.wallet-bar .gem {
+  color: #7fd3ff;
+}
+
+.gacha-banner.premium {
+  border-color: #6a4fb3;
+  background: linear-gradient(135deg, #1b1630, var(--panel) 60%);
+}
+
+.gacha-banner.standard {
+  background: linear-gradient(135deg, #1a1d14, var(--panel) 60%);
+}
+
+.chip.rar-common,
+.chip.rar-rare,
+.chip.rar-epic,
+.chip.rar-legendary,
+.chip.rar-icon {
+  border-color: currentColor;
+}
+
+.draw-slot .chip {
+  font-size: 11px;
+  padding: 1px 7px;
+}
+
+.roster-slot {
+  min-height: 46px;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  padding: 6px 8px;
+  display: flex;
+  align-items: center;
+}
+
+.roster-slot .prow {
+  flex: 1;
+}
+
+.mission {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+}
+
+.stat-card .big {
+  font-size: 34px;
+  line-height: 1.15;
+}
+
+.reserved-tag {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  right: 6px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: rgba(10, 11, 15, 0.86);
+  border: 1px solid var(--gold2);
+  color: var(--gold);
+  pointer-events: none;
+}
+
+.reward-line {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+@media (max-width: 640px) {
+  .wallet-bar {
+    font-size: 12px;
+  }
+  .wallet-bar span {
+    padding: 2px 7px;
+  }
+  .topbar .who .btn {
+    padding: 4px 8px;
+  }
+}
+
+table.tbl.wrap td {
+  white-space: normal;
+}
+
+table.tbl.wrap th {
+  width: 7em;
+  vertical-align: top;
+}
+
+.brand {
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .brand {
+    font-size: 14px;
+    letter-spacing: 0.04em;
+  }
+  .topbar {
+    gap: 6px;
+  }
+  .topbar .who {
+    gap: 6px;
+  }
+  .topbar .who .btn {
+    min-height: 30px;
+    font-size: 12px;
+  }
+}
