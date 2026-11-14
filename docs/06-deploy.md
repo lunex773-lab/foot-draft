@@ -51,7 +51,7 @@ URL は `https://<Pages のプロジェクト名>.pages.dev` と `https://<Worke
 | 環境 | ゲーム | 管理サイト | API |
 | --- | --- | --- | --- |
 | staging | https://football-draft-staging.pages.dev | https://football-draft-admin-staging.pages.dev | https://football-draft-api-staging.lunex773.workers.dev |
-| production | 未公開 | 未公開 | 未公開 |
+| production | https://football-draft-production.pages.dev | https://football-draft-admin-production.pages.dev | https://football-draft-api.lunex773.workers.dev |
 
 ## 公開と管理者の作成
 

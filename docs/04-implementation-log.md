@@ -1,5 +1,15 @@
 # 実装記録
 
+## 2026-11-14 本番（production）に公開
+
+ユーザーの承認（GitHub の Environments の承認制）を受けて Deploy（production）を実行し、成功。D1（football-draft-production）の作成とマイグレーション、API、署名キー、ゲームと管理サイトの公開、動作確認（API の応答・画面・カード画像・CORS）がすべて通った。
+
+- ゲーム：https://football-draft-production.pages.dev
+- 管理サイト：https://football-draft-admin-production.pages.dev
+- API：https://football-draft-api.lunex773.workers.dev
+
+管理者 SecondAKIRA（owner）：staging は作成済み。production は Create admin を起動し、承認待ち。
+
 ## 2026-11-14 staging に公開
 
 GitHub Actions の Deploy（staging）で Cloudflare に初めて公開した。D1 の作成とマイグレーション 0001〜0004、API（Workers＋Durable Objects）、署名キーの自動作成、ゲームと管理サイト（Pages）の公開、動作確認（API の応答・画面・カード画像・CORS）がすべて成功。
