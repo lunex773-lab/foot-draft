@@ -1,5 +1,20 @@
 # 実装記録
 
+## 2026-11-14 公開の準備（Cloudflare ＋ GitHub Actions）
+
+決定事項 31〜35。手順は `docs/06-deploy.md`。
+
+| 区分 | 内容 | 主なファイル |
+| --- | --- | --- |
+| CI | プッシュのたびに型チェック・単体テスト・ゲームと管理サイトのビルド | `.github/workflows/ci.yml` |
+| 公開 | staging はプッシュで自動（Cloudflare のシークレットが未登録なら失敗ではなくスキップ）、production は手動実行＋GitHub の承認。D1 と Pages のプロジェクトがなければ作成し、マイグレーション → API → 署名キー（初回のみ自動生成）→ ゲーム・管理サイトの順に公開し、最後に動作確認 | `.github/workflows/deploy.yml`, `.github/scripts/cf-prepare.sh` |
+| 管理者の作成 | Actions から作成。パスワードは GitHub のシークレット。2段階認証は管理サイトへの初回ログイン時に QR コードで登録（キーはログに出ない） | `.github/workflows/admin-create.yml`, `routes/admin.ts`, `admin/src/App.tsx` |
+
+検証：
+- `cf-prepare.sh` を Cloudflare API の模擬サーバーで確認（D1・Pages のプロジェクトの新規作成、2回目は既存の再利用で同じ結果、トークンが違う時は原因を表示して停止）。本物の Cloudflare では、シークレットの登録後に初めて動かす
+- 初回ログインでの2段階認証の登録をブラウザで確認（QR コードの表示、誤ったコードは拒否、登録後は通常のコード入力、操作ログに開始と完了が残る）
+- ビルド・単体テスト45件・結合テスト（Phase 1/2・Phase 3）すべて成功
+
 ## 2026-11-14 Phase 3（競争機能）
 
 計画：`docs/05-phase3-plan.md`。決定事項：`docs/02-decisions.md` の 24〜30。
