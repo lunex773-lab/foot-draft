@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { requireUser } from '../lib/auth';
 import { readJson, str } from '../lib/http';
+import { membershipOf } from '../lib/purchases';
 import type { AppEnv } from '../env';
 
 export const userRoutes = new Hono<AppEnv>();
@@ -16,7 +17,11 @@ userRoutes.get('/me', async (c) => {
   )
     .bind(u.id)
     .first<{ played: number; wins: number | null }>();
-  return c.json({ user: { id: u.id, username: u.username, displayName: u.displayName }, stats: { leaguesPlayed: stats?.played ?? 0, leaguesWon: stats?.wins ?? 0 } });
+  return c.json({
+    user: { id: u.id, username: u.username, displayName: u.displayName },
+    stats: { leaguesPlayed: stats?.played ?? 0, leaguesWon: stats?.wins ?? 0 },
+    membership: await membershipOf(c.env, u.id),
+  });
 });
 
 userRoutes.patch('/me', async (c) => {

@@ -1,6 +1,7 @@
-import { ECONOMY_CONFIG, jstDateKey, leagueMetrics, loginBonusFor, matchRewardFor, seasonRewardFor, type RoomMode, type SeatReward } from '@fd/shared';
+import { ECONOMY_CONFIG, MEMBERSHIP_CONFIG, jstDateKey, leagueXp, seasonAt, leagueMetrics, loginBonusFor, matchRewardFor, seasonRewardFor, type RoomMode, type SeatReward } from '@fd/shared';
 import type { Env } from '../env';
 import { randomId } from './crypto';
+import { membershipOf } from './purchases';
 import { currentMissionProgress, ensureWalletStmts, missionCompletedAnalytics, missionProgressStmts, missionsCompletedFrom, rewardStmts } from './economy';
 
 /**
@@ -34,6 +35,7 @@ export async function grantLeagueRewards(env: Env, roomId: string, mode: RoomMod
   const out = new Map<string, SeatReward>();
   if (inputs.length === 0) return out;
   const day = jstDateKey(now);
+  const passSeason = seasonAt(now).id;
   const opId = randomId();
   const matchKey = `match:${roomId}`;
   const users = inputs.map((i) => i.userId);
@@ -72,6 +74,18 @@ export async function grantLeagueRewards(env: Env, roomId: string, mode: RoomMod
       keys.push(key);
       stmts.push(...rewardStmts(env, { userId, key, kind: 'event_bonus', currency: 'COINS', amount: eventBonus, refType: 'room', refId: roomId, opId, now }));
     }
+    // Season Pass experience: only for leagues that gave a match reward (10 per day)
+    stmts.push(
+      env.DB.prepare(
+        `INSERT OR IGNORE INTO season_pass_xp (user_id, room_id, season_id, xp, created_at)
+         SELECT ?1, ?2, ?3, ?4, ?5 WHERE EXISTS (SELECT 1 FROM daily_match_rewards WHERE user_id = ?1 AND room_id = ?2)`,
+      ).bind(userId, roomId, passSeason, leagueXp(input.rank), now),
+      env.DB.prepare(
+        `INSERT INTO season_pass_progress (user_id, season_id, xp, updated_at)
+         SELECT x.user_id, x.season_id, x.xp, ?3 FROM season_pass_xp x WHERE x.user_id = ?1 AND x.room_id = ?2 AND x.created_at = ?3
+         ON CONFLICT (user_id, season_id) DO UPDATE SET xp = season_pass_progress.xp + excluded.xp, updated_at = excluded.updated_at`,
+      ).bind(userId, roomId, now),
+    );
     keysOf.set(userId, keys);
     if (!done.has(userId)) {
       // mission progress counts every league, also above the daily cap (decision 41)
@@ -90,6 +104,9 @@ export async function grantLeagueRewards(env: Env, roomId: string, mode: RoomMod
   )
     .bind(...users, matchKey, `event:${roomId}`, soloKey ?? '-')
     .all<{ user_id: string; reward_key: string; amount: number; op_id: string }>();
+  const xpRows = await env.DB.prepare(`SELECT user_id, xp FROM season_pass_xp WHERE room_id = ? AND user_id IN (${inList})`)
+    .bind(roomId, ...users)
+    .all<{ user_id: string; xp: number }>();
   const counts = await env.DB.prepare(`SELECT user_id, COUNT(*) AS n FROM daily_match_rewards WHERE day_key = ? AND user_id IN (${inList}) GROUP BY user_id`)
     .bind(day, ...users)
     .all<{ user_id: string; n: number }>();
@@ -104,6 +121,7 @@ export async function grantLeagueRewards(env: Env, roomId: string, mode: RoomMod
       bonus,
       leaguesToday: counts.results.find((r) => r.user_id === userId)?.n ?? 0,
       missionsCompleted: completedOf.get(userId) ?? [],
+      passXp: xpRows.results.find((r) => r.user_id === userId)?.xp ?? 0,
     });
   }
   return out;
@@ -134,8 +152,28 @@ export async function loginBonusStatus(env: Env, userId: string, now = Date.now(
   return { dayKey, claimedToday: false, streak, amount: loginBonusFor(streak) };
 }
 
-/** pays today's login bonus once (Japan day) */
-export async function claimLoginBonus(env: Env, userId: string, now = Date.now()): Promise<LoginBonusStatus & { paid: number }> {
+/** Premium Membership (decision 55): daily FREE GEMS while active; once per Japan day */
+async function claimMembershipDaily(env: Env, userId: string, now: number): Promise<number> {
+  if (!(await membershipOf(env, userId, now)).active) return 0;
+  const dayKey = jstDateKey(now);
+  const key = `membership:${dayKey}`;
+  const opId = randomId();
+  await env.DB.batch([
+    ...ensureWalletStmts(env, userId, now),
+    ...rewardStmts(env, { userId, key, kind: 'membership_daily', currency: 'GEMS_FREE', amount: MEMBERSHIP_CONFIG.dailyFreeGems, refType: 'day', refId: dayKey, opId, now }),
+  ]);
+  const row = await env.DB.prepare('SELECT op_id, amount FROM reward_claims WHERE user_id = ? AND reward_key = ?').bind(userId, key).first<{ op_id: string; amount: number }>();
+  return row?.op_id === opId ? row.amount : 0;
+}
+
+/** pays today's login bonus once (Japan day), and the membership's daily GEMS */
+export async function claimLoginBonus(env: Env, userId: string, now = Date.now()): Promise<LoginBonusStatus & { paid: number; membershipGems: number }> {
+  const membershipGems = await claimMembershipDaily(env, userId, now);
+  const result = await claimLoginBonusOnly(env, userId, now);
+  return { ...result, membershipGems };
+}
+
+async function claimLoginBonusOnly(env: Env, userId: string, now: number): Promise<LoginBonusStatus & { paid: number }> {
   const status = await loginBonusStatus(env, userId, now);
   if (status.claimedToday) return { ...status, paid: 0 };
   const opId = randomId();

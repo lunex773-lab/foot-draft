@@ -63,6 +63,37 @@ async function dauWauMau(env: Env, day: string, f: ActivityFilter) {
   };
 }
 
+/** sales of a period for the overview (details: GET /api/admin/revenue) */
+async function revenueSummary(env: Env, from: string, to: string) {
+  const fromMs = dayStart(from);
+  const toMs = dayStart(addDays(to, 1));
+  const t = await env.DB.prepare(
+    `SELECT COALESCE(SUM(price_jpy), 0) AS gross, COUNT(DISTINCT user_id) AS payers, COALESCE(SUM(CASE WHEN store = 'mock' THEN price_jpy END), 0) AS mock
+       FROM purchase_transactions WHERE status IN ('completed', 'refunded') AND completed_at >= ? AND completed_at < ?`,
+  )
+    .bind(fromMs, toMs)
+    .first<{ gross: number; payers: number; mock: number }>();
+  const total = await env.DB.prepare(
+    "SELECT COALESCE(SUM(price_jpy), 0) AS gross FROM purchase_transactions WHERE status IN ('completed', 'refunded')",
+  ).first<{ gross: number }>();
+  const refunds = await env.DB.prepare('SELECT COALESCE(SUM(amount_jpy), 0) AS n FROM refund_records WHERE created_at >= ? AND created_at < ?').bind(fromMs, toMs).first<{ n: number }>();
+  const totalRefunds = await env.DB.prepare('SELECT COALESCE(SUM(amount_jpy), 0) AS n FROM refund_records').first<{ n: number }>();
+  const active = await activeUsers(env, from, to);
+  const net = (t?.gross ?? 0) - (refunds?.n ?? 0);
+  return {
+    implemented: true,
+    // decision 52: Apple / Google are not connected yet; only the mock store (not in production) takes purchases
+    storesConnected: false,
+    cumulativeNet: (total?.gross ?? 0) - (totalRefunds?.n ?? 0),
+    net,
+    mockGross: t?.mock ?? 0,
+    payers: t?.payers ?? 0,
+    payerRate: pct(t?.payers ?? 0, active),
+    arpu: pct(net, active),
+    arppu: pct(net, t?.payers ?? 0),
+  };
+}
+
 adminInsightRoutes.get('/overview', requirePermission('analytics.read'), async (c) => {
   const now = Date.now();
   await refreshDailyMetrics(c.env, now);
@@ -107,8 +138,7 @@ adminInsightRoutes.get('/overview', requirePermission('analytics.read'), async (
     before: { ...prevRest, ...(await dauWauMau(c.env, prevTo, {})), gemsSpent: await spent(prevFrom, prevTo), errors: await errors(prevFrom, prevTo) },
     series: cur.series,
     retention: averageRetention(cohorts),
-    // purchases do not exist yet (Phase 6): reported as not implemented, never as 0
-    revenue: { implemented: false },
+    revenue: await revenueSummary(c.env, p.from, p.to),
   });
 });
 

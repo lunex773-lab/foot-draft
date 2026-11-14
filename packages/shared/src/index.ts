@@ -26,3 +26,5 @@ export * from './challenges';
 export * from './economy/config';
 export * from './economy/gacha';
 export * from './economy/missions';
+export * from './economy/pass';
+export * from './economy/shop';

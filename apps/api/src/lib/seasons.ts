@@ -53,19 +53,22 @@ export interface LeaderboardRow {
   tier: string;
   games: number;
   wins: number;
+  /** Premium Membership badge */
+  member: boolean;
 }
 
 export async function leaderboard(env: Env, seasonId: string, limit: number = RANKED_CONFIG.leaderboardSize): Promise<LeaderboardRow[]> {
   const rows = await env.DB.prepare(
-    `SELECT r.user_id, u.display_name, r.rating, r.games, r.wins, RANK() OVER (ORDER BY r.rating DESC) AS position
+    `SELECT r.user_id, u.display_name, r.rating, r.games, r.wins, RANK() OVER (ORDER BY r.rating DESC) AS position,
+            EXISTS (SELECT 1 FROM subscriptions s WHERE s.user_id = r.user_id AND s.status = 'active' AND s.current_period_end > ?3) AS member
        FROM ranked_ratings r JOIN users u ON u.id = r.user_id
-      WHERE r.season_id = ? AND r.games > 0
+      WHERE r.season_id = ?1 AND r.games > 0
       ORDER BY r.rating DESC, r.games DESC, r.updated_at ASC
-      LIMIT ?`,
+      LIMIT ?2`,
   )
-    .bind(seasonId, limit)
-    .all<{ user_id: string; display_name: string; rating: number; games: number; wins: number; position: number }>();
-  return rows.results.map((r) => ({ position: r.position, userId: r.user_id, displayName: r.display_name, rating: r.rating, tier: tierOf(r.rating).id, games: r.games, wins: r.wins }));
+    .bind(seasonId, limit, Date.now())
+    .all<{ user_id: string; display_name: string; rating: number; games: number; wins: number; position: number; member: number }>();
+  return rows.results.map((r) => ({ position: r.position, userId: r.user_id, displayName: r.display_name, rating: r.rating, tier: tierOf(r.rating).id, games: r.games, wins: r.wins, member: !!r.member }));
 }
 
 /** position of a player in the season leaderboard (null = not ranked yet) */

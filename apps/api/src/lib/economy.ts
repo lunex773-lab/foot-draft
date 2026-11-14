@@ -117,15 +117,17 @@ export interface PointChange {
   now: number;
 }
 
-export function pointStmts(env: Env, c: PointChange): D1PreparedStatement[] {
+export function pointStmts(env: Env, c: PointChange, cond?: Condition): D1PreparedStatement[] {
   if (!Number.isInteger(c.amount) || c.amount === 0) throw new Error('invalid amount');
   const col = POINT_COLUMN[c.pointType];
+  const where = cond ? ` AND ${cond.sql}` : '';
+  const binds = cond?.binds ?? [];
   return [
-    env.DB.prepare(`UPDATE exchange_wallets SET ${col} = ${col} + ?, updated_at = ? WHERE user_id = ?`).bind(c.amount, c.now, c.userId),
+    env.DB.prepare(`UPDATE exchange_wallets SET ${col} = ${col} + ?, updated_at = ? WHERE user_id = ?${where}`).bind(c.amount, c.now, c.userId, ...binds),
     env.DB.prepare(
       `INSERT INTO exchange_transactions (id, user_id, point_type, amount, balance_after, reason, ref_type, ref_id, op_id, created_at)
-       SELECT ?, ?, ?, ?, ${col}, ?, ?, ?, ?, ? FROM exchange_wallets WHERE user_id = ?`,
-    ).bind(randomId(), c.userId, c.pointType, c.amount, c.reason, c.refType ?? null, c.refId ?? null, c.opId, c.now, c.userId),
+       SELECT ?, ?, ?, ?, ${col}, ?, ?, ?, ?, ? FROM exchange_wallets WHERE user_id = ?${where}`,
+    ).bind(randomId(), c.userId, c.pointType, c.amount, c.reason, c.refType ?? null, c.refId ?? null, c.opId, c.now, c.userId, ...binds),
   ];
 }
 
@@ -153,7 +155,7 @@ export function claimedNow(g: Pick<RewardGrant, 'userId' | 'key' | 'opId'>): Con
  * Records a reward and pays it once (4 statements). `amountSql` lets the amount
  * depend on rows written earlier in the same batch (daily match cap).
  */
-export function rewardStmts(env: Env, g: RewardGrant, amountSql?: Condition): D1PreparedStatement[] {
+export function rewardStmts(env: Env, g: RewardGrant, amountSql?: Condition, opts: { analytics?: boolean } = {}): D1PreparedStatement[] {
   const claim = amountSql
     ? env.DB.prepare(
         `INSERT OR IGNORE INTO reward_claims (id, user_id, reward_key, kind, currency, amount, op_id, created_at)
@@ -180,7 +182,7 @@ export function rewardStmts(env: Env, g: RewardGrant, amountSql?: Condition): D1
      UNION ALL
      SELECT ?, 'currency_earned', ?, NULL, ?, NULL, NULL, ?, ? WHERE ${cond.sql}`,
   ).bind(randomId(), g.userId, g.now, env.ENVIRONMENT, props('reward_claimed'), ...cond.binds, randomId(), g.userId, g.now, env.ENVIRONMENT, props('currency_earned'), ...cond.binds);
-  return [claim, update, ledger, analytics];
+  return opts.analytics === false ? [claim, update, ledger] : [claim, update, ledger, analytics];
 }
 
 /** amount actually paid for a reward key (null = not recorded) */

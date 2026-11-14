@@ -50,6 +50,8 @@ export interface SeatReward {
   leaguesToday: number;
   /** missions completed by this league (ready to claim) */
   missionsCompleted: string[];
+  /** Season Pass experience from this league (0 above the daily cap) */
+  passXp?: number;
 }
 
 export interface RoomOutcome {
@@ -78,6 +80,8 @@ export interface SeatInfo {
   isCpu: boolean;
   connected: boolean;
   isHost: boolean;
+  /** Premium Membership badge (decision 55) */
+  member?: boolean;
 }
 
 export interface MatchSummary {

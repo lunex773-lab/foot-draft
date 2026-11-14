@@ -34,7 +34,13 @@ export type AnalyticsEventName =
   | 'collection_player_registered'
   | 'session_ended'
   | 'feedback_submitted'
-  | 'server_error';
+  | 'server_error'
+  | 'purchase_started'
+  | 'purchase_completed'
+  | 'purchase_failed'
+  | 'purchase_refunded'
+  | 'membership_started'
+  | 'pass_purchased';
 
 export interface AnalyticsInput {
   name: AnalyticsEventName;

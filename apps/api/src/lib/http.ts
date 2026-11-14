@@ -11,6 +11,9 @@ export type ErrorCode =
   | 'ROOM_FULL'
   | 'ROOM_NOT_JOINABLE'
   | 'INSUFFICIENT_FUNDS'
+  | 'STORE_UNAVAILABLE'
+  | 'ALREADY_MEMBER'
+  | 'RECEIPT_INVALID'
   | 'INTERNAL';
 
 const STATUS: Record<ErrorCode, number> = {
@@ -23,6 +26,9 @@ const STATUS: Record<ErrorCode, number> = {
   ROOM_FULL: 409,
   ROOM_NOT_JOINABLE: 409,
   INSUFFICIENT_FUNDS: 409,
+  STORE_UNAVAILABLE: 409,
+  ALREADY_MEMBER: 409,
+  RECEIPT_INVALID: 400,
   INTERNAL: 500,
 };
 

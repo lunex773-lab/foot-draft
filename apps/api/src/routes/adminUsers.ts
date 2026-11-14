@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { audit, ipOf } from '../lib/audit';
 import { can, requirePermission } from '../lib/auth';
 import { walletOf } from '../lib/economy';
+import { membershipOf } from '../lib/purchases';
 import { ApiError, readJson } from '../lib/http';
 import { USER_TAGS } from '../lib/metrics';
 import type { AppEnv } from '../env';
@@ -131,8 +132,20 @@ adminUserRoutes.get('/users/:id', requirePermission('users.read'), async (c) => 
     collection: collection.results,
     feedback: feedback.results,
     economy,
-    // purchases come with Phase 6
-    purchases: { implemented: false },
+    purchases: can(admin.role, 'purchases.read') || can(admin.role, 'users.wallet')
+      ? {
+          implemented: true,
+          items: (
+            await c.env.DB.prepare(
+              `SELECT t.id, t.product_id, p.name AS product_name, t.store, t.status, t.price_jpy, t.gems_purchased, t.gems_granted, t.is_renewal, t.created_at, t.completed_at, t.refunded_at
+                 FROM purchase_transactions t JOIN purchase_products p ON p.id = t.product_id WHERE t.user_id = ? ORDER BY t.created_at DESC LIMIT 50`,
+            )
+              .bind(uid)
+              .all()
+          ).results,
+          membership: await membershipOf(c.env, uid),
+        }
+      : null,
   });
 });
 

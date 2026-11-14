@@ -142,7 +142,9 @@ gachaRoutes.get('/banners/:id', async (c) => {
       return { playerId: id, name: p?.name ?? id, rarity: r, position: p?.primaryPosition ?? null, ovr: p?.ovr ?? null, ratePpm: cardRatePpm(b, pool, r), owned: owned.has(id) };
     }),
   );
+  const versions = await c.env.DB.prepare('SELECT version, change_note, created_at FROM gacha_banner_versions WHERE banner_id = ? ORDER BY version DESC').bind(b.id).all();
   return c.json({
+    versions: versions.results,
     banner: bannerSummary(b, row, await pityOf(c.env, user.id, b.seriesId), now),
     counts: Object.fromEntries(RARITIES.map((r) => [r, pool[r].length])),
     cards,

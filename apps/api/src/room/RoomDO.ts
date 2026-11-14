@@ -46,6 +46,7 @@ import type { Env } from '../env';
 import { analyticsStatement, type AnalyticsInput } from '../lib/analytics';
 import { randomId } from '../lib/crypto';
 import { loadCatalog } from '../lib/players';
+import { membershipOf } from '../lib/purchases';
 import { grantLeagueRewards, type LeagueRewardInput } from '../lib/rewards';
 import { ensureCurrentSeason, ratingOf } from '../lib/seasons';
 
@@ -67,6 +68,8 @@ interface SeatState {
   displayName: string;
   isCpu: boolean;
   joinedAt: number;
+  /** Premium Membership badge (decision 55); missing in rooms created before */
+  member?: boolean;
 }
 
 interface DraftRuntime {
@@ -247,7 +250,15 @@ export class RoomDO extends DurableObject<Env> {
       lobbyDeadline: s.phase === 'lobby' ? s.lobbyDeadline ?? null : null,
       seats: s.seats.map((x, seat) =>
         x
-          ? { seat, userId: x.userId, displayName: x.displayName, isCpu: x.isCpu, connected: x.isCpu || (!!x.userId && connected.has(x.userId)), isHost: !!x.userId && x.userId === s.hostUserId }
+          ? {
+              seat,
+              userId: x.userId,
+              displayName: x.displayName,
+              isCpu: x.isCpu,
+              connected: x.isCpu || (!!x.userId && connected.has(x.userId)),
+              isHost: !!x.userId && x.userId === s.hostUserId,
+              member: !!x.member,
+            }
           : { seat, userId: null, displayName: '', isCpu: false, connected: false, isHost: false },
       ),
       serverNow: this.now(),
@@ -440,10 +451,18 @@ export class RoomDO extends DurableObject<Env> {
     const existing = this.seatOf(userId);
     if (existing !== null) return { ok: true, seat: existing, rejoined: true };
     if (s.phase !== 'lobby') return fail('ROOM_NOT_JOINABLE', 'the draft has already started', 409);
+    // the badge only: membership never changes anything in the game (decision 55).
+    // Looked up before a seat is chosen: other joins may run while this waits.
+    const member = await membershipOf(this.env, userId)
+      .then((m) => m.active)
+      .catch(() => false);
+    const again = this.seatOf(userId);
+    if (again !== null) return { ok: true, seat: again, rejoined: true };
+    if (s.phase !== 'lobby') return fail('ROOM_NOT_JOINABLE', 'the draft has already started', 409);
     const seat = s.seats.findIndex((x) => x === null);
     if (seat < 0 || (s.mode === 'solo' && this.humanSeats().length > 0)) return fail('ROOM_FULL', 'room is full', 409);
     const now = this.now();
-    s.seats[seat] = { seat, userId, displayName: displayName.slice(0, 24), isCpu: false, joinedAt: now };
+    s.seats[seat] = { seat, userId, displayName: displayName.slice(0, 24), isCpu: false, joinedAt: now, member };
     if (!s.hostUserId) s.hostUserId = userId;
     await this.save();
     const count = s.seats.filter(Boolean).length;

@@ -9,7 +9,9 @@ import { loadCatalog } from '../lib/players';
 import { ensureCurrentSeason, leaderboard, seasonView } from '../lib/seasons';
 import { adminAccountRoutes } from './adminAdmins';
 import { adminDistributionRoutes } from './adminDistributions';
+import { adminGachaRoutes } from './adminGacha';
 import { adminInsightRoutes } from './adminInsights';
+import { adminShopRoutes } from './adminShop';
 import { adminUserRoutes } from './adminUsers';
 import { eventView, type EventRow } from './events';
 import { adminFeedbackRoutes } from './feedback';
@@ -410,3 +412,6 @@ adminRoutes.route('/', adminUserRoutes);
 adminRoutes.route('/', adminFeedbackRoutes);
 adminRoutes.route('/', adminDistributionRoutes);
 adminRoutes.route('/', adminAccountRoutes);
+// ------------------------------------------------------------------ Phase 6 (purchases, gacha management)
+adminRoutes.route('/', adminShopRoutes);
+adminRoutes.route('/', adminGachaRoutes);
