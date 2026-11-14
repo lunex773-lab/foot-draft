@@ -65,16 +65,10 @@ npm run e2e:phase3 -w @fd/api   # Phase 3 だけ
 npm run typecheck
 ```
 
-## デプロイ（未実施）
+## 公開（Cloudflare）
 
-`apps/api/wrangler.toml` に dev / staging / production の環境を定義済み。デプロイ前に次が必要です。
-
-1. 環境ごとに D1 データベースを作成し、`database_id` を設定（`wrangler d1 create football-draft-production` など）
-2. `wrangler d1 migrations apply DB --remote --env <env>`
-3. `wrangler secret put WS_TICKET_SECRET --env <env>`
-4. `ALLOWED_ORIGINS` にゲーム・管理サイトの公開URLを設定し、`apps/web` / `apps/admin` をビルドして配信（`VITE_API_URL` にAPIのURL）
-5. カード画像は各アプリの静的ファイルとして配信される。CDN / R2 に置く場合は `VITE_CARD_BASE_URL` にそのURLを設定
-6. 試合SIMとCPUの自動指名はCPU時間を使うため、Workers は有料プランを推奨
+GitHub Actions で Cloudflare に公開します（開発ブランチへのプッシュで staging に自動公開、production は承認制）。
+手順・必要なシークレット・ワークフローの内容は `docs/06-deploy.md`。
 
 ## ドキュメント
 
@@ -84,3 +78,4 @@ npm run typecheck
 - `docs/03-sim.md` 試合シミュレーションの仕様とバランス検証結果
 - `docs/04-implementation-log.md` 実装記録（実装済み・未実装・検証結果・既知の課題）
 - `docs/05-phase3-plan.md` Phase 3（競争機能）の計画
+- `docs/06-deploy.md` 公開手順（Cloudflare＋GitHub Actions）

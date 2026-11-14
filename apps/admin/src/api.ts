@@ -11,6 +11,8 @@ export class AdminApiError extends Error {
     public status: number,
     public code: string,
     message: string,
+    /** full error response (e.g. 2FA setup data) */
+    public data: Record<string, unknown> | null = null,
   ) {
     super(message);
   }
@@ -42,7 +44,7 @@ export async function adminApi<T>(path: string, body?: unknown, method?: 'POST' 
       setAdminToken(null);
       window.dispatchEvent(new Event('fd-admin:logout'));
     }
-    throw new AdminApiError(res.status, data?.error?.code ?? 'ERROR', data?.error?.message ?? res.statusText);
+    throw new AdminApiError(res.status, data?.error?.code ?? 'ERROR', data?.error?.message ?? res.statusText, data);
   }
   return data as T;
 }

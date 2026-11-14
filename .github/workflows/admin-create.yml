@@ -1,0 +1,55 @@
+# Creates an admin account for FOOTBALL DRAFT ADMIN in staging / production.
+#
+# Before running: set the GitHub secret ADMIN_INITIAL_PASSWORD (12+ characters).
+# Nothing secret is printed: the admin registers an authenticator app (2FA) at
+# the first login in the admin site, so no TOTP key appears in these logs.
+# Production runs wait for approval (GitHub environment "production").
+name: Create admin
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        type: choice
+        options: [staging, production]
+        default: staging
+      username:
+        description: 'admin username (3-40 chars: letters, digits, _ . -)'
+        required: true
+        type: string
+      role:
+        type: choice
+        options: [owner, admin, viewer]
+        default: owner
+
+permissions:
+  contents: read
+
+jobs:
+  create:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: ${{ inputs.environment }}
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      FD_ADMIN_PASSWORD: ${{ secrets.ADMIN_INITIAL_PASSWORD }}
+    steps:
+      - name: Check secrets
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then echo "::error::CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID are not set"; exit 1; fi
+          if [ ${#FD_ADMIN_PASSWORD} -lt 12 ]; then echo "::error::Set the secret ADMIN_INITIAL_PASSWORD (12+ characters)"; exit 1; fi
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Find the D1 database of the environment
+        run: bash .github/scripts/cf-prepare.sh "${{ inputs.environment }}" >/dev/null
+      - name: Create the admin (2FA is set up at the first login)
+        working-directory: apps/api
+        env:
+          ADMIN_USERNAME: ${{ inputs.username }}
+          ADMIN_ROLE: ${{ inputs.role }}
+        run: npx tsx scripts/create-admin.ts --env "${{ inputs.environment }}" --username "$ADMIN_USERNAME" --role "$ADMIN_ROLE" --totp-on-first-login

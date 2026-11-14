@@ -1,7 +1,7 @@
 import { CLUB_BY_ID, LEAGUE_BY_ID, NATION_BY_CODE, RARITY_INFO, analyzePool, describeFilter, rarityRank, sanitizeFilter, type Player } from '@fd/shared';
 import { Hono } from 'hono';
 import { createAdminSession, permissionsOf, requireAdmin, requirePermission } from '../lib/auth';
-import { randomId, verifyPassword, verifyTotp } from '../lib/crypto';
+import { base32Encode, randomBytes, randomId, verifyPassword, verifyTotp } from '../lib/crypto';
 import { ApiError, readJson, str } from '../lib/http';
 import { loadCatalog } from '../lib/players';
 import { ensureCurrentSeason, leaderboard, seasonView } from '../lib/seasons';
@@ -48,17 +48,39 @@ adminRoutes.post('/auth/login', async (c) => {
   const require2fa = c.env.ADMIN_REQUIRE_2FA === 'true';
   let reason: string | null = null;
   if (!row || !passOk || row.status !== 'active') reason = 'invalid_credentials';
-  else if (require2fa && (!row.totp_enabled || !row.totp_secret)) reason = '2fa_not_configured';
   else if (row.totp_enabled && row.totp_secret) {
     if (!totp) {
       await audit(c.env, row.id, 'login_2fa_required', { type: 'admin', id: username.toLowerCase() }, undefined, ipOf(c));
       return c.json({ error: { code: 'TOTP_REQUIRED', message: '2段階認証コードを入力してください' } }, 401);
     }
     if (!(await verifyTotp(row.totp_secret, totp))) reason = 'invalid_totp';
+  } else if (require2fa) {
+    // first login of an admin without 2FA: enrol an authenticator app now (password already verified).
+    // The key is shown only to this admin (never printed by scripts or CI logs).
+    let secret = row.totp_secret;
+    if (!secret) {
+      secret = base32Encode(randomBytes(20));
+      await c.env.DB.prepare('UPDATE admin_users SET totp_secret = ?, updated_at = ? WHERE id = ? AND totp_enabled = 0').bind(secret, Date.now(), row.id).run();
+      await audit(c.env, row.id, 'totp_setup_started', { type: 'admin', id: row.id }, undefined, ipOf(c));
+    }
+    if (!totp) {
+      const label = encodeURIComponent(`FOOTBALL DRAFT ADMIN (${c.env.ENVIRONMENT}):${row.username}`);
+      return c.json(
+        {
+          error: { code: 'TOTP_SETUP_REQUIRED', message: '2段階認証の設定が必要です' },
+          setup: { secret, otpauthUri: `otpauth://totp/${label}?secret=${secret}&issuer=${encodeURIComponent('FOOTBALL DRAFT ADMIN')}` },
+        },
+        401,
+      );
+    }
+    if (!(await verifyTotp(secret, totp))) reason = 'invalid_totp';
+    else {
+      await c.env.DB.prepare('UPDATE admin_users SET totp_enabled = 1, updated_at = ? WHERE id = ?').bind(Date.now(), row.id).run();
+      await audit(c.env, row.id, 'totp_enrolled', { type: 'admin', id: row.id }, undefined, ipOf(c));
+    }
   }
   if (reason) {
     await audit(c.env, row?.id ?? null, 'login_failed', { type: 'admin', id: username.toLowerCase() }, { reason }, ipOf(c));
-    if (reason === '2fa_not_configured') throw new ApiError('FORBIDDEN', '2段階認証の設定が必要です');
     throw new ApiError('UNAUTHORIZED', 'invalid credentials');
   }
   await c.env.DB.prepare('UPDATE admin_users SET last_login_at = ? WHERE id = ?').bind(Date.now(), row!.id).run();

@@ -1,4 +1,5 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import qrcode from 'qrcode-generator';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { adminApi, hasToken, setAdminToken, AdminApiError } from './api';
 import { CardsPage } from './CardsPage';
 import { AuditPage } from './AuditPage';
@@ -15,7 +16,15 @@ function Login({ onDone }: { onDone: () => void }) {
   const [password, setPassword] = useState('');
   const [totp, setTotp] = useState('');
   const [needTotp, setNeedTotp] = useState(false);
+  const [setup, setSetup] = useState<{ secret: string; otpauthUri: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const qrSvg = useMemo(() => {
+    if (!setup) return '';
+    const qr = qrcode(0, 'M');
+    qr.addData(setup.otpauthUri);
+    qr.make();
+    return qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true });
+  }, [setup]);
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -27,6 +36,10 @@ function Login({ onDone }: { onDone: () => void }) {
       if (err instanceof AdminApiError && err.code === 'TOTP_REQUIRED') {
         setNeedTotp(true);
         setError('認証アプリの6桁のコードを入力してください');
+      } else if (err instanceof AdminApiError && err.code === 'TOTP_SETUP_REQUIRED' && err.data?.setup) {
+        setSetup(err.data.setup as { secret: string; otpauthUri: string });
+        setNeedTotp(true);
+        setError(null);
       } else if (err instanceof AdminApiError && err.code === 'RATE_LIMITED') setError('試行回数が多すぎます。15分後に再試行してください');
       else if (err instanceof AdminApiError && err.status === 403) setError(err.message);
       else setError('ユーザー名・パスワード・認証コードのいずれかが違います');
@@ -48,6 +61,14 @@ function Login({ onDone }: { onDone: () => void }) {
         パスワード
         <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required />
       </label>
+      {setup && (
+        <div className="preview" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <b>2段階認証の設定（初回のみ）</b>
+          <div className="small muted">認証アプリ（Google Authenticator など）でこのQRコードを読み取るか、キーを手入力して登録し、表示された6桁のコードを入力してください。</div>
+          <div style={{ width: 180, background: '#fff', padding: 6, borderRadius: 6 }} dangerouslySetInnerHTML={{ __html: qrSvg }} />
+          <code style={{ wordBreak: 'break-all', fontSize: 13 }}>{setup.secret.replace(/(.{4})/g, '$1 ').trim()}</code>
+        </div>
+      )}
       {needTotp && (
         <label>
           2段階認証コード
