@@ -1,0 +1,33 @@
+# Plays one full league against the deployed staging API (apps/api/scripts/remote-check.ts):
+# account, room, WebSocket, draft with CPU teams, 3 matchdays simulated on Workers, history.
+# Creates one test account (check_<random>) in the staging database. About 5 minutes.
+name: Staging check
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Find the staging URLs
+        id: prepare
+        run: bash .github/scripts/cf-prepare.sh staging
+      - name: Play one league against staging
+        working-directory: apps/api
+        env:
+          FD_API_URL: ${{ steps.prepare.outputs.api_url }}
+        run: npx tsx scripts/remote-check.ts
