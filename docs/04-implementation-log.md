@@ -1,5 +1,30 @@
 # 実装記録
 
+## 2026-11-14 Phase 5（運営管理サイト）
+
+計画：`docs/08-phase5-plan.md`。決定事項：`docs/02-decisions.md` の 45〜51。
+
+| 区分 | 内容 | 主なファイル |
+| --- | --- | --- |
+| 役割と権限 | owner・admin・support・viewer の4種類。権限を細かく分け（分析・ユーザー・残高・フィードバック・配布・管理者など）、API ごとに確認。viewer は集計だけで個人を特定できる情報は見られない。管理サイトのメニューも権限で切り替え | `api/src/lib/auth.ts`, `admin/src/App.tsx` |
+| 管理者の管理 | owner が管理者を追加・役割変更・無効化・2段階認証のリセット（自分自身は変更不可、owner が0人にならない）。全員が自分のパスワードを変更できる（他の端末のログインは終了）。すべて操作ログに記録 | `routes/adminAdmins.ts`, `admin/src/AdminsPage.tsx` |
+| Overview | 総登録者・新規登録・DAU/WAU/MAU・期間中のアクティブ・平均プレイ時間・平均対戦数・D1/D7 継続率・消費GEMS・未使用GEMS・未対応フィードバック・エラー件数を、前の同じ長さの期間と比較。日別のグラフ4つ。売上・課金率等は「課金は未実装」と表示 | `routes/adminInsights.ts`, `admin/src/InsightsPages.tsx` |
+| Analytics・Retention | 期間・プラットフォーム・バージョン・ユーザーグループ（タグ）で絞り込み。起動回数・セッション時間・対戦回数・モード利用率・初回対戦の完了率・ドラフト完了率・試合完了率・離脱率・継続率。登録日ごとのコホート表（D1・D3・D7・D14・D30）と、Friend Tester・Beta Tester・Normal の比較 | `lib/metrics.ts` |
+| 集計の仕組み | 日付は日本時間。終わった日は `daily_user_metrics` に一度だけまとめ、今日の分は毎回作り直す。ゲームが開いた・閉じた時に `session_started`／`session_ended` を送る（DAU とプレイ時間のため）。API の予期しないエラーを `server_error` として数える | `lib/metrics.ts`, `routes/sessions.ts`, `web/src/lib/session.ts` |
+| Economy | 通貨ごとの発行・消費（理由別）、未使用残高、交換ポイント、ガシャ別の回数・消費・人数、GEMS 消費の多いプレイヤー（個人情報のため users.read が必要）。テスト付与（staging・ローカルのみ）はこのページ | `routes/adminInsights.ts`, `admin/src/EconomyPage.tsx` |
+| Users | ID・ユーザー名・表示名で検索、タグ・状態で絞り込み。詳細：登録情報・ログイン履歴・プレイ履歴・成績（勝率）・ドラフト履歴・コレクション・残高・通貨履歴・ガシャ履歴・フィードバック。タグの変更とアカウント停止（停止すると全端末でログアウト）。購入履歴は「未実装」と表示 | `routes/adminUsers.ts`, `admin/src/UsersPage.tsx` |
+| フィードバック | ゲームの「設定」から送信（カテゴリ・件名・内容・返信希望。バージョン・OS・端末の種類・直前のモードと試合・直前のエラーコードを自動で記録。1日10件まで）。管理サイトで状態・優先度・内部メモ・返信。原文は変更できない。返信はゲームの「送ったフィードバック」に表示され、未読はメニューに件数を表示 | `routes/feedback.ts`, `web/src/pages/SettingsPage.tsx`, `admin/src/FeedbackPage.tsx` |
+| GEMS 配布 | 無償GEMSだけ。対象（指定ユーザー・タグ・登録日・最近遊んだ人・全員）→ 対象人数と合計の確認（上限：1人 1,000、合計 1,000,000、停止中は対象外）→ 準備（対象者を固定、同じ取引IDで二重に作られない）→ 実行（50人ずつ、同時に実行しても1人1回）→ 照合（付与済み＝記録＝台帳）。中止もできる。すべて操作ログに記録 | `routes/adminDistributions.ts`, `admin/src/DistributionsPage.tsx` |
+| 操作ログ | 操作・管理者で絞り込み、さらに表示（ページ送り） | `routes/admin.ts`, `admin/src/AuditPage.tsx` |
+| D1 | マイグレーション `0006_admin_platform.sql`（admin_users を4種類の役割のため作り直し、feedback・feedback_notes・feedback_replies、gem_distribution_batches・gem_distribution_items、daily_user_metrics・metrics_days） | `apps/api/migrations/` |
+
+検証：
+- 結合テスト `npm run e2e:phase5` すべて成功：役割ごとに見られるページ（10の API × 4役割、選手のトークンは拒否）、viewer は個人の情報なし、support は残高を閲覧のみ、管理者の追加・役割変更の制限・パスワード変更・無効化でログアウト、セッション→DAU とプレイ時間、継続率（3日前の登録・翌日に来た人で D1 100%、D3 は集計中）、日別グラフ、フィードバック（自動記録：iOS・mobile・バージョン・エラーコード、他人のものは見えない、原文は変わらない、内部メモは見えない、返信の未読→既読、1日10件）、ユーザー検索・タグ・停止（ログアウト・ログイン不可）、配布（停止中と不明な名前は対象外、上限、同じ取引IDで1件、同時に2回実行しても1回だけ付与、照合、全員への配布を3回に分けて完了、中止）、操作ログの絞り込み
+- Phase 2・3・4 の結合テストもすべて成功（Phase 4 は viewer が個人の残高を見られなくなったことに合わせてテストを更新）
+- ブラウザ：ゲームの設定画面からフィードバック送信 → 管理サイト（Overview・Analytics・Retention・Economy・Users の検索と詳細・タグ保存・フィードバックの優先度・メモ・返信・GEMS 配布の作成と実行と照合・管理者・操作ログ）→ ゲームで返信と未読の表示、配布された GEMS の履歴。viewer・support のメニュー。管理サイト 820px 幅・ゲームのスマートフォン幅で横スクロールなし。コンソールエラーなし
+
+未実装（今回の範囲外）：フィードバックの添付ファイル（決定 49）、配布の予約実行（今は準備して手動で実行）、二人承認（決定 46 で不要）、売上・課金の分析（Phase 6）、ベータテスト管理のテストデータのリセット（Phase 7）、通知（返信のプッシュ通知など）。
+
 ## 2026-11-14 Phase 4（コレクション・経済）
 
 計画：`docs/07-phase4-plan.md`。決定事項：`docs/02-decisions.md` の 36〜44。

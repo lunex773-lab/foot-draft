@@ -285,7 +285,7 @@ const TARGET_LABEL = (t: Record<string, unknown>) =>
   t.kind === 'all'
     ? '全ユーザー'
     : t.kind === 'users'
-      ? `指定ユーザー ${(t.usernames as string[]).length}人`
+      ? `指定ユーザー（${(t.usernames as string[]).length}人の名前を指定）`
       : t.kind === 'tags'
         ? `タグ：${(t.tags as string[]).map(tagLabel).join('・')}`
         : t.kind === 'registered'

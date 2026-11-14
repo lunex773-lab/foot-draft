@@ -50,7 +50,9 @@ export function EconomyPage({ canGrant, canWallet, canInsights }: { canGrant: bo
 
   const loadStatus = () => adminApi<Status>('/economy/status').then(setStatus).catch(() => undefined);
   useEffect(() => {
-    loadStatus();
+    // totals and the test-grant switch need economy.read (support only looks up players)
+    if (canInsights) loadStatus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const find = async (e?: FormEvent) => {
@@ -77,7 +79,7 @@ export function EconomyPage({ canGrant, canWallet, canInsights }: { canGrant: bo
       await adminApi('/economy/test-grants', { username: lookup.user.username, kind, amount: value, note: note || undefined });
       await find();
       setMsg(`${label} を ${n(value)} 付与しました`);
-      loadStatus();
+      if (canInsights) loadStatus();
     } catch (err) {
       setError((err as Error).message);
     } finally {

@@ -27,12 +27,18 @@ const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 function useUnreadReplies(enabled: boolean) {
   const [n, setN] = useState(0);
   const loc = useLocation();
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const onRead = () => setTick((t) => t + 1);
+    window.addEventListener('fd:feedback-read', onRead);
+    return () => window.removeEventListener('fd:feedback-read', onRead);
+  }, []);
   useEffect(() => {
     if (!enabled) return;
     api<{ unread: number }>('/api/feedback')
       .then((r) => setN(r.unread))
       .catch(() => undefined);
-  }, [enabled, loc.pathname]);
+  }, [enabled, loc.pathname, tick]);
   return n;
 }
 

@@ -262,7 +262,7 @@ tbody tr:hover {
 }
 .kv {
   display: grid;
-  grid-template-columns: 110px 1fr;
+  grid-template-columns: minmax(110px, max-content) 1fr;
   gap: 4px 10px;
   font-size: 13px;
 }
@@ -692,5 +692,14 @@ form textarea {
 @media (max-width: 900px) {
   .grid2 {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 860px) {
+  /* the menu becomes one wrapping row; group titles are not needed there */
+  .nav-group {
+    display: contents;
+  }
+  .nav-head {
+    display: none;
   }
 }

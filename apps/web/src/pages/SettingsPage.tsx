@@ -151,6 +151,8 @@ function FeedbackThread({ id, onRead }: { id: string; onRead: () => void }) {
       .then((r) => {
         setD(r);
         onRead();
+        // the reply is now read: update the badge in the menu
+        window.dispatchEvent(new Event('fd:feedback-read'));
       })
       .catch(() => undefined);
     // eslint-disable-next-line react-hooks/exhaustive-deps

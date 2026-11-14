@@ -3,6 +3,7 @@
 サッカー選手のドラフトとチーム編成で戦う、最大4人のオンライン対戦ゲーム。
 モード：クイックドラフト・ランク戦（レーティング・月間シーズン・ランキング）・ソロ課題（日替わり）・イベント（期間限定の候補）・Collection Draft（所持カードを専用枠で持ち込む）・プライベートルーム。
 経済：COINS・GEMS（無償・有償）、ガシャ（Standard・Premium、天井つき）、重複カードの交換所、ミッション、ログインボーナス、対戦報酬。
+運営管理サイト：Overview・Analytics・Retention・Economy・Users・Feedback・GEMS 配布・管理者・操作ログ（役割は owner・admin・support・viewer）。
 設計書：`docs/` 配下（現状分析・開発計画・決定事項・SIM仕様・実装記録）。
 
 ![カード](docs/screenshots/cards.png)
@@ -64,6 +65,7 @@ npm run sim:balance -- 150      # SIMのバランス検証（大量の自動試�
 npm run e2e -w @fd/api          # API起動中に実行：4人のWebSocketクライアントでリーグを1回通しで対戦＋Phase 3（ランク・ソロ・イベント・管理）＋Phase 4（経済）
 npm run e2e:phase3 -w @fd/api   # Phase 3 だけ
 npm run e2e:phase4 -w @fd/api   # Phase 4 だけ（通貨・ガシャ・交換所・ミッション・Collection Draft・テスト付与）
+npm run e2e:phase5 -w @fd/api   # Phase 5 だけ（役割・分析・継続率・フィードバック・ユーザー・GEMS 配布・操作ログ）
 npm run typecheck
 ```
 
@@ -82,3 +84,4 @@ GitHub Actions で Cloudflare に公開します（開発ブランチへのプ�
 - `docs/05-phase3-plan.md` Phase 3（競争機能）の計画
 - `docs/06-deploy.md` 公開手順（Cloudflare＋GitHub Actions）
 - `docs/07-phase4-plan.md` Phase 4（コレクション・経済）の計画
+- `docs/08-phase5-plan.md` Phase 5（運営管理サイト）の計画

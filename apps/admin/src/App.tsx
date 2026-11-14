@@ -153,7 +153,8 @@ export default function App() {
   const can = (p: string) => me.admin.permissions?.includes(p) ?? false;
   const visible = (i: NavItem) => i.any.length === 0 || i.any.some(can);
   // the first page the role can open
-  const current: Page = page ?? NAV.flatMap((g) => g.items).find((i) => visible(i) && i.page !== 'settings')?.page ?? 'settings';
+  const LANDING: Page[] = ['overview', 'users', 'feedback', 'distributions', 'events', 'cards'];
+  const current: Page = page ?? LANDING.find((p) => NAV.flatMap((g) => g.items).some((i) => i.page === p && visible(i))) ?? 'settings';
   return (
     <div className="layout">
       <aside className="side">

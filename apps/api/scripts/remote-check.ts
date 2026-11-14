@@ -3,7 +3,8 @@
  * game really works there: accounts, room, WebSocket, server-side draft with
  * CPU teams, lineups, match simulation (CPU time on Workers), standings,
  * history, the Phase 3 endpoints and the Phase 4 economy (wallet, login bonus,
- * gacha refusal without funds, match reward and missions after the league).
+ * gacha refusal without funds, match reward and missions after the league) and
+ * Phase 5 (app sessions, feedback, admin APIs closed to players).
  *
  *   FD_API_URL=https://<api> npx tsx scripts/remote-check.ts
  *
@@ -81,6 +82,19 @@ async function main() {
   check(shop.status === 200 && shop.data.sections?.length === 2, 'exchange shop endpoint');
   const grant = await api('/api/admin/economy/test-grants', { token, body: { username, kind: 'COINS', amount: 1000 } });
   check(grant.status === 401, 'a player token cannot use admin test grants');
+
+  // ---------------------------------------------------------------- Phase 5 (sessions, feedback, admin APIs closed to players)
+  const sid = `check-${Math.random().toString(36).slice(2, 12)}`;
+  check((await api('/api/sessions/start', { token, body: { sessionId: sid } })).status === 200, 'app session started');
+  const fb = await api('/api/feedback', { token, body: { category: 'other', subject: 'staging check', body: 'automatic check from the Staging check workflow' } });
+  check(fb.status === 201, 'feedback sent');
+  const mine = await api('/api/feedback', { token });
+  check(mine.status === 200 && mine.data.items?.[0]?.id === fb.data.id, 'own feedback listed');
+  let closed = true;
+  for (const p of ['/api/admin/overview', '/api/admin/users', '/api/admin/feedback', '/api/admin/distributions', '/api/admin/admins']) {
+    if ((await api(p, { token })).status !== 401) closed = false;
+  }
+  check(closed, 'admin APIs refuse player tokens (overview, users, feedback, distributions, admins)');
 
   const badAdmin = await api('/api/admin/auth/login', { body: { username: 'nobody', password: 'wrong-password-123' } });
   check(badAdmin.status === 401, 'admin login rejects unknown accounts');
@@ -160,6 +174,7 @@ async function main() {
   check(claim.status === 200 && claim.data.paid === 100, 'claim the daily mission');
   const w1 = await api('/api/currency', { token });
   check(w1.data.wallet?.coins === 100 + (reward?.coins ?? 0) + 100, `wallet: ${w1.data.wallet?.coins} COINS (login + match reward + mission)`);
+  check((await api('/api/sessions/end', { token, body: { sessionId: sid, durationMs: Date.now() - t0 } })).status === 200, 'app session ended');
   if (errors.length) console.log(`  (server errors received: ${errors.join(', ')})`);
 
   console.log(`\n${failures === 0 ? 'REMOTE CHECK PASSED' : `${failures} CHECK(S) FAILED`} in ${elapsed()}`);
