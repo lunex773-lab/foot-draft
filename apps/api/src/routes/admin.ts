@@ -3,13 +3,15 @@ import { Hono } from 'hono';
 import { createAdminSession, permissionsOf, requireAdmin, requirePermission, testGrantsEnabled } from '../lib/auth';
 import { base32Encode, randomBytes, randomId, verifyPassword, verifyTotp } from '../lib/crypto';
 import { audit, ipOf } from '../lib/audit';
-import { currencyStmts, ensureWalletStmts, pointStmts, walletOf } from '../lib/economy';
+import { GRANT_KINDS, currencyStmts, ensureWalletStmts, pointStmts, walletOf, type GrantKind } from '../lib/economy';
 import { ApiError, readJson, str } from '../lib/http';
 import { loadCatalog } from '../lib/players';
 import { ensureCurrentSeason, leaderboard, seasonView } from '../lib/seasons';
 import { adminAccountRoutes } from './adminAdmins';
 import { adminDistributionRoutes } from './adminDistributions';
 import { adminGachaRoutes } from './adminGacha';
+import { adminBetaRoutes } from './adminBeta';
+import { adminGameStatRoutes } from './adminGameStats';
 import { adminInsightRoutes } from './adminInsights';
 import { adminShopRoutes } from './adminShop';
 import { adminUserRoutes } from './adminUsers';
@@ -365,8 +367,6 @@ adminRoutes.get('/economy/users/:username', requirePermission('users.wallet'), a
   return c.json({ user: { id: user.id, username: user.username, displayName: user.display_name }, wallet: await walletOf(c.env, user.id), ledger: ledger.results, collection: owned?.n ?? 0 });
 });
 
-const GRANT_KINDS = ['COINS', 'GEMS_FREE', 'GEMS_PAID_GRANTED', 'GEMS_PAID_PURCHASED', 'POINTS_STANDARD', 'POINTS_PREMIUM'] as const;
-type GrantKind = (typeof GRANT_KINDS)[number];
 
 /** staging / local only: give a player test currency (recorded in the ledger and the audit log) */
 adminRoutes.post('/economy/test-grants', requirePermission('economy.test_grant'), async (c) => {
@@ -415,3 +415,6 @@ adminRoutes.route('/', adminAccountRoutes);
 // ------------------------------------------------------------------ Phase 6 (purchases, gacha management)
 adminRoutes.route('/', adminShopRoutes);
 adminRoutes.route('/', adminGachaRoutes);
+// ------------------------------------------------------------------ Phase 7 (beta test)
+adminRoutes.route('/', adminBetaRoutes);
+adminRoutes.route('/', adminGameStatRoutes);

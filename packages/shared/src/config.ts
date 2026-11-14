@@ -13,7 +13,7 @@ export const GAME_CONFIG = {
   /** provisional: seconds per pick (spec 3-4) */
   pickSeconds: 8,
   /** allowed values for private rooms */
-  pickSecondsOptions: [5, 8, 10, 15] as readonly number[],
+  pickSecondsOptions: [5, 8, 10, 12, 15] as readonly number[],
   /** provisional: candidate pool per draft */
   pool: { GK: 12, DF: 24, MF: 24, FW: 12, FREE: 12 },
   /** provisional: max goalkeepers one player can draft */

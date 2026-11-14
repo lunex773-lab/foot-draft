@@ -105,7 +105,9 @@ export type AdminPermission =
   | 'purchases.read'
   | 'purchases.write'
   /** aggregated revenue */
-  | 'revenue.read';
+  | 'revenue.read'
+  /** beta test tools: bulk tags, test data reset, draft timer setting (Phase 7) */
+  | 'beta.manage';
 
 const ALL: AdminPermission[] = [
   'cards.read',
@@ -130,6 +132,7 @@ const ALL: AdminPermission[] = [
   'purchases.read',
   'purchases.write',
   'revenue.read',
+  'beta.manage',
 ];
 
 const ROLE_PERMISSIONS: Record<AuthAdmin['role'], AdminPermission[]> = {

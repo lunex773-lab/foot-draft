@@ -1,6 +1,7 @@
-import { GAME_CONFIG, type RoomMode, type RoomSettings, type RoomVariant } from '@fd/shared';
+import { GAME_CONFIG, pickSecondsFor, TIMER_EXPERIMENT_MODES, type RoomMode, type RoomSettings, type RoomVariant } from '@fd/shared';
 import { Hono } from 'hono';
 import { track } from '../lib/analytics';
+import { draftTimerSetting } from '../lib/settings';
 import { requireUser } from '../lib/auth';
 import { randomId, signTicket, verifyTicket } from '../lib/crypto';
 import { ApiError, readJson, str } from '../lib/http';
@@ -23,8 +24,12 @@ export async function createRoom(env: Env, user: AuthUser, mode: RoomMode, setti
   // rules (CPU fill, default pick time) except for test timings in non-production environments
   const custom = mode === 'quick' || mode === 'private';
   const input = custom ? settings : allowTest ? { ...settings, fillWithCpu: true } : {};
-  const clean = sanitizeSettings({ pickSeconds: GAME_CONFIG.pickSeconds, fillWithCpu: true, ...input }, allowTest);
   const id = randomId();
+  // decision 66: quick / ranked / collection rooms take part in the pick time comparison
+  // (a pick time given for tests in non-production environments wins)
+  const timed = (TIMER_EXPERIMENT_MODES as readonly string[]).includes(mode) && input.pickSeconds === undefined;
+  const pickSeconds = timed ? pickSecondsFor(id, await draftTimerSetting(env)) : GAME_CONFIG.pickSeconds;
+  const clean = sanitizeSettings({ pickSeconds, fillWithCpu: true, ...input }, allowTest);
   let code = '';
   for (let i = 0; i < 5; i++) {
     code = randomRoomCode();
@@ -39,7 +44,7 @@ export async function createRoom(env: Env, user: AuthUser, mode: RoomMode, setti
   if (!code) throw new ApiError('INTERNAL', 'could not allocate a room code');
   await callRoom(env, id, '/init', { roomId: id, code, mode, settings: clean, environment: env.ENVIRONMENT, allowTestTimings: allowTest, variant: opts.variant ?? { kind: 'standard' } });
   const joined = await callRoom<{ seat: number }>(env, id, '/join', { userId: user.id, displayName: user.displayName });
-  await track(env, { name: 'room_created', userId: user.id, properties: { roomId: id, mode, eventId: opts.eventId ?? undefined, challengeId: opts.challengeId ?? undefined } });
+  await track(env, { name: 'room_created', userId: user.id, properties: { roomId: id, mode, pickSeconds: clean.pickSeconds, eventId: opts.eventId ?? undefined, challengeId: opts.challengeId ?? undefined } });
   return { roomId: id, code, seat: joined.seat };
 }
 

@@ -316,3 +316,7 @@ export async function runOperation<T extends object>(
   }
   throw new ApiError('CONFLICT', 'the operation could not be completed, please try again');
 }
+
+/** what admins can grant for tests (staging / local only, decision 42) */
+export const GRANT_KINDS = ['COINS', 'GEMS_FREE', 'GEMS_PAID_GRANTED', 'GEMS_PAID_PURCHASED', 'POINTS_STANDARD', 'POINTS_PREMIUM'] as const;
+export type GrantKind = (typeof GRANT_KINDS)[number];

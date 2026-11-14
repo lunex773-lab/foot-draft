@@ -4,6 +4,8 @@ import { can, requirePermission } from '../lib/auth';
 import {
   RETENTION_DAYS,
   activeUsers,
+  activitySummary,
+  dauWauMau,
   addDays,
   averageRetention,
   dailySeries,
@@ -26,42 +28,6 @@ import type { AppEnv, Env } from '../env';
 export const adminInsightRoutes = new Hono<AppEnv>();
 
 const pct = (a: number, b: number) => (b > 0 ? a / b : null);
-
-async function summary(env: Env, from: string, to: string, f: ActivityFilter) {
-  const series = await dailySeries(env, from, to, f);
-  const sum = (k: 'active' | 'sessions' | 'playtimeMs' | 'matches' | 'newUsers') => series.reduce((s, r) => s + r[k], 0);
-  const activeDays = sum('active');
-  const w = metricsWhere(f);
-  const extra = await env.DB.prepare(
-    `SELECT COALESCE(SUM(m.drafts_started), 0) AS ds, COALESCE(SUM(m.drafts_completed), 0) AS dc,
-            COALESCE(SUM(m.matches_started), 0) AS ms, COALESCE(SUM(m.matches_completed), 0) AS mc
-       FROM daily_user_metrics m WHERE m.day_key BETWEEN ? AND ?${w.sql}`,
-  )
-    .bind(from, to, ...w.binds)
-    .first<{ ds: number; dc: number; ms: number; mc: number }>();
-  return {
-    series,
-    activeUsers: await activeUsers(env, from, to, f),
-    newUsers: sum('newUsers'),
-    sessions: sum('sessions'),
-    matches: sum('matches'),
-    /** per active player and day */
-    avgPlaytimeMs: activeDays ? sum('playtimeMs') / activeDays : null,
-    avgMatches: activeDays ? sum('matches') / activeDays : null,
-    avgSessionMs: sum('sessions') ? sum('playtimeMs') / sum('sessions') : null,
-    draftCompletion: pct(extra?.dc ?? 0, extra?.ds ?? 0),
-    matchCompletion: pct(extra?.mc ?? 0, extra?.ms ?? 0),
-  };
-}
-
-/** DAU on `day`, WAU / MAU on the 7 / 30 days ending on `day` */
-async function dauWauMau(env: Env, day: string, f: ActivityFilter) {
-  return {
-    dau: await activeUsers(env, day, day, f),
-    wau: await activeUsers(env, addDays(day, -6), day, f),
-    mau: await activeUsers(env, addDays(day, -29), day, f),
-  };
-}
 
 /** sales of a period for the overview (details: GET /api/admin/revenue) */
 async function revenueSummary(env: Env, from: string, to: string) {
@@ -98,9 +64,10 @@ adminInsightRoutes.get('/overview', requirePermission('analytics.read'), async (
   const now = Date.now();
   await refreshDailyMetrics(c.env, now);
   const p = periodOf(c.req.query(), now);
+  const f = filterOf({ dev: c.req.query('dev') });
   const prevTo = addDays(p.from, -1);
   const prevFrom = addDays(prevTo, -(p.days - 1));
-  const [cur, prev] = [await summary(c.env, p.from, p.to, {}), await summary(c.env, prevFrom, prevTo, {})];
+  const [cur, prev] = [await activitySummary(c.env, p.from, p.to, f), await activitySummary(c.env, prevFrom, prevTo, f)];
   const totals = await c.env.DB.prepare(
     `SELECT (SELECT COUNT(*) FROM users) AS users,
             (SELECT COUNT(*) FROM users WHERE status = 'suspended') AS suspended,
@@ -124,18 +91,19 @@ adminInsightRoutes.get('/overview', requirePermission('analytics.read'), async (
         .first<{ n: number }>()
     )?.n ?? 0;
   // retention of the players registered in the last 60 days (finished days only)
-  const cohorts = await retentionCohorts(c.env, addDays(p.to, -59), p.to, {}, now);
+  const cohorts = await retentionCohorts(c.env, addDays(p.to, -59), p.to, f, now);
   const { series: _s, ...curRest } = cur;
   const { series: _p, ...prevRest } = prev;
   void _s;
   void _p;
   return c.json({
     period: p,
+    filter: f,
     previous: { from: prevFrom, to: prevTo },
     today: jstDateKey(now),
     totals: { ...totals },
-    current: { ...curRest, ...(await dauWauMau(c.env, p.to, {})), gemsSpent: await spent(p.from, p.to), errors: await errors(p.from, p.to) },
-    before: { ...prevRest, ...(await dauWauMau(c.env, prevTo, {})), gemsSpent: await spent(prevFrom, prevTo), errors: await errors(prevFrom, prevTo) },
+    current: { ...curRest, ...(await dauWauMau(c.env, p.to, f)), gemsSpent: await spent(p.from, p.to), errors: await errors(p.from, p.to) },
+    before: { ...prevRest, ...(await dauWauMau(c.env, prevTo, f)), gemsSpent: await spent(prevFrom, prevTo), errors: await errors(prevFrom, prevTo) },
     series: cur.series,
     retention: averageRetention(cohorts),
     revenue: await revenueSummary(c.env, p.from, p.to),
@@ -148,7 +116,7 @@ adminInsightRoutes.get('/analytics', requirePermission('analytics.read'), async 
   const q = c.req.query();
   const p = periodOf(q, now);
   const f = filterOf(q);
-  const cur = await summary(c.env, p.from, p.to, f);
+  const cur = await activitySummary(c.env, p.from, p.to, f);
   const w = metricsWhere(f);
   const modes = await c.env.DB.prepare(
     `SELECT j.key AS mode, SUM(j.value) AS n FROM daily_user_metrics m, json_each(m.modes_json) j

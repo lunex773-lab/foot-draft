@@ -37,6 +37,17 @@ export function periodOf(q: { from?: string; to?: string }, now = Date.now()): {
   return { from, to, days };
 }
 
+/**
+ * Events recorded for a player that the player did not cause (operator or
+ * system actions): they do not make the player active (DAU, retention).
+ */
+export const PASSIVE_EVENT_SQL = `(
+  event_name IN ('login_failed', 'test_data_reset', 'match_abandoned', 'purchase_refunded')
+  OR (event_name = 'purchase_completed' AND json_extract(properties_json, '$.renewal') = 1)
+  OR (event_name IN ('reward_claimed', 'currency_earned', 'currency_spent')
+      AND COALESCE(json_extract(properties_json, '$.kind'), json_extract(properties_json, '$.reason')) IN ('distribution', 'test_grant', 'refund', 'season_reward'))
+)`;
+
 /** statements that (re)build the rows of one day */
 function dayStatements(env: Env, dayKey: string): D1PreparedStatement[] {
   const { startsAt, endsAt } = jstDayRange(dayKey);
@@ -51,7 +62,7 @@ function dayStatements(env: Env, dayKey: string): D1PreparedStatement[] {
               SUM(event_name = 'match_started'), SUM(event_name = 'match_completed'),
               SUM(event_name IN ('draft_pick_completed', 'draft_timeout'))
          FROM analytics_events
-        WHERE environment = ?2 AND user_id IS NOT NULL AND event_name <> 'login_failed' AND timestamp >= ?3 AND timestamp < ?4
+        WHERE environment = ?2 AND user_id IS NOT NULL AND NOT ${PASSIVE_EVENT_SQL} AND timestamp >= ?3 AND timestamp < ?4
         GROUP BY user_id`,
     ).bind(dayKey, env.ENVIRONMENT, startsAt, endsAt, MAX_SESSION_MS),
     // modes played that day (every human joins a room, whatever the mode)
@@ -99,6 +110,8 @@ export interface ActivityFilter {
   platform?: string;
   appVersion?: string;
   tag?: string;
+  /** leave out Developer accounts (default; decision 60) */
+  excludeDevelopers?: boolean;
 }
 
 export const USER_TAGS = ['founder', 'beta_tester', 'friend_tester', 'developer', 'normal'] as const;
@@ -111,6 +124,8 @@ export function filterOf(q: Record<string, string | undefined>): ActivityFilter 
     if (!(USER_TAGS as readonly string[]).includes(q.tag)) throw new ApiError('BAD_REQUEST', 'unknown tag');
     f.tag = q.tag;
   }
+  // Developer accounts (Staging check, the team) are left out unless asked for
+  f.excludeDevelopers = q.dev !== 'include' && f.tag !== 'developer';
   return f;
 }
 
@@ -130,12 +145,25 @@ export function metricsWhere(f: ActivityFilter): { sql: string; binds: unknown[]
     parts.push('m.user_id IN (SELECT user_id FROM user_tags WHERE tag = ?)');
     binds.push(f.tag);
   }
+  if (f.excludeDevelopers) parts.push(`m.user_id NOT IN (SELECT user_id FROM user_tags WHERE tag = 'developer')`);
   return { sql: parts.length ? ` AND ${parts.join(' AND ')}` : '', binds };
 }
 
 /** SQL condition on users (alias u) for the tag filter */
 export function usersWhere(f: ActivityFilter): { sql: string; binds: unknown[] } {
-  return f.tag ? { sql: ' AND u.id IN (SELECT user_id FROM user_tags WHERE tag = ?)', binds: [f.tag] } : { sql: '', binds: [] };
+  return userIdWhere('u.id', f);
+}
+
+/** the same player condition on any user id column (e.g. "e.user_id") */
+export function userIdWhere(col: string, f: ActivityFilter): { sql: string; binds: unknown[] } {
+  const parts: string[] = [];
+  const binds: unknown[] = [];
+  if (f.tag) {
+    parts.push(`${col} IN (SELECT user_id FROM user_tags WHERE tag = ?)`);
+    binds.push(f.tag);
+  }
+  if (f.excludeDevelopers) parts.push(`${col} NOT IN (SELECT user_id FROM user_tags WHERE tag = 'developer')`);
+  return { sql: parts.length ? ` AND ${parts.join(' AND ')}` : '', binds };
 }
 
 /** start (ms) of a Japan day */
@@ -241,3 +269,45 @@ export function averageRetention(cohorts: CohortRow[]): Record<number, number | 
   }
   return out;
 }
+
+// ---------------------------------------------------------------- summaries
+
+const pct = (a: number, b: number) => (b > 0 ? a / b : null);
+
+/** activity of a period (overview, analytics, beta report) */
+export async function activitySummary(env: Env, from: string, to: string, f: ActivityFilter) {
+  const series = await dailySeries(env, from, to, f);
+  const sum = (k: 'active' | 'sessions' | 'playtimeMs' | 'matches' | 'newUsers') => series.reduce((s, r) => s + r[k], 0);
+  const activeDays = sum('active');
+  const w = metricsWhere(f);
+  const extra = await env.DB.prepare(
+    `SELECT COALESCE(SUM(m.drafts_started), 0) AS ds, COALESCE(SUM(m.drafts_completed), 0) AS dc,
+            COALESCE(SUM(m.matches_started), 0) AS ms, COALESCE(SUM(m.matches_completed), 0) AS mc
+       FROM daily_user_metrics m WHERE m.day_key BETWEEN ? AND ?${w.sql}`,
+  )
+    .bind(from, to, ...w.binds)
+    .first<{ ds: number; dc: number; ms: number; mc: number }>();
+  return {
+    series,
+    activeUsers: await activeUsers(env, from, to, f),
+    newUsers: sum('newUsers'),
+    sessions: sum('sessions'),
+    matches: sum('matches'),
+    /** per active player and day */
+    avgPlaytimeMs: activeDays ? sum('playtimeMs') / activeDays : null,
+    avgMatches: activeDays ? sum('matches') / activeDays : null,
+    avgSessionMs: sum('sessions') ? sum('playtimeMs') / sum('sessions') : null,
+    draftCompletion: pct(extra?.dc ?? 0, extra?.ds ?? 0),
+    matchCompletion: pct(extra?.mc ?? 0, extra?.ms ?? 0),
+  };
+}
+
+/** DAU on `day`, WAU / MAU on the 7 / 30 days ending on `day` */
+export async function dauWauMau(env: Env, day: string, f: ActivityFilter) {
+  return {
+    dau: await activeUsers(env, day, day, f),
+    wau: await activeUsers(env, addDays(day, -6), day, f),
+    mau: await activeUsers(env, addDays(day, -29), day, f),
+  };
+}
+

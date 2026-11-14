@@ -40,7 +40,9 @@ export type AnalyticsEventName =
   | 'purchase_failed'
   | 'purchase_refunded'
   | 'membership_started'
-  | 'pass_purchased';
+  | 'pass_purchased'
+  | 'league_rated'
+  | 'test_data_reset';
 
 export interface AnalyticsInput {
   name: AnalyticsEventName;

@@ -17,6 +17,7 @@ import { matchRoutes } from './routes/matches';
 import { playerRoutes } from './routes/players';
 import { rankedRoutes } from './routes/ranked';
 import { passRoutes } from './routes/pass';
+import { ratingRoutes } from './routes/ratings';
 import { purchaseRoutes } from './routes/purchases';
 import { roomRoutes } from './routes/rooms';
 import { sessionRoutes } from './routes/sessions';
@@ -58,6 +59,7 @@ app.route('/api/feedback', feedbackRoutes);
 app.route('/api/sessions', sessionRoutes);
 app.route('/api/purchases', purchaseRoutes);
 app.route('/api/pass', passRoutes);
+app.route('/api/ratings', ratingRoutes);
 app.route('/api/admin', adminRoutes);
 
 app.notFound((c) => c.json(errorBody('NOT_FOUND', 'not found'), 404));

@@ -165,7 +165,32 @@ async function feedbackDetail(c: { env: AppEnv['Bindings'] }, id: string) {
       "SELECT l.action, l.detail_json, l.created_at, a.username AS admin FROM admin_audit_logs l LEFT JOIN admin_users a ON a.id = l.admin_id WHERE l.target_type = 'feedback' AND l.target_id = ? ORDER BY l.created_at",
     ).bind(id),
   ]);
-  return { feedback: f, notes: notes.results, replies: replies.results, history: history.results };
+  return { feedback: f, notes: notes.results, replies: replies.results, history: history.results, activity: await activityOf(c.env, String(f.user_id), Number(f.created_at)) };
+}
+
+/**
+ * The sender's use of the game around the feedback (spec 23-5: feedback and
+ * usage history linked): tags, days played, leagues before the feedback.
+ */
+async function activityOf(env: AppEnv['Bindings'], userId: string, at: number) {
+  const [tags, days, leagues, ratings] = await env.DB.batch([
+    env.DB.prepare('SELECT tag FROM user_tags WHERE user_id = ?').bind(userId),
+    env.DB.prepare(
+      `SELECT COUNT(*) AS activeDays, MAX(day_key) AS lastActive, COALESCE(SUM(matches_completed), 0) AS matches, COALESCE(SUM(playtime_ms), 0) AS playtimeMs
+         FROM daily_user_metrics WHERE user_id = ?`,
+    ).bind(userId),
+    env.DB.prepare(
+      `SELECT r.id, r.mode, r.status, r.created_at, m.final_rank, (SELECT pick_seconds FROM drafts WHERE room_id = r.id LIMIT 1) AS pick_seconds
+         FROM room_members m JOIN rooms r ON r.id = m.room_id WHERE m.user_id = ? AND r.created_at <= ? ORDER BY r.created_at DESC LIMIT 5`,
+    ).bind(userId, at),
+    env.DB.prepare('SELECT COUNT(*) AS n, AVG(draft_fun) AS draftFun, AVG(result_fair) AS resultFair FROM league_ratings WHERE user_id = ?').bind(userId),
+  ]);
+  return {
+    tags: (tags.results as { tag: string }[]).map((t) => t.tag),
+    ...(days.results[0] as Record<string, unknown>),
+    leaguesBefore: leagues.results,
+    ratings: ratings.results[0],
+  };
 }
 
 adminFeedbackRoutes.get('/feedback/:id', requirePermission('feedback.read'), async (c) => c.json(await feedbackDetail(c, c.req.param('id'))));

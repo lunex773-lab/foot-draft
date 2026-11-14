@@ -3,7 +3,7 @@ import { analyticsStatement, track } from '../lib/analytics';
 import { createUserSession, requireUser } from '../lib/auth';
 import { hashPassword, randomId, verifyPassword } from '../lib/crypto';
 import { ApiError, readJson, str } from '../lib/http';
-import type { AppEnv } from '../env';
+import type { AppEnv, Env } from '../env';
 
 export const authRoutes = new Hono<AppEnv>();
 
@@ -11,6 +11,15 @@ const USERNAME = /^[a-zA-Z0-9_]{3,20}$/;
 
 function platformOf(c: { req: { header: (n: string) => string | undefined } }) {
   return c.req.header('X-FD-Platform')?.slice(0, 20) ?? 'web';
+}
+
+/**
+ * Tag of a new account. The Staging check signs up "check_..." accounts; outside
+ * production they are Developer accounts so that they stay out of the beta
+ * figures (decision 60).
+ */
+export function initialTag(env: Env, username: string): 'normal' | 'developer' {
+  return env.ENVIRONMENT !== 'production' && username.startsWith('check_') ? 'developer' : 'normal';
 }
 
 authRoutes.post('/register', async (c) => {
@@ -28,7 +37,7 @@ authRoutes.post('/register', async (c) => {
       c.env.DB.prepare(
         'INSERT INTO users (id, username, display_name, password_hash, password_salt, password_iterations, status, created_at, updated_at, last_login_at) VALUES (?,?,?,?,?,?,?,?,?,?)',
       ).bind(id, username, displayName, hash, salt, iterations, 'active', now, now, now),
-      c.env.DB.prepare("INSERT INTO user_tags (user_id, tag, created_at) VALUES (?, 'normal', ?)").bind(id, now),
+      c.env.DB.prepare('INSERT INTO user_tags (user_id, tag, created_at) VALUES (?, ?, ?)').bind(id, initialTag(c.env, username), now),
       analyticsStatement(c.env, { name: 'account_registered', userId: id, platform: platformOf(c) }),
     ]);
   } catch {

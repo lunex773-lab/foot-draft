@@ -577,7 +577,7 @@ export class RoomDO extends DurableObject<Env> {
         this.env.DB.prepare('UPDATE rooms SET member_count = 4 WHERE id = ?').bind(s.roomId),
       ]),
     );
-    this.analytics(this.humanSeats().map((h) => ({ name: 'draft_started', userId: h.userId, properties: { roomId: s.roomId, draftId: s.draft!.draftId, mode: s.mode, humans: this.humanSeats().length } })));
+    this.analytics(this.humanSeats().map((h) => ({ name: 'draft_started', userId: h.userId, properties: { roomId: s.roomId, draftId: s.draft!.draftId, mode: s.mode, humans: this.humanSeats().length, pickSeconds: s.settings.pickSeconds } })));
     this.sendPlayers();
     this.broadcastSnapshot();
     await this.scheduleAlarm();
@@ -690,7 +690,7 @@ export class RoomDO extends DurableObject<Env> {
       this.env.DB.batch([
         this.env.DB.prepare("UPDATE drafts SET status = 'completed', completed_at = ? WHERE id = ?").bind(now, d.draftId),
         this.roomStatusSql('lineup'),
-        ...this.humanSeats().map((h) => analyticsStatement(this.env, { name: 'draft_completed', userId: h.userId, properties: { draftId: d.draftId, roomId: s.roomId } })),
+        ...this.humanSeats().map((h) => analyticsStatement(this.env, { name: 'draft_completed', userId: h.userId, properties: { draftId: d.draftId, roomId: s.roomId, mode: s.mode, pickSeconds: s.settings.pickSeconds } })),
       ]),
     );
     this.broadcastSnapshot();
@@ -867,6 +867,11 @@ export class RoomDO extends DurableObject<Env> {
       writes.push(this.env.DB.prepare("UPDATE rooms SET status = 'finished', finished_at = ? WHERE id = ?").bind(now, s.roomId));
       for (const r of table) {
         writes.push(this.env.DB.prepare('UPDATE room_members SET final_rank = ?, points = ?, goals_for = ?, goals_against = ? WHERE room_id = ? AND seat = ?').bind(r.rank, r.points, r.goalsFor, r.goalsAgainst, s.roomId, r.seat));
+      }
+      // players who were not in the game when the league ended left it on the way (spec 16-1 match_abandoned, 15-3)
+      const here = this.connectedUsers();
+      for (const h of this.humanSeats()) {
+        if (h.userId && !here.has(h.userId)) writes.push(analyticsStatement(this.env, { name: 'match_abandoned', userId: h.userId, properties: { roomId: s.roomId, mode: s.mode, pickSeconds: s.settings.pickSeconds } }));
       }
       s.outcome = await this.leagueOutcome(table, now, writes);
     }
