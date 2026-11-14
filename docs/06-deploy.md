@@ -21,6 +21,7 @@ URL は `https://<Pages のプロジェクト名>.pages.dev` と `https://<Worke
 | --- | --- | --- |
 | `CI`（`.github/workflows/ci.yml`） | プッシュのたび | 型チェック・単体テスト・ゲームと管理サイトのビルド |
 | `Deploy`（`deploy.yml`） | 開発ブランチへのプッシュ（staging）／手動（staging か production） | ① D1・Pages のプロジェクトがなければ作成 ② D1 のマイグレーション ③ API の公開（`ALLOWED_ORIGINS` にゲームと管理サイトの URL を設定）④ WebSocket 用の署名キーを初回だけ自動で作成 ⑤ ゲームと管理サイトのビルドと公開 ⑥ 動作確認（API の応答・画面・カード画像・CORS） |
+| `Staging check`（`staging-check.yml`） | 手動 | 公開した staging の API を相手に、テスト用アカウントで4人リーグ（自分＋CPU 3）を1回通しで遊び、ドラフト・試合計算・順位・履歴が動くか確認（約5分。テスト用アカウント `check_…` が staging に1つ増える） |
 | `Create admin`（`admin-create.yml`） | 手動 | 管理者アカウントを作成。パスワードはシークレット `ADMIN_INITIAL_PASSWORD`。2段階認証は管理サイトへの初回ログイン時にその場で登録するため、キーはログに出ません |
 
 ## あなたの作業（最初の1回）
@@ -44,6 +45,13 @@ URL は `https://<Pages のプロジェクト名>.pages.dev` と `https://<Worke
    - `ADMIN_INITIAL_PASSWORD`：最初の管理者のパスワード（12文字以上。パスワード管理アプリで作ったものを推奨）
 2. **Settings → Environments** で `staging` と `production` を作ります。`production` は **Required reviewers** にご自分を設定します（本番への公開は承認制）。
 3. **Settings → Actions → General** で Actions が有効になっていることを確認します（初期設定のままで可）。
+
+## 公開済みの環境（2026-11-14）
+
+| 環境 | ゲーム | 管理サイト | API |
+| --- | --- | --- | --- |
+| staging | https://football-draft-staging.pages.dev | https://football-draft-admin-staging.pages.dev | https://football-draft-api-staging.lunex773.workers.dev |
+| production | 未公開 | 未公開 | 未公開 |
 
 ## 公開と管理者の作成
 

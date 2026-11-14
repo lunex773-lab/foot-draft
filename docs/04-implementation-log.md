@@ -1,5 +1,15 @@
 # 実装記録
 
+## 2026-11-14 staging に公開
+
+GitHub Actions の Deploy（staging）で Cloudflare に初めて公開した。D1 の作成とマイグレーション 0001〜0004、API（Workers＋Durable Objects）、署名キーの自動作成、ゲームと管理サイト（Pages）の公開、動作確認（API の応答・画面・カード画像・CORS）がすべて成功。
+
+- ゲーム：https://football-draft-staging.pages.dev
+- 管理サイト：https://football-draft-admin-staging.pages.dev
+- API：https://football-draft-api-staging.lunex773.workers.dev
+
+確認：新しく作ったワークフロー Staging check で、公開した staging を相手に、本番と同じ設定（テスト用の短い時間設定なし）で4人リーグ（自分＋CPU 3）を1回通しで実行し、すべて成功（247秒）。登録・300人のカード・Phase 3 の API・ルーム作成・WebSocket・ドラフト56ピック・3節6試合の試合計算・最終順位・試合履歴。Workers の無料プランで、試合計算が CPU 時間の上限で失敗することはなかった（1ルームでの確認。複数ルームの同時進行は未確認）。
+
 ## 2026-11-14 実写の選手カード（2日目：計150人）
 
 クレジットのリセット後に自動で再開し、FD-074〜FD-149（FD-088 は1日目に生成済み）の75人分を生成してカードに組み込んだ。Figma AI のクレジットが今日の上限に達したため停止。合計150人（残り150人はイラストのカード）。単体テスト45件・型チェック成功。次は 2026-11-15 00:05 UTC に自動で再開する。
