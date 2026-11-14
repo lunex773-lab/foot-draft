@@ -75,6 +75,8 @@ export interface DraftState {
   pool: string[];
   order: number[];
   picks: DraftPick[];
+  /** Collection Draft (decision 36): player id -> the only seat allowed to pick it */
+  reserved?: Record<string, number>;
 }
 
 export function createDraftState(pool: string[], seats: number = GAME_CONFIG.maxPlayers, rounds: number = GAME_CONFIG.picksPerPlayer): DraftState {
@@ -93,12 +95,14 @@ export function rosterOf(state: DraftState, seat: number): string[] {
   return state.picks.filter((p) => p.seat === seat).map((p) => p.playerId);
 }
 
-export function availablePlayers(state: DraftState): string[] {
+/** players still available; with `seat`, other players' reserved cards are excluded */
+export function availablePlayers(state: DraftState, seat?: number): string[] {
   const taken = new Set(state.picks.map((p) => p.playerId));
-  return state.pool.filter((id) => !taken.has(id));
+  const reserved = state.reserved ?? {};
+  return state.pool.filter((id) => !taken.has(id) && (seat === undefined || reserved[id] === undefined || reserved[id] === seat));
 }
 
-export type PickError = 'DRAFT_FINISHED' | 'NOT_YOUR_TURN' | 'NOT_IN_POOL' | 'ALREADY_PICKED' | 'GK_LIMIT';
+export type PickError = 'DRAFT_FINISHED' | 'NOT_YOUR_TURN' | 'NOT_IN_POOL' | 'ALREADY_PICKED' | 'GK_LIMIT' | 'RESERVED';
 
 export function validatePick(state: DraftState, seat: number, playerId: string, byId: Map<string, Player>): PickError | null {
   const cur = currentSeat(state);
@@ -106,6 +110,8 @@ export function validatePick(state: DraftState, seat: number, playerId: string, 
   if (cur !== seat) return 'NOT_YOUR_TURN';
   if (!state.pool.includes(playerId)) return 'NOT_IN_POOL';
   if (state.picks.some((p) => p.playerId === playerId)) return 'ALREADY_PICKED';
+  const owner = state.reserved?.[playerId];
+  if (owner !== undefined && owner !== seat) return 'RESERVED';
   const player = byId.get(playerId);
   if (!player) return 'NOT_IN_POOL';
   if (player.primaryPosition === 'GK') {
@@ -168,7 +174,7 @@ export function chooseAutoPick(state: DraftState, seat: number, byId: Map<string
   const gkCount = roster.filter((p) => p.primaryPosition === 'GK').length;
   const picksLeft = state.order.slice(state.picks.length).filter((s) => s === seat).length;
   const base = squadValue(roster);
-  const candidates = availablePlayers(state)
+  const candidates = availablePlayers(state, seat)
     .map((id) => byId.get(id)!)
     .filter((p) => !(p.primaryPosition === 'GK' && gkCount >= GAME_CONFIG.maxGkPerTeam));
 

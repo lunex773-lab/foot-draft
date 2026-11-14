@@ -9,14 +9,15 @@ import type { PoolFilter } from './pool';
 import type { MatchResultData } from './sim/types';
 import type { Lineup, Player } from './types';
 
-export type RoomMode = 'quick' | 'private' | 'ranked' | 'solo' | 'event';
+export type RoomMode = 'quick' | 'private' | 'ranked' | 'solo' | 'event' | 'collection';
 
 /** What kind of league the room plays (Phase 3). */
 export type RoomVariant =
   | { kind: 'standard' }
   | { kind: 'ranked' }
   | { kind: 'solo'; challenge: SoloChallenge }
-  | { kind: 'event'; eventId: string; name: string; description: string; filter: PoolFilter | null; endsAt: number };
+  | { kind: 'event'; eventId: string; name: string; description: string; filter: PoolFilter | null; endsAt: number }
+  | { kind: 'collection' };
 
 /** rating change of one seat in a ranked league */
 export interface SeatRatingChange {
@@ -39,9 +40,21 @@ export interface SoloOutcome {
   record: TeamLeagueRecord;
 }
 
+/** currency granted to a seat after the league (Phase 4) */
+export interface SeatReward {
+  coins: number;
+  /** false when the daily league cap was reached */
+  matchRewardGiven: boolean;
+  /** solo clear / event rank bonus included in coins */
+  bonus: number;
+  leaguesToday: number;
+}
+
 export interface RoomOutcome {
   ranked?: RankedOutcome;
   solo?: SoloOutcome;
+  /** seat -> rewards (human seats) */
+  rewards?: Record<number, SeatReward>;
 }
 export type RoomPhase = 'lobby' | 'drafting' | 'lineup' | 'playing' | 'finished' | 'closed';
 
@@ -108,6 +121,8 @@ export interface RoomSnapshot {
     picks: DraftPick[];
     currentSeat: number | null;
     deadline: number | null;
+    /** Collection Draft: reserved player id -> seat */
+    reserved: Record<string, number>;
   };
   /** rosters after the draft (seat -> player ids) */
   rosters: Record<number, string[]>;
