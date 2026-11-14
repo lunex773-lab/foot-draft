@@ -75,8 +75,12 @@ export interface DraftState {
   pool: string[];
   order: number[];
   picks: DraftPick[];
-  /** Collection Draft (decision 36): player id -> the only seat allowed to pick it */
-  reserved?: Record<string, number>;
+  /**
+   * Collection Draft (decision 36): player id -> the only seats allowed to pick
+   * it (the owners who registered it; several when more players registered the
+   * same card — whoever picks it first gets it)
+   */
+  reserved?: Record<string, number[]>;
 }
 
 export function createDraftState(pool: string[], seats: number = GAME_CONFIG.maxPlayers, rounds: number = GAME_CONFIG.picksPerPlayer): DraftState {
@@ -99,7 +103,7 @@ export function rosterOf(state: DraftState, seat: number): string[] {
 export function availablePlayers(state: DraftState, seat?: number): string[] {
   const taken = new Set(state.picks.map((p) => p.playerId));
   const reserved = state.reserved ?? {};
-  return state.pool.filter((id) => !taken.has(id) && (seat === undefined || reserved[id] === undefined || reserved[id] === seat));
+  return state.pool.filter((id) => !taken.has(id) && (seat === undefined || reserved[id] === undefined || reserved[id].includes(seat)));
 }
 
 export type PickError = 'DRAFT_FINISHED' | 'NOT_YOUR_TURN' | 'NOT_IN_POOL' | 'ALREADY_PICKED' | 'GK_LIMIT' | 'RESERVED';
@@ -110,8 +114,8 @@ export function validatePick(state: DraftState, seat: number, playerId: string, 
   if (cur !== seat) return 'NOT_YOUR_TURN';
   if (!state.pool.includes(playerId)) return 'NOT_IN_POOL';
   if (state.picks.some((p) => p.playerId === playerId)) return 'ALREADY_PICKED';
-  const owner = state.reserved?.[playerId];
-  if (owner !== undefined && owner !== seat) return 'RESERVED';
+  const owners = state.reserved?.[playerId];
+  if (owners !== undefined && !owners.includes(seat)) return 'RESERVED';
   const player = byId.get(playerId);
   if (!player) return 'NOT_IN_POOL';
   if (player.primaryPosition === 'GK') {

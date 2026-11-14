@@ -48,6 +48,8 @@ export interface SeatReward {
   /** solo clear / event rank bonus included in coins */
   bonus: number;
   leaguesToday: number;
+  /** missions completed by this league (ready to claim) */
+  missionsCompleted: string[];
 }
 
 export interface RoomOutcome {
@@ -121,8 +123,8 @@ export interface RoomSnapshot {
     picks: DraftPick[];
     currentSeat: number | null;
     deadline: number | null;
-    /** Collection Draft: reserved player id -> seat */
-    reserved: Record<string, number>;
+    /** Collection Draft: reserved player id -> seats that may pick it */
+    reserved: Record<string, number[]>;
   };
   /** rosters after the draft (seat -> player ids) */
   rosters: Record<number, string[]>;

@@ -10,6 +10,7 @@ export type ErrorCode =
   | 'RATE_LIMITED'
   | 'ROOM_FULL'
   | 'ROOM_NOT_JOINABLE'
+  | 'INSUFFICIENT_FUNDS'
   | 'INTERNAL';
 
 const STATUS: Record<ErrorCode, number> = {
@@ -21,6 +22,7 @@ const STATUS: Record<ErrorCode, number> = {
   RATE_LIMITED: 429,
   ROOM_FULL: 409,
   ROOM_NOT_JOINABLE: 409,
+  INSUFFICIENT_FUNDS: 409,
   INTERNAL: 500,
 };
 

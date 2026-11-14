@@ -6,8 +6,11 @@ import type { AppEnv } from './env';
 import { ApiError, errorBody } from './lib/http';
 import { adminRoutes } from './routes/admin';
 import { authRoutes } from './routes/auth';
+import { collectionRoutes, exchangeRoutes } from './routes/collection';
 import { draftRoutes } from './routes/drafts';
+import { currencyRoutes, missionRoutes, rewardRoutes } from './routes/economy';
 import { eventRoutes } from './routes/events';
+import { gachaRoutes } from './routes/gacha';
 import { matchRoutes } from './routes/matches';
 import { playerRoutes } from './routes/players';
 import { rankedRoutes } from './routes/ranked';
@@ -24,7 +27,7 @@ app.use('/api/*', async (c, next) => {
   return cors({
     origin: (origin) => (origins.includes(origin) ? origin : null),
     allowHeaders: ['Authorization', 'Content-Type', 'X-FD-Platform', 'X-FD-App-Version'],
-    allowMethods: ['GET', 'POST', 'PATCH', 'OPTIONS'],
+    allowMethods: ['GET', 'POST', 'PATCH', 'PUT', 'OPTIONS'],
     maxAge: 600,
   })(c, next);
 });
@@ -40,6 +43,12 @@ app.route('/api/matches', matchRoutes);
 app.route('/api/ranked', rankedRoutes);
 app.route('/api/solo', soloRoutes);
 app.route('/api/events', eventRoutes);
+app.route('/api/currency', currencyRoutes);
+app.route('/api/rewards', rewardRoutes);
+app.route('/api/missions', missionRoutes);
+app.route('/api/gacha', gachaRoutes);
+app.route('/api/collection', collectionRoutes);
+app.route('/api/exchange', exchangeRoutes);
 app.route('/api/admin', adminRoutes);
 
 app.notFound((c) => c.json(errorBody('NOT_FOUND', 'not found'), 404));

@@ -12,8 +12,9 @@
     "seed:generate": "tsx scripts/generate-seed.ts",
     "db:migrate:local": "wrangler d1 migrations apply DB --local",
     "admin:create:local": "tsx scripts/create-admin.ts --local",
-    "e2e": "tsx scripts/e2e.ts && tsx scripts/e2e-phase3.ts",
-    "e2e:phase3": "tsx scripts/e2e-phase3.ts"
+    "e2e": "tsx scripts/e2e.ts && tsx scripts/e2e-phase3.ts && tsx scripts/e2e-phase4.ts",
+    "e2e:phase3": "tsx scripts/e2e-phase3.ts",
+    "e2e:phase4": "tsx scripts/e2e-phase4.ts"
   },
   "dependencies": {
     "@fd/shared": "*",

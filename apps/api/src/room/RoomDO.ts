@@ -37,6 +37,7 @@ import {
   type RankedOutcome,
   type RoomSettings,
   type RoomSnapshot,
+  type SeatReward,
   type ServerMessage,
   type StandingRow,
 } from '@fd/shared';
@@ -45,9 +46,10 @@ import type { Env } from '../env';
 import { analyticsStatement, type AnalyticsInput } from '../lib/analytics';
 import { randomId } from '../lib/crypto';
 import { loadCatalog } from '../lib/players';
+import { grantLeagueRewards, type LeagueRewardInput } from '../lib/rewards';
 import { ensureCurrentSeason, ratingOf } from '../lib/seasons';
 
-const ROOM_MODES: RoomMode[] = ['quick', 'private', 'ranked', 'solo', 'event'];
+const ROOM_MODES: RoomMode[] = ['quick', 'private', 'ranked', 'solo', 'event', 'collection'];
 
 /**
  * RoomDO — one Durable Object per room. It is the single authority for the
@@ -211,7 +213,7 @@ export class RoomDO extends DurableObject<Env> {
   /** modes whose rooms start by themselves when 4 humans are in */
   private autoStartsWhenFull(): boolean {
     const m = this.state!.mode;
-    return m === 'quick' || m === 'ranked' || m === 'event';
+    return m === 'quick' || m === 'ranked' || m === 'event' || m === 'collection';
   }
 
   // -------------------------------------------------------------- snapshot
@@ -232,6 +234,7 @@ export class RoomDO extends DurableObject<Env> {
           picks: s.draft.state.picks,
           currentSeat: currentSeat(s.draft.state),
           deadline: s.draft.deadline ?? s.draft.cpuDueAt,
+          reserved: s.draft.state.reserved ?? {},
         }
       : null;
     return {
@@ -515,10 +518,16 @@ export class RoomDO extends DurableObject<Env> {
     const rng = new Rng(`${s.seed}:draft`);
     const v = this.variant();
     const filter = v.kind === 'solo' ? v.challenge.pool.filter : v.kind === 'event' ? v.filter : null;
-    const pool = buildDraftPool(catalog, rng.fork('pool'), GAME_CONFIG.pool, filter);
     const byId = new Map(catalog.map((p) => [p.id, p]));
+    // Collection Draft (decision 36): each human's registered cards join the pool, reserved for their owners
+    const reserved = v.kind === 'collection' ? await this.collectionReservations(byId) : {};
+    if (s.phase !== 'lobby') return;
+    const reservedIds = Object.keys(reserved);
+    const common = buildDraftPool(reservedIds.length ? catalog.filter((p) => !reserved[p.id]) : catalog, rng.fork('pool'), GAME_CONFIG.pool, filter);
+    const pool = [...common, ...reservedIds.sort()];
     this.players = new Map(pool.map((id) => [id, byId.get(id)!]));
     const state = createDraftState(pool);
+    if (reservedIds.length) state.reserved = reserved;
     // randomize draft positions, then apply the snake order to them
     let perm = rng.fork('order').shuffle([0, 1, 2, 3]);
     if (v.kind === 'solo' && v.challenge.rule.type === 'last_pick') {
@@ -553,6 +562,26 @@ export class RoomDO extends DurableObject<Env> {
     this.sendPlayers();
     this.broadcastSnapshot();
     await this.scheduleAlarm();
+  }
+
+  /** registered Collection Draft cards of the human seats: player id -> owner seats */
+  private async collectionReservations(byId: Map<string, Player>): Promise<Record<string, number[]>> {
+    const humans = this.humanSeats();
+    if (humans.length === 0) return {};
+    const rows = await this.env.DB.prepare(
+      `SELECT r.user_id, r.player_id FROM collection_draft_rosters r
+         JOIN user_collections uc ON uc.user_id = r.user_id AND uc.player_id = r.player_id
+        WHERE r.user_id IN (${humans.map(() => '?').join(',')}) ORDER BY r.user_id, r.slot`,
+    )
+      .bind(...humans.map((h) => h.userId))
+      .all<{ user_id: string; player_id: string }>();
+    const out: Record<string, number[]> = {};
+    for (const r of rows.results) {
+      const seat = this.seatOf(r.user_id);
+      if (seat === null || !byId.has(r.player_id)) continue;
+      (out[r.player_id] ??= []).push(seat);
+    }
+    return out;
   }
 
   private setTurnTimer(now: number) {
@@ -829,30 +858,60 @@ export class RoomDO extends DurableObject<Env> {
 
   // --------------------------------------------------------------- outcomes
 
-  /** results decided after the league: ranked rating changes, Solo Challenge goal */
+  /** results decided after the league: ranked rating changes, Solo Challenge goal, rewards */
   private async leagueOutcome(table: StandingRow[], now: number, writes: D1PreparedStatement[]): Promise<RoomOutcome | null> {
     const s = this.state!;
     const v = this.variant();
+    const outcome: RoomOutcome = {};
     if (s.mode === 'ranked') {
       try {
-        return { ranked: await this.applyRanked(table, now) };
+        outcome.ranked = await this.applyRanked(table, now);
       } catch (err) {
         console.error('ranked rating update failed', err);
-        return null;
       }
     }
+    let soloCleared: string | null = null;
     if (v.kind === 'solo') {
       const human = this.humanSeats()[0];
-      if (!human) return null;
-      const record = teamRecord(human.seat, table, s.results);
-      const cleared = evaluateGoal(v.challenge.goal, record);
-      writes.push(
-        this.env.DB.prepare('UPDATE solo_attempts SET status = ?, result_json = ?, finished_at = ? WHERE room_id = ?').bind(cleared ? 'cleared' : 'failed', JSON.stringify(record), now, s.roomId),
-        analyticsStatement(this.env, { name: 'solo_challenge_completed', userId: human.userId, properties: { challengeId: v.challenge.id, roomId: s.roomId, cleared, rank: record.rank } }),
-      );
-      return { solo: { challengeId: v.challenge.id, cleared, record } };
+      if (human) {
+        const record = teamRecord(human.seat, table, s.results);
+        const cleared = evaluateGoal(v.challenge.goal, record);
+        if (cleared) soloCleared = v.challenge.id;
+        writes.push(
+          this.env.DB.prepare('UPDATE solo_attempts SET status = ?, result_json = ?, finished_at = ? WHERE room_id = ?').bind(cleared ? 'cleared' : 'failed', JSON.stringify(record), now, s.roomId),
+          analyticsStatement(this.env, { name: 'solo_challenge_completed', userId: human.userId, properties: { challengeId: v.challenge.id, roomId: s.roomId, cleared, rank: record.rank } }),
+        );
+        outcome.solo = { challengeId: v.challenge.id, cleared, record };
+      }
     }
-    return null;
+    try {
+      outcome.rewards = await this.applyRewards(table, now, soloCleared);
+    } catch (err) {
+      // not lost: pending solo / event rewards are paid later by the wallet endpoint
+      console.error('league rewards failed', err);
+    }
+    return Object.keys(outcome).length ? outcome : null;
+  }
+
+  /** match rewards, bonuses and mission progress of the human seats (Phase 4) */
+  private async applyRewards(table: StandingRow[], now: number, soloCleared: string | null): Promise<Record<number, SeatReward>> {
+    const s = this.state!;
+    const humans = this.humanSeats();
+    const picks = s.draft?.state.picks ?? [];
+    const inputs: LeagueRewardInput[] = humans.map((h) => ({
+      userId: h.userId!,
+      rank: table.find((r) => r.seat === h.seat)!.rank,
+      matchWins: s.results.filter((r) => (r.home === h.seat && r.homeGoals > r.awayGoals) || (r.away === h.seat && r.awayGoals > r.homeGoals)).length,
+      manualPicks: picks.filter((p) => p.seat === h.seat && !p.auto).length,
+      soloClearedChallengeId: soloCleared,
+    }));
+    const granted = await grantLeagueRewards(this.env, s.roomId, s.mode, inputs, now);
+    const out: Record<number, SeatReward> = {};
+    for (const h of humans) {
+      const r = granted.get(h.userId!);
+      if (r) out[h.seat] = r;
+    }
+    return out;
   }
 
   /**

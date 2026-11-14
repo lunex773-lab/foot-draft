@@ -30,6 +30,18 @@ function check(cond: unknown, label: string) {
 }
 
 async function api<T = any>(path: string, opts: { method?: string; token?: string; body?: unknown } = {}): Promise<{ status: number; data: T }> {
+  // the local dev server can drop a connection right after `wrangler d1 execute` touched the database
+  for (let i = 0; ; i++) {
+    try {
+      return await apiOnce<T>(path, opts);
+    } catch (e) {
+      if (i >= 4) throw e;
+      await sleep(1000);
+    }
+  }
+}
+
+async function apiOnce<T>(path: string, opts: { method?: string; token?: string; body?: unknown }): Promise<{ status: number; data: T }> {
   const res = await fetch(`${API}${path}`, {
     method: opts.method ?? (opts.body ? 'POST' : 'GET'),
     headers: { 'Content-Type': 'application/json', ...(opts.token ? { Authorization: `Bearer ${opts.token}` } : {}) },

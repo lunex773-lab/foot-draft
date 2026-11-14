@@ -93,7 +93,7 @@ export function cryptoRandom(): RandomSource {
       if (!Number.isInteger(max) || max <= 0 || max > 2 ** 32) throw new Error('invalid range');
       const limit = 2 ** 32 - (2 ** 32 % max);
       for (;;) {
-        globalThis.crypto.getRandomValues(buf);
+        crypto.getRandomValues(buf);
         if (buf[0] < limit) return buf[0] % max;
       }
     },

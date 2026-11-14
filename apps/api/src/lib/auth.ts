@@ -72,12 +72,17 @@ export const requireAdmin: MiddlewareHandler<AppEnv> = async (c, next) => {
 };
 
 /** RBAC (provisional roles: owner / admin / viewer, spec 24-11 undecided) */
-export type AdminPermission = 'cards.read' | 'audit.read' | 'events.read' | 'events.write' | 'seasons.read';
+export type AdminPermission = 'cards.read' | 'audit.read' | 'events.read' | 'events.write' | 'seasons.read' | 'economy.read' | 'economy.test_grant';
 const ROLE_PERMISSIONS: Record<AuthAdmin['role'], AdminPermission[]> = {
-  owner: ['cards.read', 'audit.read', 'events.read', 'events.write', 'seasons.read'],
-  admin: ['cards.read', 'audit.read', 'events.read', 'events.write', 'seasons.read'],
-  viewer: ['cards.read', 'events.read', 'seasons.read'],
+  owner: ['cards.read', 'audit.read', 'events.read', 'events.write', 'seasons.read', 'economy.read', 'economy.test_grant'],
+  admin: ['cards.read', 'audit.read', 'events.read', 'events.write', 'seasons.read', 'economy.read', 'economy.test_grant'],
+  viewer: ['cards.read', 'events.read', 'seasons.read', 'economy.read'],
 };
+
+/** test grants of currencies (decision 42): never in production */
+export function testGrantsEnabled(env: { ENVIRONMENT: string }): boolean {
+  return env.ENVIRONMENT === 'local' || env.ENVIRONMENT === 'development' || env.ENVIRONMENT === 'staging';
+}
 
 export function permissionsOf(role: AuthAdmin['role']): AdminPermission[] {
   return [...ROLE_PERMISSIONS[role]];

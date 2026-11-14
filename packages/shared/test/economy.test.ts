@@ -190,7 +190,8 @@ describe('Collection Draft reserved cards (decision 36)', () => {
     const reservedIds = ['FD-173', 'FD-072', 'FD-096']; // icons
     const pool = [...buildDraftPool(catalog.filter((p) => !reservedIds.includes(p.id)), new Rng('cd')), ...reservedIds];
     const state = createDraftState(pool);
-    state.reserved = { 'FD-173': 2, 'FD-072': 2, 'FD-096': 0 };
+    // FD-096 was registered by two players: either of them may pick it
+    state.reserved = { 'FD-173': [2], 'FD-072': [2], 'FD-096': [0, 3] };
     expect(validatePick(state, 0, 'FD-173', byId)).toBe('RESERVED');
     expect(validatePick(state, 0, 'FD-096', byId)).toBeNull();
     // run the whole draft with auto picks: reserved cards end up only with their owners
@@ -199,8 +200,8 @@ describe('Collection Draft reserved cards (decision 36)', () => {
       applyPick(state, seat, chooseAutoPick(state, seat, byId), true, byId);
     }
     for (const p of state.picks) {
-      const owner = state.reserved[p.playerId];
-      if (owner !== undefined) expect(p.seat).toBe(owner);
+      const owners = state.reserved[p.playerId];
+      if (owners !== undefined) expect(owners).toContain(p.seat);
     }
   });
 });

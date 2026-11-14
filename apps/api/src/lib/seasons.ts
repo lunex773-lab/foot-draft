@@ -1,5 +1,6 @@
 import { RANKED_CONFIG, carryOverRating, seasonAt, seasonById, tierOf, type SeasonInfo } from '@fd/shared';
 import type { Env } from '../env';
+import { grantSeasonRewards } from './rewards';
 
 /**
  * Monthly Ranked seasons (Japan time, decision 27). Seasons are created and
@@ -17,7 +18,7 @@ export async function ensureCurrentSeason(env: Env, now = Date.now()): Promise<S
   return cur;
 }
 
-/** records the final standings of a season (idempotent) */
+/** records the final standings of a season and pays the season rewards (idempotent) */
 export async function finalizeSeason(env: Env, seasonId: string, now = Date.now()) {
   await env.DB.batch([
     env.DB.prepare(
@@ -27,6 +28,8 @@ export async function finalizeSeason(env: Env, seasonId: string, now = Date.now(
     ).bind(now, seasonId),
     env.DB.prepare("UPDATE seasons SET status = 'finished', finalized_at = ? WHERE id = ? AND status = 'active'").bind(now, seasonId),
   ]);
+  // Phase 4: FREE GEMS by final position (decision 40)
+  await grantSeasonRewards(env, seasonId, now);
 }
 
 /** current rating of a player in a season (a new season starts from the carried-over rating) */

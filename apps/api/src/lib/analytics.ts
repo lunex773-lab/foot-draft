@@ -22,7 +22,16 @@ export type AnalyticsEventName =
   | 'match_completed'
   | 'match_abandoned'
   | 'rating_updated'
-  | 'solo_challenge_completed';
+  | 'solo_challenge_completed'
+  | 'currency_earned'
+  | 'currency_spent'
+  | 'gacha_started'
+  | 'gacha_completed'
+  | 'duplicate_converted'
+  | 'exchange_completed'
+  | 'mission_completed'
+  | 'reward_claimed'
+  | 'collection_player_registered';
 
 export interface AnalyticsInput {
   name: AnalyticsEventName;

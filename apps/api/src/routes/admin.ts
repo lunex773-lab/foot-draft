@@ -1,7 +1,8 @@
-import { CLUB_BY_ID, LEAGUE_BY_ID, NATION_BY_CODE, RARITY_INFO, analyzePool, describeFilter, rarityRank, sanitizeFilter, type Player } from '@fd/shared';
+import { CLUB_BY_ID, ECONOMY_CONFIG, LEAGUE_BY_ID, NATION_BY_CODE, RARITY_INFO, analyzePool, describeFilter, rarityRank, sanitizeFilter, type Player } from '@fd/shared';
 import { Hono } from 'hono';
-import { createAdminSession, permissionsOf, requireAdmin, requirePermission } from '../lib/auth';
+import { createAdminSession, permissionsOf, requireAdmin, requirePermission, testGrantsEnabled } from '../lib/auth';
 import { base32Encode, randomBytes, randomId, verifyPassword, verifyTotp } from '../lib/crypto';
+import { currencyStmts, ensureWalletStmts, pointStmts, walletOf } from '../lib/economy';
 import { ApiError, readJson, str } from '../lib/http';
 import { loadCatalog } from '../lib/players';
 import { ensureCurrentSeason, leaderboard, seasonView } from '../lib/seasons';
@@ -103,7 +104,7 @@ adminRoutes.post('/auth/logout', async (c) => {
 
 adminRoutes.get('/auth/me', (c) => {
   const a = c.get('admin');
-  return c.json({ admin: { id: a.id, username: a.username, role: a.role, permissions: permissionsOf(a.role) }, environment: c.env.ENVIRONMENT });
+  return c.json({ admin: { id: a.id, username: a.username, role: a.role, permissions: permissionsOf(a.role) }, environment: c.env.ENVIRONMENT, testGrantsEnabled: testGrantsEnabled(c.env) });
 });
 
 type SortKey = 'ovr' | 'name' | 'rarity' | 'position' | 'pac' | 'sho' | 'pas' | 'dri' | 'def' | 'phy' | 'id';
@@ -307,4 +308,68 @@ adminRoutes.get('/seasons/:id/leaderboard', requirePermission('seasons.read'), a
   const id = c.req.param('id');
   if (!/^\d{4}-\d{2}$/.test(id)) throw new ApiError('BAD_REQUEST', 'invalid season id');
   return c.json({ season: seasonView(id), items: await leaderboard(c.env, id) });
+});
+
+// ------------------------------------------------------------------ economy (Phase 4)
+
+/** whether test grants are available here (never in production, decision 42) */
+adminRoutes.get('/economy/status', requirePermission('economy.read'), async (c) => {
+  const totals = await c.env.DB.prepare(
+    `SELECT COUNT(*) AS wallets, COALESCE(SUM(coins), 0) AS coins, COALESCE(SUM(gems_free), 0) AS gems_free,
+            COALESCE(SUM(gems_paid_purchased), 0) AS gems_paid_purchased, COALESCE(SUM(gems_paid_granted), 0) AS gems_paid_granted
+       FROM currency_wallets`,
+  ).first();
+  return c.json({ environment: c.env.ENVIRONMENT, testGrantsEnabled: testGrantsEnabled(c.env), totals });
+});
+
+/** wallet, recent ledger and collection size of one player (to check a grant) */
+adminRoutes.get('/economy/users/:username', requirePermission('economy.read'), async (c) => {
+  const user = await c.env.DB.prepare('SELECT id, username, display_name FROM users WHERE username = ?').bind(c.req.param('username')).first<{ id: string; username: string; display_name: string }>();
+  if (!user) throw new ApiError('NOT_FOUND', 'player not found');
+  const ledger = await c.env.DB.prepare('SELECT currency, amount, balance_after, reason, ref_type, ref_id, created_at FROM currency_transactions WHERE user_id = ? ORDER BY created_at DESC, rowid DESC LIMIT 30')
+    .bind(user.id)
+    .all();
+  const owned = await c.env.DB.prepare('SELECT COUNT(*) AS n FROM user_collections WHERE user_id = ?').bind(user.id).first<{ n: number }>();
+  return c.json({ user: { id: user.id, username: user.username, displayName: user.display_name }, wallet: await walletOf(c.env, user.id), ledger: ledger.results, collection: owned?.n ?? 0 });
+});
+
+const GRANT_KINDS = ['COINS', 'GEMS_FREE', 'GEMS_PAID_GRANTED', 'GEMS_PAID_PURCHASED', 'POINTS_STANDARD', 'POINTS_PREMIUM'] as const;
+type GrantKind = (typeof GRANT_KINDS)[number];
+
+/** staging / local only: give a player test currency (recorded in the ledger and the audit log) */
+adminRoutes.post('/economy/test-grants', requirePermission('economy.test_grant'), async (c) => {
+  if (!testGrantsEnabled(c.env)) throw new ApiError('FORBIDDEN', 'test grants are disabled in this environment');
+  const a = c.get('admin');
+  const body = await readJson(c);
+  const username = str(body.username, 'username', { max: 40 });
+  const kind = body.kind as GrantKind;
+  if (!GRANT_KINDS.includes(kind)) throw new ApiError('BAD_REQUEST', `kind must be one of ${GRANT_KINDS.join(', ')}`);
+  const amount = Number(body.amount);
+  if (!Number.isInteger(amount) || amount <= 0 || amount > ECONOMY_CONFIG.testGrantMax) throw new ApiError('BAD_REQUEST', `amount must be 1-${ECONOMY_CONFIG.testGrantMax}`);
+  const note = str(body.note, 'note', { max: 200, optional: true });
+  const user = await c.env.DB.prepare('SELECT id, username FROM users WHERE username = ?').bind(username).first<{ id: string; username: string }>();
+  if (!user) throw new ApiError('NOT_FOUND', 'player not found');
+  const now = Date.now();
+  const opId = randomId();
+  const grantId = randomId();
+  const change = { userId: user.id, amount, reason: 'test_grant', refType: 'admin_test_grant', refId: grantId, opId, now };
+  const stmts =
+    kind === 'POINTS_STANDARD' || kind === 'POINTS_PREMIUM'
+      ? pointStmts(c.env, { ...change, pointType: kind === 'POINTS_STANDARD' ? 'standard' : 'premium' })
+      : currencyStmts(c.env, { ...change, currency: kind });
+  await c.env.DB.batch([
+    ...ensureWalletStmts(c.env, user.id, now),
+    ...stmts,
+    c.env.DB.prepare('INSERT INTO admin_audit_logs (id, admin_id, action, target_type, target_id, detail_json, ip, created_at) VALUES (?,?,?,?,?,?,?,?)').bind(
+      grantId,
+      a.id,
+      'test_grant',
+      'user',
+      user.id,
+      JSON.stringify({ username: user.username, kind, amount, note: note || undefined, environment: c.env.ENVIRONMENT }),
+      ipOf(c),
+      now,
+    ),
+  ]);
+  return c.json({ grantId, user: { id: user.id, username: user.username }, kind, amount, wallet: await walletOf(c.env, user.id) });
 });
