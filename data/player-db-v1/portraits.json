@@ -1107,6 +1107,26 @@
    "model": "gpt-image-2.5-flare",
    "figma_node": "8:72",
    "generated_at": "2026-11-15"
+  },
+  "FD-222": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "8:73",
+   "generated_at": "2026-11-15"
+  },
+  "FD-223": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "8:74",
+   "generated_at": "2026-11-15"
+  },
+  "FD-224": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "8:75",
+   "generated_at": "2026-11-15"
+  },
+  "FD-225": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "8:76",
+   "generated_at": "2026-11-15"
   }
  }
 }
