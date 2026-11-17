@@ -1127,6 +1127,66 @@
    "model": "gpt-image-2.5-flare",
    "figma_node": "8:76",
    "generated_at": "2026-11-15"
+  },
+  "FD-226": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "9:2",
+   "generated_at": "2026-11-17"
+  },
+  "FD-227": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "9:3",
+   "generated_at": "2026-11-17"
+  },
+  "FD-228": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "9:4",
+   "generated_at": "2026-11-17"
+  },
+  "FD-229": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "9:5",
+   "generated_at": "2026-11-17"
+  },
+  "FD-230": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "9:6",
+   "generated_at": "2026-11-17"
+  },
+  "FD-231": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "9:7",
+   "generated_at": "2026-11-17"
+  },
+  "FD-232": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "9:8",
+   "generated_at": "2026-11-17"
+  },
+  "FD-233": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "9:9",
+   "generated_at": "2026-11-17"
+  },
+  "FD-234": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "9:10",
+   "generated_at": "2026-11-17"
+  },
+  "FD-235": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "9:11",
+   "generated_at": "2026-11-17"
+  },
+  "FD-236": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "9:12",
+   "generated_at": "2026-11-17"
+  },
+  "FD-237": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "9:13",
+   "generated_at": "2026-11-17"
   }
  }
 }
