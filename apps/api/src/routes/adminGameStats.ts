@@ -148,10 +148,10 @@ adminGameStatRoutes.get('/matches', requirePermission('analytics.read'), async (
 adminGameStatRoutes.get('/drafts', requirePermission('analytics.read'), async (c) => {
   const q = c.req.query();
   const s = scopeOf(c.env, q);
-  const base = 'FROM drafts d JOIN rooms r ON r.id = d.room_id WHERE d.started_at >= ? AND d.started_at < ? AND ' + s.sql;
+  const base = 'FROM legacy_drafts d JOIN rooms r ON r.id = d.room_id WHERE d.started_at >= ? AND d.started_at < ? AND ' + s.sql;
   const binds = [s.fromMs, s.toMs, ...s.binds];
   const sum = await c.env.DB.prepare(`SELECT COUNT(*) AS drafts, SUM(d.status = 'completed') AS completed ${base}`).bind(...binds).first<{ drafts: number; completed: number | null }>();
-  const pickBase = `FROM draft_picks p JOIN drafts d ON d.id = p.draft_id JOIN rooms r ON r.id = d.room_id JOIN player_cards pc ON pc.id = p.player_id
+  const pickBase = `FROM legacy_draft_picks p JOIN legacy_drafts d ON d.id = p.draft_id JOIN rooms r ON r.id = d.room_id JOIN player_cards pc ON pc.id = p.player_id
                     WHERE d.started_at >= ? AND d.started_at < ? AND ${s.sql}`;
   const picks = await c.env.DB.prepare(
     `SELECT COUNT(*) AS picks, SUM(p.user_id IS NOT NULL) AS human, SUM(p.user_id IS NOT NULL AND p.is_auto = 1) AS humanAuto ${pickBase}`,
@@ -174,7 +174,7 @@ adminGameStatRoutes.get('/drafts', requirePermission('analytics.read'), async (c
     .all<Record<string, number>>();
   // how often a card is picked when it is in the pool, and how early (average pick number)
   const offered = await c.env.DB.prepare(
-    `SELECT j.value AS id, COUNT(*) AS offered FROM drafts d JOIN rooms r ON r.id = d.room_id, json_each(d.pool_json) j
+    `SELECT j.value AS id, COUNT(*) AS offered FROM legacy_drafts d JOIN rooms r ON r.id = d.room_id, json_each(d.pool_json) j
       WHERE d.started_at >= ? AND d.started_at < ? AND d.status = 'completed' AND ${s.sql} GROUP BY j.value`,
   )
     .bind(...binds)

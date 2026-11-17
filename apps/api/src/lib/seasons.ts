@@ -3,11 +3,17 @@ import type { Env } from '../env';
 import { grantSeasonRewards } from './rewards';
 
 /**
- * Monthly Ranked seasons (Japan time, decision 27). Seasons are created and
- * finished lazily: whenever ranked data is read or written, finished seasons
+ * Monthly seasons (Japan time, decision 27). Seasons are created and
+ * finished lazily: whenever ranking data is read or written, finished seasons
  * are closed (final standings recorded in season_results) and the current
  * season row is created.
+ *
+ * Since DRAFT MATCH (decision 77) the ranking of a season is the DRAFT MATCH
+ * ranking (draft_rankings). The rating of the retired Ranked mode
+ * (ranked_ratings) is kept as a record.
  */
+export type RankingTable = 'draft_rankings' | 'ranked_ratings';
+const SEASON_TABLE: RankingTable = 'draft_rankings';
 export async function ensureCurrentSeason(env: Env, now = Date.now()): Promise<SeasonInfo> {
   const cur = seasonAt(now);
   const stale = await env.DB.prepare("SELECT id FROM seasons WHERE status = 'active' AND ends_at <= ?").bind(now).all<{ id: string }>();
@@ -24,7 +30,7 @@ export async function finalizeSeason(env: Env, seasonId: string, now = Date.now(
     env.DB.prepare(
       `INSERT OR IGNORE INTO season_results (season_id, user_id, final_rating, final_position, games, wins, created_at)
        SELECT season_id, user_id, rating, RANK() OVER (ORDER BY rating DESC), games, wins, ?
-         FROM ranked_ratings WHERE season_id = ? AND games > 0`,
+         FROM ${SEASON_TABLE} WHERE season_id = ? AND games > 0`,
     ).bind(now, seasonId),
     env.DB.prepare("UPDATE seasons SET status = 'finished', finalized_at = ? WHERE id = ? AND status = 'active'").bind(now, seasonId),
   ]);
@@ -33,12 +39,12 @@ export async function finalizeSeason(env: Env, seasonId: string, now = Date.now(
 }
 
 /** current rating of a player in a season (a new season starts from the carried-over rating) */
-export async function ratingOf(env: Env, seasonId: string, userId: string): Promise<{ rating: number; games: number; wins: number; peak: number; exists: boolean }> {
-  const row = await env.DB.prepare('SELECT rating, games, wins, peak_rating FROM ranked_ratings WHERE season_id = ? AND user_id = ?')
+export async function ratingOf(env: Env, seasonId: string, userId: string, table: RankingTable = 'ranked_ratings'): Promise<{ rating: number; games: number; wins: number; peak: number; exists: boolean }> {
+  const row = await env.DB.prepare(`SELECT rating, games, wins, peak_rating FROM ${table} WHERE season_id = ? AND user_id = ?`)
     .bind(seasonId, userId)
     .first<{ rating: number; games: number; wins: number; peak_rating: number }>();
   if (row) return { rating: row.rating, games: row.games, wins: row.wins, peak: row.peak_rating, exists: true };
-  const prev = await env.DB.prepare('SELECT rating FROM ranked_ratings WHERE user_id = ? AND season_id < ? AND games > 0 ORDER BY season_id DESC LIMIT 1')
+  const prev = await env.DB.prepare(`SELECT rating FROM ${table} WHERE user_id = ? AND season_id < ? AND games > 0 ORDER BY season_id DESC LIMIT 1`)
     .bind(userId, seasonId)
     .first<{ rating: number }>();
   const start = carryOverRating(prev?.rating);
@@ -57,11 +63,11 @@ export interface LeaderboardRow {
   member: boolean;
 }
 
-export async function leaderboard(env: Env, seasonId: string, limit: number = RANKED_CONFIG.leaderboardSize): Promise<LeaderboardRow[]> {
+export async function leaderboard(env: Env, seasonId: string, limit: number = RANKED_CONFIG.leaderboardSize, table: RankingTable = 'ranked_ratings'): Promise<LeaderboardRow[]> {
   const rows = await env.DB.prepare(
     `SELECT r.user_id, u.display_name, r.rating, r.games, r.wins, RANK() OVER (ORDER BY r.rating DESC) AS position,
             EXISTS (SELECT 1 FROM subscriptions s WHERE s.user_id = r.user_id AND s.status = 'active' AND s.current_period_end > ?3) AS member
-       FROM ranked_ratings r JOIN users u ON u.id = r.user_id
+       FROM ${table} r JOIN users u ON u.id = r.user_id
       WHERE r.season_id = ?1 AND r.games > 0
       ORDER BY r.rating DESC, r.games DESC, r.updated_at ASC
       LIMIT ?2`,
@@ -72,13 +78,13 @@ export async function leaderboard(env: Env, seasonId: string, limit: number = RA
 }
 
 /** position of a player in the season leaderboard (null = not ranked yet) */
-export async function positionOf(env: Env, seasonId: string, userId: string): Promise<{ position: number | null; players: number }> {
+export async function positionOf(env: Env, seasonId: string, userId: string, table: RankingTable = 'ranked_ratings'): Promise<{ position: number | null; players: number }> {
   const row = await env.DB.prepare(
-    `SELECT (SELECT COUNT(*) FROM ranked_ratings WHERE season_id = ?1 AND games > 0) AS players,
-            (SELECT 1 + COUNT(*) FROM ranked_ratings o, ranked_ratings me
+    `SELECT (SELECT COUNT(*) FROM ${table} WHERE season_id = ?1 AND games > 0) AS players,
+            (SELECT 1 + COUNT(*) FROM ${table} o, ${table} me
               WHERE me.season_id = ?1 AND me.user_id = ?2 AND me.games > 0
                 AND o.season_id = ?1 AND o.games > 0 AND o.rating > me.rating) AS position,
-            (SELECT games FROM ranked_ratings WHERE season_id = ?1 AND user_id = ?2) AS games`,
+            (SELECT games FROM ${table} WHERE season_id = ?1 AND user_id = ?2) AS games`,
   )
     .bind(seasonId, userId)
     .first<{ players: number; position: number; games: number | null }>();

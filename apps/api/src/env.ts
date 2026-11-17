@@ -1,8 +1,11 @@
+import type { DraftMatchDO } from './room/DraftMatchDO';
 import type { RoomDO } from './room/RoomDO';
 
 export interface Env {
   DB: D1Database;
   ROOM: DurableObjectNamespace<RoomDO>;
+  /** DRAFT MATCH rooms (official spec v2.0) */
+  DRAFT_MATCH: DurableObjectNamespace<DraftMatchDO>;
   ENVIRONMENT: 'local' | 'development' | 'staging' | 'production';
   /** HMAC secret for WebSocket tickets (secret) */
   WS_TICKET_SECRET: string;

@@ -91,7 +91,7 @@ adminUserRoutes.get('/users/:id', requirePermission('users.read'), async (c) => 
     ).bind(uid),
     c.env.DB.prepare(
       `SELECT d.id AS draft_id, d.room_id, d.started_at, COUNT(p.pick_no) AS picks, SUM(p.is_auto) AS auto_picks
-         FROM draft_picks p JOIN drafts d ON d.id = p.draft_id WHERE p.user_id = ? GROUP BY d.id ORDER BY d.started_at DESC LIMIT 20`,
+         FROM legacy_draft_picks p JOIN legacy_drafts d ON d.id = p.draft_id WHERE p.user_id = ? GROUP BY d.id ORDER BY d.started_at DESC LIMIT 20`,
     ).bind(uid),
     c.env.DB.prepare(
       'SELECT c.player_id, p.name, p.rarity, c.source, c.obtained_at FROM user_collections c JOIN player_cards p ON p.id = c.player_id WHERE c.user_id = ? ORDER BY c.obtained_at DESC',

@@ -8,7 +8,7 @@ export const draftRoutes = new Hono<AppEnv>();
 draftRoutes.use('*', requireUser);
 
 async function roomOfDraft(env: Env, draftId: string): Promise<string> {
-  const row = await env.DB.prepare('SELECT room_id FROM drafts WHERE id = ?').bind(draftId).first<{ room_id: string }>();
+  const row = await env.DB.prepare('SELECT room_id FROM legacy_drafts WHERE id = ?').bind(draftId).first<{ room_id: string }>();
   if (!row) throw new ApiError('NOT_FOUND', 'draft not found');
   return row.room_id;
 }

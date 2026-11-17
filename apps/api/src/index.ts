@@ -9,6 +9,7 @@ import { adminRoutes } from './routes/admin';
 import { authRoutes } from './routes/auth';
 import { collectionRoutes, exchangeRoutes } from './routes/collection';
 import { matchModeRoutes, teamRoutes } from './routes/team';
+import { draftMatchRoutes } from './routes/draftMatch';
 import { draftRoutes } from './routes/drafts';
 import { currencyRoutes, missionRoutes, rewardRoutes } from './routes/economy';
 import { eventRoutes } from './routes/events';
@@ -26,6 +27,7 @@ import { soloRoutes } from './routes/solo';
 import { userRoutes } from './routes/users';
 
 export { RoomDO } from './room/RoomDO';
+export { DraftMatchDO } from './room/DraftMatchDO';
 
 const app = new Hono<AppEnv>();
 
@@ -58,6 +60,7 @@ app.route('/api/collection', collectionRoutes);
 app.route('/api/exchange', exchangeRoutes);
 app.route('/api/team', teamRoutes);
 app.route('/api/match', matchModeRoutes);
+app.route('/api/draft-match', draftMatchRoutes);
 app.route('/api/feedback', feedbackRoutes);
 app.route('/api/sessions', sessionRoutes);
 app.route('/api/purchases', purchaseRoutes);

@@ -44,16 +44,16 @@ export async function timerComparison(env: Env, fromMs: number, toMs: number, f:
   const pw = userIdWhere('p.user_id', f);
   const drafts = await env.DB.prepare(
     `SELECT d.pick_seconds AS seconds, COUNT(*) AS drafts, SUM(d.status = 'completed') AS completed
-       FROM drafts d JOIN rooms r ON r.id = d.room_id
+       FROM legacy_drafts d JOIN rooms r ON r.id = d.room_id
       WHERE d.started_at >= ? AND d.started_at < ? AND r.environment = ? AND r.mode IN ${TIMED_MODES}
-        AND EXISTS (SELECT 1 FROM draft_picks p WHERE p.draft_id = d.id AND p.user_id IS NOT NULL${pw.sql})
+        AND EXISTS (SELECT 1 FROM legacy_draft_picks p WHERE p.draft_id = d.id AND p.user_id IS NOT NULL${pw.sql})
       GROUP BY d.pick_seconds`,
   )
     .bind(fromMs, toMs, env.ENVIRONMENT, ...pw.binds)
     .all<{ seconds: number; drafts: number; completed: number }>();
   const picks = await env.DB.prepare(
     `SELECT d.pick_seconds AS seconds, COUNT(*) AS picks, SUM(p.is_auto) AS auto, COUNT(DISTINCT p.draft_id || ':' || p.user_id) AS players
-       FROM draft_picks p JOIN drafts d ON d.id = p.draft_id JOIN rooms r ON r.id = d.room_id
+       FROM legacy_draft_picks p JOIN legacy_drafts d ON d.id = p.draft_id JOIN rooms r ON r.id = d.room_id
       WHERE p.user_id IS NOT NULL AND d.started_at >= ? AND d.started_at < ? AND r.environment = ? AND r.mode IN ${TIMED_MODES}${pw.sql}
       GROUP BY d.pick_seconds`,
   )
@@ -73,7 +73,7 @@ export async function timerComparison(env: Env, fromMs: number, toMs: number, f:
   // time to pick (ms) of the picks made by hand, per pick time of the draft
   const speed = await env.DB.prepare(
     `SELECT d.pick_seconds AS seconds, AVG(json_extract(e.properties_json, '$.ms')) AS ms
-       FROM analytics_events e JOIN drafts d ON d.id = json_extract(e.properties_json, '$.draftId') JOIN rooms r ON r.id = d.room_id
+       FROM analytics_events e JOIN legacy_drafts d ON d.id = json_extract(e.properties_json, '$.draftId') JOIN rooms r ON r.id = d.room_id
       WHERE e.environment = ? AND e.event_name = 'draft_pick_completed' AND e.timestamp >= ? AND e.timestamp < ? AND r.mode IN ${TIMED_MODES}${ew.sql}
       GROUP BY d.pick_seconds`,
   )

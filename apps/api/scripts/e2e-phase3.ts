@@ -303,9 +303,10 @@ async function main() {
   console.log('\n[admin seasons]');
   const seasons = await api('/api/admin/seasons', { token: vt });
   const cur = seasons.data.items[0];
-  check(seasons.status === 200 && /^\d{4}-\d{2}$/.test(cur.id) && cur.players >= 4 && cur.rated_leagues >= 1, `current season ${cur.id}: ${cur.players} players, ${cur.rated_leagues} rated leagues`);
+  // since DRAFT MATCH (decision 77) the season ranking is the DRAFT MATCH ranking (checked in e2e-draft-match)
+  check(seasons.status === 200 && /^\d{4}-\d{2}$/.test(cur.id) && cur.players >= 0, `current season ${cur.id}: ${cur.players} players, ${cur.rated_leagues} leagues`);
   const lb = await api(`/api/admin/seasons/${cur.id}/leaderboard`, { token: vt });
-  check(lb.status === 200 && lb.data.items.length >= 4, 'admin season leaderboard');
+  check(lb.status === 200 && Array.isArray(lb.data.items), 'admin season leaderboard');
 
   console.log(`\n${failures === 0 ? 'ALL PHASE 3 CHECKS PASSED' : `${failures} CHECK(S) FAILED`}`);
   process.exit(failures === 0 ? 0 : 1);

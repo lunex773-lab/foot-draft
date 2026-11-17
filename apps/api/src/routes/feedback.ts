@@ -180,7 +180,7 @@ async function activityOf(env: AppEnv['Bindings'], userId: string, at: number) {
          FROM daily_user_metrics WHERE user_id = ?`,
     ).bind(userId),
     env.DB.prepare(
-      `SELECT r.id, r.mode, r.status, r.created_at, m.final_rank, (SELECT pick_seconds FROM drafts WHERE room_id = r.id LIMIT 1) AS pick_seconds
+      `SELECT r.id, r.mode, r.status, r.created_at, m.final_rank, (SELECT pick_seconds FROM legacy_drafts WHERE room_id = r.id LIMIT 1) AS pick_seconds
          FROM room_members m JOIN rooms r ON r.id = m.room_id WHERE m.user_id = ? AND r.created_at <= ? ORDER BY r.created_at DESC LIMIT 5`,
     ).bind(userId, at),
     env.DB.prepare('SELECT COUNT(*) AS n, AVG(draft_fun) AS draftFun, AVG(result_fair) AS resultFair FROM league_ratings WHERE user_id = ?').bind(userId),

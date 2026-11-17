@@ -168,7 +168,7 @@ adminRoutes.get('/cards/:id', requirePermission('cards.read'), async (c) => {
   if (!p) throw new ApiError('NOT_FOUND', 'card not found');
   const usage = await c.env.DB.prepare(
     `SELECT COUNT(*) AS picks, SUM(CASE WHEN is_auto = 1 THEN 1 ELSE 0 END) AS auto_picks, AVG(pick_no) AS avg_pick
-       FROM draft_picks WHERE player_id = ?`,
+       FROM legacy_draft_picks WHERE player_id = ?`,
   )
     .bind(p.id)
     .first<{ picks: number; auto_picks: number | null; avg_pick: number | null }>();
@@ -330,9 +330,9 @@ adminRoutes.get('/seasons', requirePermission('seasons.read'), async (c) => {
   await ensureCurrentSeason(c.env);
   const rows = await c.env.DB.prepare(
     `SELECT s.id, s.name, s.starts_at, s.ends_at, s.status, s.finalized_at,
-            (SELECT COUNT(*) FROM ranked_ratings r WHERE r.season_id = s.id AND r.games > 0) AS players,
-            (SELECT COUNT(DISTINCT room_id) FROM rating_changes rc WHERE rc.season_id = s.id) AS leagues,
-            (SELECT COUNT(DISTINCT room_id) FROM rating_changes rc WHERE rc.season_id = s.id AND rc.rated = 1) AS rated_leagues
+            (SELECT COUNT(*) FROM draft_rankings r WHERE r.season_id = s.id AND r.games > 0) AS players,
+            (SELECT COUNT(*) FROM draft_rooms dr WHERE dr.season_id = s.id AND dr.status = 'COMPLETED') AS leagues,
+            (SELECT COUNT(*) FROM draft_rooms dr WHERE dr.season_id = s.id AND dr.status = 'COMPLETED' AND dr.players >= 2) AS rated_leagues
        FROM seasons s ORDER BY s.id DESC LIMIT 36`,
   ).all();
   return c.json({ items: rows.results });
@@ -341,7 +341,8 @@ adminRoutes.get('/seasons', requirePermission('seasons.read'), async (c) => {
 adminRoutes.get('/seasons/:id/leaderboard', requirePermission('seasons.read'), async (c) => {
   const id = c.req.param('id');
   if (!/^\d{4}-\d{2}$/.test(id)) throw new ApiError('BAD_REQUEST', 'invalid season id');
-  return c.json({ season: seasonView(id), items: await leaderboard(c.env, id) });
+  // the season ranking is the DRAFT MATCH ranking (decision 77)
+  return c.json({ season: seasonView(id), items: await leaderboard(c.env, id, undefined, 'draft_rankings') });
 });
 
 // ------------------------------------------------------------------ economy (Phase 4)

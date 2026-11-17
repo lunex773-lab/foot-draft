@@ -34,7 +34,7 @@ ratingRoutes.post('/', async (c) => {
   if (typeof body.roomId !== 'string' || body.roomId.length > 64) throw new ApiError('BAD_REQUEST', 'roomId is required');
   const member = await c.env.DB.prepare(
     `SELECT r.mode, r.status, m.seat, m.final_rank,
-            (SELECT pick_seconds FROM drafts WHERE room_id = r.id ORDER BY started_at DESC LIMIT 1) AS pick_seconds
+            (SELECT pick_seconds FROM legacy_drafts WHERE room_id = r.id ORDER BY started_at DESC LIMIT 1) AS pick_seconds
        FROM rooms r JOIN room_members m ON m.room_id = r.id WHERE r.id = ? AND m.user_id = ?`,
   )
     .bind(body.roomId, user.id)

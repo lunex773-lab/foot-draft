@@ -426,9 +426,9 @@ async function main() {
   const old = '2000-01';
   d1(
     // a finished test season from an earlier run is reset first
-    `DELETE FROM season_results WHERE season_id = '${old}'; DELETE FROM ranked_ratings WHERE season_id = '${old}'; DELETE FROM seasons WHERE id = '${old}'; ` +
+    `DELETE FROM season_results WHERE season_id = '${old}'; DELETE FROM draft_rankings WHERE season_id = '${old}'; DELETE FROM seasons WHERE id = '${old}'; ` +
       `INSERT INTO seasons (id, name, starts_at, ends_at, status, created_at) VALUES ('${old}', 'test', 0, 1000, 'active', 0); ` +
-      `INSERT INTO ranked_ratings (season_id, user_id, rating, initial_rating, peak_rating, games, wins, created_at, updated_at) VALUES ('${old}', '${b.id}', 9999, 1000, 9999, 5, 3, 0, 0)`,
+      `INSERT INTO draft_rankings (season_id, user_id, rating, initial_rating, peak_rating, games, wins, created_at, updated_at) VALUES ('${old}', '${b.id}', 9999, 1000, 9999, 5, 3, 0, 0)`,
   );
   const bw = await api('/api/currency', { token: b.token });
   check(bw.data.wallet.gems.free === 300, 'season closed: 1st place receives 300 FREE GEMS');

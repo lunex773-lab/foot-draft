@@ -25,9 +25,18 @@ migrations_dir = "migrations"
 name = "ROOM"
 class_name = "RoomDO"
 
+# DRAFT MATCH rooms (official spec v2.0)
+[[durable_objects.bindings]]
+name = "DRAFT_MATCH"
+class_name = "DraftMatchDO"
+
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["RoomDO"]
+
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["DraftMatchDO"]
 
 # ------------------------------------------------------------------ dev
 [env.dev]
@@ -45,6 +54,9 @@ migrations_dir = "migrations"
 [[env.dev.durable_objects.bindings]]
 name = "ROOM"
 class_name = "RoomDO"
+[[env.dev.durable_objects.bindings]]
+name = "DRAFT_MATCH"
+class_name = "DraftMatchDO"
 
 # ------------------------------------------------------------------ staging
 [env.staging]
@@ -62,6 +74,9 @@ migrations_dir = "migrations"
 [[env.staging.durable_objects.bindings]]
 name = "ROOM"
 class_name = "RoomDO"
+[[env.staging.durable_objects.bindings]]
+name = "DRAFT_MATCH"
+class_name = "DraftMatchDO"
 
 # ------------------------------------------------------------------ production
 [env.production]
@@ -79,3 +94,6 @@ migrations_dir = "migrations"
 [[env.production.durable_objects.bindings]]
 name = "ROOM"
 class_name = "RoomDO"
+[[env.production.durable_objects.bindings]]
+name = "DRAFT_MATCH"
+class_name = "DraftMatchDO"

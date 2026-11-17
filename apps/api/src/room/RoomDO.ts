@@ -596,7 +596,7 @@ export class RoomDO extends DurableObject<Env> {
       this.env.DB.batch([
         this.env.DB.prepare("UPDATE rooms SET status = 'drafting', started_at = ? WHERE id = ?").bind(now, s.roomId),
         ...this.cpuMemberStmts(now),
-        this.env.DB.prepare("INSERT INTO drafts (id, room_id, seed, pool_json, pick_seconds, status, started_at) VALUES (?,?,?,?,?,'active',?)").bind(
+        this.env.DB.prepare("INSERT INTO legacy_drafts (id, room_id, seed, pool_json, pick_seconds, status, started_at) VALUES (?,?,?,?,?,'active',?)").bind(
           s.draft!.draftId,
           s.roomId,
           s.draft!.seed,
@@ -674,7 +674,7 @@ export class RoomDO extends DurableObject<Env> {
     const p = this.players.get(playerId)!;
     this.db(() =>
       this.env.DB.batch([
-        this.env.DB.prepare('INSERT INTO draft_picks (draft_id, pick_no, seat, user_id, player_id, is_auto, picked_at) VALUES (?,?,?,?,?,?,?)').bind(d.draftId, pick.pickNo, seat, seatInfo.userId, playerId, auto ? 1 : 0, now),
+        this.env.DB.prepare('INSERT INTO legacy_draft_picks (draft_id, pick_no, seat, user_id, player_id, is_auto, picked_at) VALUES (?,?,?,?,?,?,?)').bind(d.draftId, pick.pickNo, seat, seatInfo.userId, playerId, auto ? 1 : 0, now),
         ...(seatInfo.isCpu
           ? []
           : [
@@ -699,7 +699,7 @@ export class RoomDO extends DurableObject<Env> {
     await this.save();
     this.db(() =>
       this.env.DB.batch([
-        this.env.DB.prepare("UPDATE drafts SET status = 'completed', completed_at = ? WHERE id = ?").bind(now, d.draftId),
+        this.env.DB.prepare("UPDATE legacy_drafts SET status = 'completed', completed_at = ? WHERE id = ?").bind(now, d.draftId),
         this.roomStatusSql('lineup'),
         ...this.humanSeats().map((h) => analyticsStatement(this.env, { name: 'draft_completed', userId: h.userId, properties: { draftId: d.draftId, roomId: s.roomId, mode: s.mode, pickSeconds: s.settings.pickSeconds } })),
       ]),
