@@ -1,8 +1,9 @@
 # FOOTBALL DRAFT
 
-サッカー選手のドラフトとチーム編成で戦う、最大4人のオンライン対戦ゲーム。
-モード：クイックドラフト・ランク戦（レーティング・月間シーズン・ランキング）・ソロ課題（日替わり）・イベント（期間限定の候補）・Collection Draft（所持カードを専用枠で持ち込む）・プライベートルーム。
-経済：COINS・GEMS（無償・有償）、ガシャ（Standard・Premium、天井つき）、重複カードの交換所、ミッション、ログインボーナス、対戦報酬、Season Pass、Premium Membership、GEMS の販売（Apple・Google は未接続。ローカルと staging は模擬ストアで確認）。
+サッカー選手のカードでチームを作って戦う、最大4人のオンライン対戦ゲーム（正式基準：仕様書「MATCH / DRAFT MATCH v2.0」、`docs/11-match-plan.md`）。
+モード：MATCH（持っているカードのチームで4人の総当たり。初期選手11人、ガシャの重複で +1〜+5 に強化）・プライベート MATCH。DRAFT MATCH（チンチロで順番を決めるスネークドラフト）は次に作成。以前のドラフトのモードは画面から外した（API・記録は残す）。
+チーム画面：3つのチームの保存・おまかせ編成・戦術・総合力とケミストリー・お気に入り、選手図鑑（所持／全カード・カード詳細）。
+経済：COINS・GEMS（無償・有償）、ガシャ（Standard・Premium、天井つき。重複は強化、+5 の後は交換ポイント）、交換所、ミッション、ログインボーナス、対戦報酬、Season Pass、Premium Membership、GEMS の販売（Apple・Google は未接続。ローカルと staging は模擬ストアで確認）。
 運営管理サイト：Overview・Analytics・Retention・Economy・Revenue・Users・Feedback・GEMS 配布・Purchases（返金・会員）・商品・ガシャ管理・管理者・操作ログ（役割は owner・admin・support・viewer）。
 設計書：`docs/` 配下（現状分析・開発計画・決定事項・SIM仕様・実装記録）。
 
@@ -44,7 +45,7 @@ npm run admin:create:local -- --username あなたの管理者名
 #   ローカル確認だけなら --no-totp で2段階認証なしのアカウントも作れます（ローカル限定）。
 ```
 
-ゲームは `http://127.0.0.1:5173` で新規登録 → 「クイックドラフト」または「ルームを作成」。
+ゲームは `http://127.0.0.1:5173` で新規登録 → 「チーム」で初期選手を確認 → 「MATCH を探す」またはモード選択の「ルームを作成」。
 1人でも開始でき、空席はCPUが埋めます。友だちとは招待コード・招待リンクで同じルームに入れます。
 
 ## 選手データの更新
@@ -62,11 +63,13 @@ npm run admin:create:local -- --username あなたの管理者名
 ```bash
 npm test -w @fd/shared          # 単体テスト（乱数・選手データ・ドラフト・編成・SIM・順位）
 npm run sim:balance -- 150      # SIMのバランス検証（大量の自動試合）
-npm run e2e -w @fd/api          # API起動中に実行：4人のWebSocketクライアントでリーグを1回通しで対戦＋Phase 3（ランク・ソロ・イベント・管理）＋Phase 4（経済）＋Phase 5＋Phase 6
+npm run e2e -w @fd/api          # API起動中に実行：4人のWebSocketクライアントでリーグを1回通しで対戦＋Phase 3（ランク・ソロ・イベント・管理）＋Phase 4（経済）＋Phase 5〜7＋MATCH
 npm run e2e:phase3 -w @fd/api   # Phase 3 だけ
 npm run e2e:phase4 -w @fd/api   # Phase 4 だけ（通貨・ガシャ・交換所・ミッション・Collection Draft・テスト付与）
 npm run e2e:phase5 -w @fd/api   # Phase 5 だけ（役割・分析・継続率・フィードバック・ユーザー・GEMS 配布・操作ログ）
 npm run e2e:phase6 -w @fd/api   # Phase 6 だけ（模擬ストアの購入・返金・会員・Season Pass・ガシャ管理・商品・売上）
+npm run e2e:phase7 -w @fd/api   # Phase 7 だけ（テスト用アカウント・制限時間の比較・評価・リセット・ベータの集計）
+npm run e2e:match -w @fd/api    # MATCH だけ（初期選手・強化・チーム・MATCH のルーム・報酬）
 npm run typecheck
 ```
 
