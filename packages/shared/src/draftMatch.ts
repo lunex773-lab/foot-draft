@@ -89,7 +89,7 @@ export function groupNeeds(formation: FormationId): Record<PositionGroup, number
 
 export const groupOf = (p: Player): PositionGroup => POSITION_GROUP[p.primaryPosition];
 
-export function poolSize(players: number): number {
+export function draftMatchPoolSize(players: number): number {
   return DRAFT_MATCH_CONFIG.picksPerPlayer * players + DRAFT_MATCH_CONFIG.poolExtra;
 }
 
