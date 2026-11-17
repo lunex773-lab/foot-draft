@@ -184,8 +184,8 @@ export default function GachaPage() {
       })}
       {error && <div className="error">{error}</div>}
       {confirm && (
-        <div className="modal-bg" onClick={() => setConfirm(null)}>
-          <div className="modal panel" style={{ maxWidth: 420 }} onClick={(e) => e.stopPropagation()}>
+        <div className="modal-bg center" onClick={() => setConfirm(null)}>
+          <div className="modal panel" style={{ maxWidth: 420 }} role="dialog" aria-modal="true" aria-label="ガシャを引く確認" onClick={(e) => e.stopPropagation()}>
             <h3>{confirm.banner.name}</h3>
             <p className="small">
               {confirm.count}回引きます。{fmt(confirm.count === 10 ? confirm.banner.cost.multi : confirm.banner.cost.single)} {costLabel(confirm.banner.cost.currency, confirm.banner.cost.acceptsFreeGems)} を使います。

@@ -2,6 +2,7 @@ import { RARITY_INFO, type Player, type Rarity } from '@fd/shared';
 import { PlayerCard } from '@fd/ui';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ShootAudio } from './audio';
+import { IconTitle } from './IconTitle';
 
 /**
  * Card reveal after the goal (spec "SHOOT GACHA" 5): the net, a moment of
@@ -41,7 +42,11 @@ export function CardReveal({ items, catalog, audio, onFinish }: { items: RevealI
 
   useEffect(() => {
     if (stage === 'info') return;
-    if (stage === 'spin') audio?.flip();
+    if (stage === 'spin') {
+      audio?.flip();
+      // ICON: a swell rises into the reveal
+      if (item.rarity === 'icon') audio?.riser(STAGE_MS.spin / 1000);
+    }
     if (stage === 'reveal') audio?.sting(item.rarity);
     timer.current = window.setTimeout(() => setStage(NEXT[stage]), STAGE_MS[stage]);
     return () => {
@@ -86,7 +91,7 @@ export function CardReveal({ items, catalog, audio, onFinish }: { items: RevealI
           </div>
         </div>
       </div>
-      <div className="reveal-label">{RARITY_INFO[item.rarity].label}</div>
+      <div className="reveal-label">{item.rarity === 'icon' ? <IconTitle /> : RARITY_INFO[item.rarity].label}</div>
       {stage === 'info' && (
         <div className="reveal-info" onClick={(e) => e.stopPropagation()}>
           <div className="spread">

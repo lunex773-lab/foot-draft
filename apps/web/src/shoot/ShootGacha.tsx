@@ -1,6 +1,7 @@
 import type { Player } from '@fd/shared';
 import { useEffect, useRef, useState } from 'react';
 import { CardReveal, type RevealItem } from './CardReveal';
+import { IconTitle, preloadIconFont } from './IconTitle';
 import { ShootEngine, type ShootPhase } from './engine';
 import { bestRarity } from './plan';
 
@@ -21,6 +22,7 @@ export default function ShootGacha({ results, catalog, onClose }: { results: Rev
 
   useEffect(() => {
     document.body.classList.add('shoot-open');
+    if (rarity === 'icon') preloadIconFont();
     const canvas = canvasRef.current!;
     let engine: ShootEngine | null = null;
     try {
@@ -78,15 +80,22 @@ export default function ShootGacha({ results, catalog, onClose }: { results: Rev
               {muted ? '🔇' : '🔊'}
             </button>
             <div className="shoot-title">SHOOT!</div>
-            <button className="shoot-btn skip" onClick={() => engineRef.current?.skip()}>
+            <button
+              className="shoot-btn skip"
+              onClick={() => {
+                // the tap is a user gesture: start the sound so the card reveal is heard too
+                engineRef.current?.audio.start();
+                engineRef.current?.skip();
+              }}
+            >
               スキップ
             </button>
           </div>
           {(phase === 'aim' || phase === 'loading') && (
             <div className="shoot-hint">
               <div className="hand" aria-hidden="true" />
-              ボールを下に引っ張って、離すとシュート
-              <small>引っ張る向きで狙いが変わります（結果は決まっています）</small>
+              下に引っ張って、離すとシュート
+              <small>画面の下半分のどこからでも引けます。向きで狙いが変わります（結果は決まっています）</small>
             </div>
           )}
           {phase === 'charging' && (
@@ -94,7 +103,11 @@ export default function ShootGacha({ results, catalog, onClose }: { results: Rev
               <span style={{ width: `${Math.round(power * 100)}%` }} />
             </div>
           )}
-          {frozen && <div className="shoot-freeze">ICON</div>}
+          {frozen && (
+            <div className="shoot-freeze">
+              <IconTitle />
+            </div>
+          )}
         </>
       )}
       {phase === 'reveal' && <CardReveal items={results} catalog={catalog} audio={engineRef.current?.audio ?? null} onFinish={onClose} />}

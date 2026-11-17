@@ -43,6 +43,9 @@ function lens(aspect: number) {
   return { aim: 60, watch: 42 };
 }
 
+/** a drag can start anywhere below this fraction of the screen height (under the goal) */
+const DRAG_AREA_TOP = 0.36;
+
 export class ShootEngine {
   private renderer: THREE.WebGLRenderer;
   private composer: EffectComposer;
@@ -70,6 +73,8 @@ export class ShootEngine {
   private lastReal = 0;
   private sim = 0;
   private frozenUntil = 0;
+  /** how far down a full-power pull is (px), set when the drag starts */
+  private pullRange = 200;
   private freezeDone = false;
   private dragFrom: { x: number; y: number } | null = null;
   private aim: Aim = { power: 0, target: { x: 2, y: 1 } };
@@ -178,14 +183,21 @@ export class ShootEngine {
     return { x: r.left + ((v.x + 1) / 2) * r.width, y: r.top + ((1 - v.y) / 2) * r.height };
   }
 
-  /** spec 2-1: the drag starts on the ball (a generous area for fingers) */
+  /**
+   * spec 2-1: the drag starts on the ball, or anywhere on the lower part of the
+   * screen below the goal (easier for fingers than hitting the ball exactly)
+   */
   pointerDown(x: number, y: number): boolean {
     if (this.phase !== 'aim') return false;
     const b = this.ballOnScreen();
     const r = this.canvas.getBoundingClientRect();
-    if (Math.hypot(x - b.x, y - b.y) > Math.max(70, r.height * 0.11)) return false;
+    const onBall = Math.hypot(x - b.x, y - b.y) <= Math.max(70, r.height * 0.11);
+    const lower = y >= r.top + r.height * DRAG_AREA_TOP;
+    if (!onBall && !lower) return false;
     this.audio.start();
     this.dragFrom = { x, y };
+    // full power before the finger reaches the bottom edge, wherever the drag starts
+    this.pullRange = Math.max(r.height * 0.1, Math.min(r.height * 0.26, r.bottom - y - 16));
     this.setPhase('charging');
     return true;
   }
@@ -193,7 +205,7 @@ export class ShootEngine {
   pointerMove(x: number, y: number) {
     if (this.phase !== 'charging' || !this.dragFrom) return;
     const r = this.canvas.getBoundingClientRect();
-    this.aim = aimFromDrag(x - this.dragFrom.x, y - this.dragFrom.y, r.height);
+    this.aim = aimFromDrag(x - this.dragFrom.x, y - this.dragFrom.y, r.height, this.pullRange);
     this.events.onPower?.(this.aim.power);
   }
 

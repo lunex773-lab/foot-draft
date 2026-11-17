@@ -25,10 +25,11 @@ const MIN_SIDE = 1.35;
 
 /**
  * Pull-and-release: pulling down-right sends the ball up-left and so on.
- * dx / dy are the drag in screen pixels (down = +dy), `scale` the screen height.
+ * dx / dy are the drag in screen pixels (down = +dy), `scale` the screen height,
+ * `pullRange` how far down gives full power (less when the drag starts low on the screen).
  */
-export function aimFromDrag(dx: number, dy: number, scale: number): Aim {
-  const power = Math.max(0, Math.min(1, dy / (scale * 0.26)));
+export function aimFromDrag(dx: number, dy: number, scale: number, pullRange = scale * 0.26): Aim {
+  const power = Math.max(0, Math.min(1, dy / pullRange));
   const side = Math.max(-1, Math.min(1, -dx / (scale * 0.18)));
   const x = Math.sign(side || 0.0001) * (MIN_SIDE + Math.abs(side) * (GOAL.halfWidth - 0.45 - MIN_SIDE));
   // a gentle pull goes low, a strong pull towards the top corner
