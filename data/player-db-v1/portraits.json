@@ -1247,6 +1247,11 @@
    "model": "gpt-image-2.5-flare",
    "figma_node": "9:25",
    "generated_at": "2026-11-17"
+  },
+  "FD-250": {
+   "model": "gpt-image-2.5-flare",
+   "figma_node": "9:26",
+   "generated_at": "2026-11-17"
   }
  }
 }
