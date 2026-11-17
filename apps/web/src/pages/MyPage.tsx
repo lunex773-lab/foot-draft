@@ -1,3 +1,5 @@
+import { TierBadge } from '../components/TierBadge';
+import type { DraftMatchMe } from './RankingPage';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
@@ -24,11 +26,13 @@ export default function MyPage() {
   const { me, logout } = useAuth();
   const { wallet, membership } = useWallet();
   const [stats, setStats] = useState<{ leaguesPlayed: number; leaguesWon: number } | null>(null);
+  const [dm, setDm] = useState<DraftMatchMe | null>(null);
   const [missionsReady, setMissionsReady] = useState(0);
   const [pass, setPass] = useState<{ level: number; claimable: number; premium: boolean } | null>(null);
   const [unread, setUnread] = useState(0);
 
   useEffect(() => {
+    api<DraftMatchMe>('/api/draft-match/me').then(setDm).catch(() => undefined);
     api<{ stats: { leaguesPlayed: number; leaguesWon: number } }>('/api/users/me')
       .then((r) => setStats(r.stats))
       .catch(() => undefined);
@@ -66,11 +70,11 @@ export default function MyPage() {
               <div className="stat-value">{stats ? fmt(stats.leaguesPlayed) : '—'}</div>
               <div className="stat-sub">優勝 {stats ? fmt(stats.leaguesWon) : '—'}回</div>
             </div>
-            <div>
+            <Link to="/ranking" className="stat-link">
               <div className="stat-label">RANKING</div>
-              <div className="stat-value muted">—</div>
-              <div className="stat-sub">DRAFT MATCH で開始予定</div>
-            </div>
+              <div className="stat-value">{dm && dm.games > 0 ? <TierBadge rating={dm.rating} /> : '—'}</div>
+              <div className="stat-sub">{dm ? (dm.position ? `DRAFT MATCH ${dm.position}位` : 'DRAFT MATCH 未参加') : ''}</div>
+            </Link>
           </div>
         </article>
         <article className="fd-card">
@@ -103,7 +107,8 @@ export default function MyPage() {
       <nav className="menu-list" aria-label="マイページのメニュー">
         <Row to="/missions" label="ミッション" value={missionsReady > 0 ? <span className="badge on">{missionsReady}</span> : null} />
         <Row to="/pass" label="Season Pass" value={pass ? `Lv ${pass.level}${pass.premium ? '・プレミアム' : ''}` : null} />
-        <Row to="/play" label="モード選択" sub="MATCH・プライベート MATCH" />
+        <Row to="/play" label="モード選択" sub="MATCH・DRAFT MATCH・プライベート MATCH" />
+        <Row to="/ranking" label="DRAFT MATCH ランキング" />
         <Row to="/team" label="チーム編成" />
         <Row to="/history" label="対戦履歴" />
         <Row to="/wallet" label="残高と履歴" />

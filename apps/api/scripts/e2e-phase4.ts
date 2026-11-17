@@ -416,7 +416,7 @@ async function main() {
   await playLeague([sc]);
   const sr = sc.snap!.outcome!.rewards![sc.snap!.you!];
   const cleared = sc.snap!.outcome!.solo!.cleared;
-  check(!sr.matchRewardGiven && sr.leaguesToday === 10 && sr.coins === (cleared ? 200 : 0), `11th league today: no match reward${cleared ? ', solo clear bonus 200 COINS' : ' (challenge not cleared)'}`);
+  check(!sr.matchRewardGiven && sr.leaguesToday === 10 && sr.coins === (cleared ? 200 : 0), `11th league today: no match reward${cleared ? ', solo clear bonus 200 COINS' : ' (challenge not cleared)'} ${JSON.stringify(sr)}`);
   const cm = await api('/api/missions', { token: cUser.token });
   check(cm.data.items.find((x: any) => x.id === 'd-league').completed && cm.data.items.find((x: any) => x.id === 'b-first-league').completed, 'missions still count above the cap');
   sc.close();
@@ -426,7 +426,7 @@ async function main() {
   const old = '2000-01';
   d1(
     // a finished test season from an earlier run is reset first
-    `DELETE FROM season_results WHERE season_id = '${old}'; DELETE FROM draft_rankings WHERE season_id = '${old}'; DELETE FROM seasons WHERE id = '${old}'; ` +
+    `DELETE FROM season_results WHERE season_id = '${old}'; DELETE FROM draft_rankings WHERE season_id = '${old}'; DELETE FROM ranked_ratings WHERE season_id = '${old}'; DELETE FROM seasons WHERE id = '${old}'; ` +
       `INSERT INTO seasons (id, name, starts_at, ends_at, status, created_at) VALUES ('${old}', 'test', 0, 1000, 'active', 0); ` +
       `INSERT INTO draft_rankings (season_id, user_id, rating, initial_rating, peak_rating, games, wins, created_at, updated_at) VALUES ('${old}', '${b.id}', 9999, 1000, 9999, 5, 3, 0, 0)`,
   );

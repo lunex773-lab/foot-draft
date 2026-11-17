@@ -9,7 +9,7 @@ import { seatColor, signed } from '../../lib/labels';
 import { fmt, useWallet } from '../../lib/wallet';
 
 /** COINS and missions earned by this league (decided by the server) */
-function Rewards({ snap }: { snap: RoomSnapshot }) {
+export function Rewards({ snap }: { snap: RoomSnapshot }) {
   const { refresh } = useWallet();
   const r = snap.you !== null ? snap.outcome?.rewards?.[snap.you] : undefined;
   useEffect(() => {

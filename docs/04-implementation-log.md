@@ -1,5 +1,27 @@
 # 実装記録
 
+## 2026-11-17 DRAFT MATCH（チンチロ・共通カードプール・スネークドラフト・ランキング）
+
+計画：`docs/12-draft-match-plan.md`。決定事項：`docs/02-decisions.md` の 75〜85。
+
+| 区分 | 内容 | 主なファイル |
+| --- | --- | --- |
+| 状態管理 | 仕様書の WAITING → MATCHING → FORMATION_SELECTION → POOL_GENERATION → CHINCHIRO → DRAFT_ORDER → PLAYER_DRAFT → TEAM_CONFIRMATION ⇄ SIMULATION → RESULT → COMPLETED を新しい Durable Object（DraftMatchDO）で管理。許される移り変わりだけを通し、履歴を D1 に記録。サーバー時刻で進み、再接続すると全部の状態が戻る | `api/src/room/DraftMatchDO.ts`, `shared/src/draftMatch.ts` |
+| マッチング | 人だけの2〜4人（CPUなし）。約60秒待って2〜3人ならその人数、4人で即開始。自分の対戦中のルームがあればそこへ戻る | `api/src/routes/draftMatch.ts` |
+| チンチロ | 各自がタップ（10秒、時間切れは自動）、出目はサーバーが決め、全員そろって一斉公開。最大3投、同じ結果は再勝負。画面ではカップを振り、サイコロが重力・摩擦・衝突で転がってサーバーの出目で止まる | `shared/src/chinchiro.ts`, `web/src/components/Chinchiro.tsx` |
+| カードプール | 11×人数＋12枚。全員のフォーメーションに必要な GK・DF・MF・FW＋予備、レアリティは全カードと同じ割合（各最低1枚） | `shared/src/draftMatch.ts` |
+| ドラフト | スネーク11ラウンド・15秒。手番・指名済み・ポジションの空きをサーバーで確認、同じカードは D1 の一意制約でも防ぐ。時間切れは足りないポジションから自動指名 | `DraftMatchDO.ts` |
+| チーム確認・試合 | 11人・控えなし・フォーメーション固定で配置と戦術を変更（60秒、各節の前にも）。人数に合わせた総当たり、試合はサーバーの SIM（強化なし） | `DraftMatchDO.ts`, `web/src/pages/DraftMatchPage.tsx` |
+| ランキング・報酬 | 月間シーズンのレート（DRAFT MATCH 専用）。シーズンの最終順位と報酬もこのランキングに変更。報酬は MATCH と同じ（COINS・ミッション・Season Pass） | `lib/seasons.ts`, `routes/draftMatch.ts`, `web/src/pages/RankingPage.tsx` |
+| 監査ログ | 拒否した操作を draft_audit_logs に記録 | `DraftMatchDO.ts` |
+| 画面 | ホーム・モード選択に DRAFT MATCH（自分のレート）、ルーム（進行の表示・マッチング・フォーメーション選択・チンチロ・ドラフト・チーム確認・試合・結果）、ランキング、マイページにレートと順位 | `web/src/pages/*` |
+| D1 | マイグレーション `0010_draft_match.sql`（既存の drafts・draft_picks を legacy_ に改名、仕様書の8つの表＋監査ログ） | `apps/api/migrations/` |
+
+検証：
+- 単体テスト：shared 87件（チンチロ・プール・指名・自動指名・総当たり・状態の移り変わりを追加）
+- 結合テスト `npm run e2e:draft-match` すべて成功（4人・2人・3人のルーム、拒否される操作、再接続、途中退出、ランキング、報酬、状態の履歴、監査ログ）。Phase 2〜7・MATCH の結合テストも成功（Phase 3・4 はシーズンのランキングが DRAFT MATCH になったことに合わせて更新）
+- ブラウザ（iPhone 15 の大きさ、2人）：フォーメーション選択 → チンチロ（振る・転がる・役の表示・再勝負）→ 指名順 → ドラフト（手で10回指名）→ チーム確認 → 試合 → 結果（1位・レート +16・COINS 250・ミッション）→ ランキング。コンソールエラーなし、横のはみ出しなし
+
 ## 2026-11-17 MATCH（所持カードのチームで戦うモード）とチーム画面
 
 計画：`docs/11-match-plan.md`。決定事項：`docs/02-decisions.md` の 68〜74。仕様書「MATCH / DRAFT MATCH SYSTEM UPDATE v2.0」を新しい正式基準とした。

@@ -427,6 +427,22 @@ async function main() {
   ch3.close();
   ci3.close();
 
+  // ------------------------------------------------------------ admin
+  console.log('\n[admin]');
+  const admin = `dm_admin_${RUN}`;
+  execFileSync('npx', ['tsx', join(HERE, 'create-admin.ts'), '--local', '--username', admin, '--role', 'viewer', '--no-totp'], {
+    env: { ...process.env, FD_ADMIN_PASSWORD: 'admin-password-123' },
+    cwd: join(HERE, '..'),
+    stdio: ['ignore', 'ignore', 'inherit'],
+  });
+  const vt = (await api('/api/admin/auth/login', { body: { username: admin, password: 'admin-password-123' } })).data.token as string;
+  const today = new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10);
+  const st = await api(`/api/admin/draft-match?from=${today}&to=${today}`, { token: vt });
+  check(st.status === 200 && st.data.states.some((x: any) => x.status === 'COMPLETED') && st.data.hands.length > 0 && st.data.audit.byReason.length > 0, 'admin: DRAFT MATCH rooms, チンチロ hands and the audit log');
+  check((await api(`/api/admin/draft-match?from=${today}&to=${today}`, { token: a.token })).status === 401, 'admin: a player token is refused');
+  const lb = await api(`/api/admin/seasons/${(await api('/api/draft-match/ranking', { token: a.token })).data.season.id}/leaderboard`, { token: vt });
+  check(lb.status === 200 && lb.data.items.some((x: any) => x.userId === a.id), 'admin: the season leaderboard is the DRAFT MATCH ranking');
+
   // ------------------------------------------------------------ season (admin)
   console.log('\n[season]');
   const seasonId = (await api('/api/draft-match/ranking', { token: a.token })).data.season.id;

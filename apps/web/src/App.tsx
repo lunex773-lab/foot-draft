@@ -15,6 +15,8 @@ const GachaPage = lazy(() => import('./pages/GachaPage'));
 const GachaDetailPage = lazy(() => import('./pages/GachaPage').then((m) => ({ default: m.GachaDetailPage })));
 const GachaHistoryPage = lazy(() => import('./pages/GachaPage').then((m) => ({ default: m.GachaHistoryPage })));
 const TeamPage = lazy(() => import('./pages/TeamPage'));
+const DraftMatchPage = lazy(() => import('./pages/DraftMatchPage'));
+const RankingPage = lazy(() => import('./pages/RankingPage'));
 const ExchangePage = lazy(() => import('./pages/ExchangePage'));
 const MissionsPage = lazy(() => import('./pages/MissionsPage'));
 const WalletPage = lazy(() => import('./pages/WalletPage'));
@@ -110,7 +112,7 @@ function tabOf(path: string): Tab {
   if (/^\/(team|cards)/.test(path)) return 'team';
   if (/^\/(gacha|exchange)/.test(path)) return 'gacha';
   if (/^\/(shop|pass)/.test(path)) return 'shop';
-  if (/^\/(me|missions|history|wallet|settings|match)/.test(path)) return 'me';
+  if (/^\/(me|missions|history|wallet|settings|match|ranking)/.test(path)) return 'me';
   return 'home';
 }
 
@@ -216,7 +218,7 @@ function ShellInner() {
   const online = useOnline();
   const loc = useLocation();
   // the draft, lineup and match screens use the whole width on computers; the menu is hidden in a room
-  const inRoom = loc.pathname.startsWith('/room/');
+  const inRoom = loc.pathname.startsWith('/room/') || loc.pathname.startsWith('/draft/');
   const wide = inRoom || loc.pathname.startsWith('/match/');
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -257,6 +259,8 @@ function ShellInner() {
               <Route path="/match/:matchId" element={<MatchReplayPage />} />
               <Route path="/cards" element={<CatalogPage />} />
               <Route path="/team" element={<TeamPage />} />
+              <Route path="/draft/:roomId" element={<DraftMatchPage />} />
+              <Route path="/ranking" element={<RankingPage />} />
               <Route path="/gacha" element={<GachaPage />} />
               <Route path="/gacha/history" element={<GachaHistoryPage />} />
               <Route path="/gacha/:bannerId" element={<GachaDetailPage />} />

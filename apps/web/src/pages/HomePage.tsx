@@ -8,7 +8,7 @@ import { useCatalog } from '../lib/catalog';
 import { errorText } from '../lib/labels';
 import { useTeam } from '../lib/team';
 import { fmt, useWallet } from '../lib/wallet';
-import { ActiveRooms, type HistoryRow } from './PlayPage';
+import { ActiveRooms, DraftMatchCard, type HistoryRow } from './PlayPage';
 
 /**
  * Home: hero, the DUEL button (mode select), MATCH and DRAFT MATCH (official
@@ -41,12 +41,12 @@ export default function HomePage() {
       .catch(() => undefined);
   }, []);
 
-  const go = async (fn: () => Promise<{ roomId: string }>) => {
+  const go = async (fn: () => Promise<{ roomId: string; draft?: boolean }>) => {
     setBusy(true);
     setError(null);
     try {
       const r = await fn();
-      nav(`/room/${r.roomId}`);
+      nav(`${r.draft ? '/draft' : '/room'}/${r.roomId}`);
     } catch (e) {
       setError(errorText((e as { code?: string }).code ?? '', (e as Error).message));
     } finally {
@@ -101,13 +101,7 @@ export default function HomePage() {
             </Link>
           </div>
         </article>
-        <article className="fd-card soon">
-          <div className="fd-card-header">
-            <h3>DRAFT MATCH</h3>
-            <span className="badge">準備中</span>
-          </div>
-          <p>共通のカードプールから、チンチロで決めた順番に11人を指名して戦うモード。ランキングはこのモードで行います。</p>
-        </article>
+        <DraftMatchCard busy={busy} go={go} />
       </section>
 
       <MyTeamCard />

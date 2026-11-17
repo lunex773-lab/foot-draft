@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import { errorText, modeLabel } from '../lib/labels';
+import { TierBadge } from '../components/TierBadge';
 import { MyTeamCard } from './HomePage';
+import type { DraftMatchMe } from './RankingPage';
 
 export interface HistoryRow {
   room_id: string;
@@ -14,6 +16,34 @@ export interface HistoryRow {
 }
 
 const STATUS_LABEL: Record<string, string> = { lobby: '待機中', drafting: 'ドラフト中', lineup: '編成中', playing: '試合中' };
+
+/** DRAFT MATCH (official spec v2.0): matchmaking for 2-4 people and the ranking */
+export function DraftMatchCard({ busy, go }: { busy: boolean; go: (fn: () => Promise<{ roomId: string; draft?: boolean }>) => void }) {
+  const [me, setMe] = useState<DraftMatchMe | null>(null);
+  useEffect(() => {
+    api<DraftMatchMe>('/api/draft-match/me').then(setMe).catch(() => undefined);
+  }, []);
+  return (
+    <article className="fd-card">
+      <div className="fd-card-header">
+        <h3>DRAFT MATCH</h3>
+        {me && me.games > 0 ? <TierBadge rating={me.rating} /> : <span className="badge">2-4 PLAYERS</span>}
+      </div>
+      <p>
+        全員共通のカードプールから、チンチロで決めた順番のスネークドラフトで11人を指名して総当たり。持っているカード・強化は使いません。ランキング（レート）はこのモードだけ。
+        {me && me.games > 0 && `（${me.season.name}・${me.games}試合${me.position ? `・${me.position}位` : ''}）`}
+      </p>
+      <div className="button-row">
+        <button className="btn primary" disabled={busy} onClick={() => go(async () => ({ ...(await api<{ roomId: string }>('/api/draft-match/queue', { body: {} })), draft: true }))}>
+          {me?.activeRoomId ? '対戦中のルームに戻る' : 'DRAFT MATCH を探す'}
+        </button>
+        <Link className="btn" to="/ranking">
+          ランキング
+        </Link>
+      </div>
+    </article>
+  );
+}
 
 /** rooms the player has not finished (shown on the home screen and here) */
 export function ActiveRooms({ rooms }: { rooms: HistoryRow[] }) {
@@ -31,7 +61,7 @@ export function ActiveRooms({ rooms }: { rooms: HistoryRow[] }) {
               {modeLabel(r.mode)}
               {r.mode === 'quick' || r.mode === 'private' || r.mode === 'match' ? `・${r.code}` : ''}・{STATUS_LABEL[r.status] ?? r.status}
             </span>
-            <Link className="btn small primary" to={`/room/${r.room_id}`}>
+            <Link className="btn small primary" to={r.mode === 'draft_match' ? `/draft/${r.room_id}` : `/room/${r.room_id}`}>
               戻る
             </Link>
           </div>
@@ -58,12 +88,12 @@ export default function PlayPage() {
       .catch(() => undefined);
   }, []);
 
-  const go = async (fn: () => Promise<{ roomId: string }>) => {
+  const go = async (fn: () => Promise<{ roomId: string; draft?: boolean }>) => {
     setBusy(true);
     setError(null);
     try {
       const r = await fn();
-      nav(`/room/${r.roomId}`);
+      nav(`${r.draft ? '/draft' : '/room'}/${r.roomId}`);
     } catch (e) {
       setError(errorText((e as { code?: string }).code ?? '', (e as Error).message));
     } finally {
@@ -99,18 +129,7 @@ export default function PlayPage() {
             </Link>
           </div>
         </article>
-        <article className="fd-card soon">
-          <div className="fd-card-header">
-            <h3>DRAFT MATCH</h3>
-            <span className="badge">準備中</span>
-          </div>
-          <p>2〜4人。全員共通のカードプールから、チンチロで決めた順番のスネークドラフトで11人を指名して戦います。持っているカードや強化は使いません。ランキングポイントはこのモード専用です。</p>
-          <div className="button-row">
-            <button className="btn" disabled>
-              近日公開
-            </button>
-          </div>
-        </article>
+        <DraftMatchCard busy={busy} go={go} />
       </section>
 
       <MyTeamCard />

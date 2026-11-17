@@ -225,3 +225,37 @@ adminGameStatRoutes.get('/drafts', requirePermission('analytics.read'), async (c
     timer: await timerComparison(c.env, s.fromMs, s.toMs, filterOf(q)),
   });
 });
+
+// ---------------------------------------------------------------- DRAFT MATCH
+
+/**
+ * DRAFT MATCH (official spec v2.0): rooms by state, people per room, チンチロ hands,
+ * automatic picks and the refused operations of the audit log (spec 10).
+ */
+adminGameStatRoutes.get('/draft-match', requirePermission('analytics.read'), async (c) => {
+  const period = periodOf(c.req.query());
+  const from = dayStart(period.from);
+  const to = dayStart(addDays(period.to, 1));
+  const env = c.env.ENVIRONMENT;
+  const [states, sizes, hands, picks, reasons, recent] = await c.env.DB.batch([
+    c.env.DB.prepare('SELECT status, COUNT(*) AS n FROM draft_rooms WHERE created_at >= ? AND created_at < ? AND environment = ? GROUP BY status').bind(from, to, env),
+    c.env.DB.prepare("SELECT players, COUNT(*) AS n FROM draft_rooms WHERE created_at >= ? AND created_at < ? AND environment = ? AND status = 'COMPLETED' GROUP BY players ORDER BY players").bind(from, to, env),
+    c.env.DB.prepare(
+      'SELECT h.hand, COUNT(*) AS n, SUM(h.is_auto) AS auto FROM draft_dice_results h JOIN draft_rooms d ON d.id = h.room_id WHERE h.created_at >= ? AND h.created_at < ? AND d.environment = ? GROUP BY h.hand',
+    ).bind(from, to, env),
+    c.env.DB.prepare('SELECT COUNT(*) AS n, SUM(p.is_auto) AS auto FROM draft_picks p JOIN draft_rooms d ON d.id = p.room_id WHERE p.picked_at >= ? AND p.picked_at < ? AND d.environment = ?').bind(from, to, env),
+    c.env.DB.prepare('SELECT a.action, a.reason, COUNT(*) AS n FROM draft_audit_logs a JOIN draft_rooms d ON d.id = a.room_id WHERE a.created_at >= ? AND a.created_at < ? AND d.environment = ? GROUP BY a.action, a.reason ORDER BY n DESC LIMIT 30').bind(from, to, env),
+    c.env.DB.prepare(
+      'SELECT a.created_at, a.room_id, a.status, a.action, a.reason, a.user_id FROM draft_audit_logs a JOIN draft_rooms d ON d.id = a.room_id WHERE a.created_at >= ? AND a.created_at < ? AND d.environment = ? ORDER BY a.created_at DESC LIMIT 50',
+    ).bind(from, to, env),
+  ]);
+  const p = (picks.results[0] ?? {}) as { n?: number; auto?: number };
+  return c.json({
+    period,
+    states: states.results,
+    sizes: sizes.results,
+    hands: hands.results,
+    picks: { total: p.n ?? 0, auto: p.auto ?? 0, autoRate: pct(p.auto ?? 0, p.n ?? 0) },
+    audit: { byReason: reasons.results, recent: recent.results },
+  });
+});

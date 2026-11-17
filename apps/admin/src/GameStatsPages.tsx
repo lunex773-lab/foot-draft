@@ -343,6 +343,83 @@ function CardTable({ rows, title, note }: { rows: Drafts['earliest'] | Drafts['i
   );
 }
 
+const HAND_JA: Record<string, string> = { pinzoro: 'ピンゾロ', shigoro: 'シゴロ', zorome: 'ゾロ目', normal: '通常役', hifumi: 'ヒフミ', none: '役なし' };
+const STATE_JA: Record<string, string> = {
+  WAITING: '待機', MATCHING: 'マッチング', FORMATION_SELECTION: 'フォーメーション', POOL_GENERATION: 'プール作成', CHINCHIRO: 'チンチロ', DRAFT_ORDER: '指名順',
+  PLAYER_DRAFT: 'ドラフト', TEAM_CONFIRMATION: 'チーム確認', SIMULATION: '試合', RESULT: '結果', COMPLETED: '完了', CANCELLED: '取り消し',
+};
+
+interface DraftMatchStats {
+  states: { status: string; n: number }[];
+  sizes: { players: number; n: number }[];
+  hands: { hand: string; n: number; auto: number }[];
+  picks: { total: number; auto: number; autoRate: number | null };
+  audit: { byReason: { action: string; reason: string; n: number }[]; recent: { created_at: number; room_id: string; status: string; action: string; reason: string; user_id: string | null }[] };
+}
+
+/** DRAFT MATCH (official spec v2.0): rooms, チンチロ, automatic picks and the audit log of refused operations */
+function DraftMatchSection({ from, to }: { from: string; to: string }) {
+  const { data: d, error } = useLoad<DraftMatchStats>(`/draft-match?from=${from}&to=${to}`);
+  if (error) return <div className="error">{error}</div>;
+  if (!d) return <div className="muted">読み込み中…</div>;
+  const completed = d.states.find((s) => s.status === 'COMPLETED')?.n ?? 0;
+  const throws = d.hands.reduce((s, h) => s + h.n, 0);
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div className="tiles">
+        <StatTile label="DRAFT MATCH（完了）" value={completed} sub={`全ルーム ${fmtInt(d.states.reduce((s, x) => s + x.n, 0))}`} />
+        <StatTile label="時間切れの自動指名" value={d.picks.autoRate} format={(n) => fmtPct(n)} upIsGood={false} sub={`${fmtInt(d.picks.auto)} / ${fmtInt(d.picks.total)}`} />
+        <StatTile label="チンチロの投数" value={throws} sub={`自動 ${fmtInt(d.hands.reduce((s, h) => s + (h.auto ?? 0), 0))}`} />
+        <StatTile label="拒否した操作" value={d.audit.byReason.reduce((s, r) => s + r.n, 0)} upIsGood={false} />
+      </div>
+      <div className="grid2">
+        <div className="panel">
+          <BarList title="ルームの状態" data={d.states.map((s) => ({ label: STATE_JA[s.status] ?? s.status, value: s.n }))} />
+          <BarList title="完了したルームの人数" data={d.sizes.map((s) => ({ label: `${s.players}人`, value: s.n }))} />
+        </div>
+        <div className="panel">
+          <BarList title="チンチロの役（全投）" data={d.hands.map((h) => ({ label: HAND_JA[h.hand] ?? h.hand, value: h.n }))} />
+        </div>
+      </div>
+      <div className="panel">
+        <h3>監査ログ（拒否した操作）</h3>
+        <BarList title="理由" data={d.audit.byReason.map((r) => ({ label: `${r.action} / ${r.reason}`, value: r.n }))} />
+        <div className="scroll-x" style={{ marginTop: 10 }}>
+          <table className="tbl">
+            <thead>
+              <tr>
+                <th>日時</th>
+                <th>ルーム</th>
+                <th>状態</th>
+                <th>操作</th>
+                <th>理由</th>
+              </tr>
+            </thead>
+            <tbody>
+              {d.audit.recent.map((r, i) => (
+                <tr key={i}>
+                  <td className="small">{new Date(r.created_at).toLocaleString('ja-JP')}</td>
+                  <td className="small mono">{r.room_id.slice(0, 8)}</td>
+                  <td className="small">{STATE_JA[r.status] ?? r.status}</td>
+                  <td>{r.action}</td>
+                  <td>{r.reason}</td>
+                </tr>
+              ))}
+              {d.audit.recent.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="muted">
+                    この期間の記録はありません
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function DraftAnalyticsPage() {
   const [period, setPeriod] = usePeriod(14);
   const [mode, setMode] = useState('');
@@ -353,6 +430,9 @@ export function DraftAnalyticsPage() {
       <PeriodFilter value={period} onChange={setPeriod}>
         <ModeSelect value={mode} onChange={setMode} />
       </PeriodFilter>
+      <h2>DRAFT MATCH</h2>
+      <DraftMatchSection from={period.from} to={period.to} />
+      <h2 style={{ marginTop: 24 }}>以前のドラフト（クイック・ランク戦など、記録）</h2>
       {error && <div className="error">{error}</div>}
       {d && (
         <div style={{ opacity: loading ? 0.5 : 1, display: 'flex', flexDirection: 'column', gap: 14 }}>
