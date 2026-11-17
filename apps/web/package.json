@@ -14,11 +14,13 @@
     "@fd/ui": "*",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "react-router-dom": "^7.6.0"
+    "react-router-dom": "^7.6.0",
+    "three": "0.170.0"
   },
   "devDependencies": {
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",
+    "@types/three": "0.170.0",
     "@vitejs/plugin-react": "^5.0.0",
     "typescript": "~5.9.3",
     "vite": "^7.1.0"

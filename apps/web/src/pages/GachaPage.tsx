@@ -1,11 +1,13 @@
 import { CURRENCY_LABEL_JA, ECONOMY_CONFIG, RARITIES, RARITY_INFO, type Player, type Rarity } from '@fd/shared';
 import { PlayerCard } from '@fd/ui';
-import { useEffect, useState } from 'react';
+import { Suspense, lazy, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useCatalog } from '../lib/catalog';
 import { errorText, formatDateTime, formatJst } from '../lib/labels';
 import { fmt, newRequestId, useWallet, type Wallet } from '../lib/wallet';
+
+const ShootGacha = lazy(() => import('../shoot/ShootGacha'));
 
 interface PityView {
   epicIn: number;
@@ -88,6 +90,12 @@ export default function GachaPage() {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<DrawResponse | null>(null);
+  /** SHOOT GACHA: the result is decided; the animation shows it before the list */
+  const [shooting, setShooting] = useState<DrawResponse | null>(null);
+  useEffect(() => {
+    // load the 3D animation in the background so that it starts at once
+    void import('../shoot/ShootGacha');
+  }, []);
   const [confirm, setConfirm] = useState<{ banner: Banner; count: 1 | 10 } | null>(null);
 
   const load = () =>
@@ -108,7 +116,7 @@ export default function GachaPage() {
     setError(null);
     try {
       const r = await api<DrawResponse>(`/api/gacha/banners/${banner.id}/draw`, { body: { count, requestId: newRequestId() } });
-      setResult(r);
+      setShooting(r);
       setWallet(r.wallet);
       setBanners((bs) => bs.map((b) => (b.id === banner.id ? { ...b, pity: r.pity } : b)));
     } catch (e) {
@@ -193,6 +201,18 @@ export default function GachaPage() {
             </div>
           </div>
         </div>
+      )}
+      {shooting && (
+        <Suspense fallback={<div className="shoot-loading">SHOOT!</div>}>
+          <ShootGacha
+            results={shooting.results}
+            catalog={catalog}
+            onClose={() => {
+              setResult(shooting);
+              setShooting(null);
+            }}
+          />
+        </Suspense>
       )}
       {result && <DrawResultModal result={result} catalog={catalog} onClose={() => setResult(null)} />}
     </div>

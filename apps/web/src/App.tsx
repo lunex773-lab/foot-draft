@@ -17,6 +17,8 @@ const GachaHistoryPage = lazy(() => import('./pages/GachaPage').then((m) => ({ d
 const TeamPage = lazy(() => import('./pages/TeamPage'));
 const DraftMatchPage = lazy(() => import('./pages/DraftMatchPage'));
 const RankingPage = lazy(() => import('./pages/RankingPage'));
+/** development only: preview of the SHOOT GACHA by rarity (not in production builds) */
+const DevShootPage = import.meta.env.DEV ? lazy(() => import('./shoot/DevShootPage')) : null;
 const ExchangePage = lazy(() => import('./pages/ExchangePage'));
 const MissionsPage = lazy(() => import('./pages/MissionsPage'));
 const WalletPage = lazy(() => import('./pages/WalletPage'));
@@ -261,6 +263,7 @@ function ShellInner() {
               <Route path="/team" element={<TeamPage />} />
               <Route path="/draft/:roomId" element={<DraftMatchPage />} />
               <Route path="/ranking" element={<RankingPage />} />
+              {DevShootPage && <Route path="/dev/shoot" element={<DevShootPage />} />}
               <Route path="/gacha" element={<GachaPage />} />
               <Route path="/gacha/history" element={<GachaHistoryPage />} />
               <Route path="/gacha/:bannerId" element={<GachaDetailPage />} />

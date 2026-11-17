@@ -2,8 +2,9 @@
 
 サッカー選手のカードでチームを作って戦う、最大4人のオンライン対戦ゲーム（正式基準：仕様書「MATCH / DRAFT MATCH v2.0」、`docs/11-match-plan.md`）。
 モード：MATCH（持っているカードのチームで4人の総当たり。初期選手11人、ガシャの重複で +1〜+5 に強化）・プライベート MATCH・DRAFT MATCH（2〜4人、共通カードプール、チンチロで指名順、11人のスネークドラフト、月間ランキング：`docs/12-draft-match-plan.md`）。以前のドラフトのモードは画面から外した（API・記録は残す）。
+SHOOT GACHA：ガシャを引くと、一人称の PK（three.js の 3D、引っ張って離すとシュート、レアリティでキーパーの反応が変わり必ずゴール）のあとにカードが登場する（`docs/13-shoot-gacha-plan.md`）。
 チーム画面：3つのチームの保存・おまかせ編成・戦術・総合力とケミストリー・お気に入り、選手図鑑（所持／全カード・カード詳細）。
-経済：COINS・GEMS（無償・有償）、ガシャ（Standard・Premium、天井つき。重複は強化、+5 の後は交換ポイント）、交換所、ミッション、ログインボーナス、対戦報酬、Season Pass、Premium Membership、GEMS の販売（Apple・Google は未接続。ローカルと staging は模擬ストアで確認）。
+経済：COINS・GEMS（無償・有償）、ガシャ（Standard・Premium、天井つき。重複は強化、+5 の後は交換ポイント。Premium は無償 GEMS → 有償 GEMS の順に使う）、交換所、ミッション、ログインボーナス、対戦報酬、Season Pass、Premium Membership、GEMS の販売（Apple・Google は未接続。ローカルと staging は模擬ストアで確認）。
 運営管理サイト：Overview・Analytics・Retention・Economy・Revenue・Users・Feedback・GEMS 配布・Purchases（返金・会員）・商品・ガシャ管理・管理者・操作ログ（役割は owner・admin・support・viewer）。
 設計書：`docs/` 配下（現状分析・開発計画・決定事項・SIM仕様・実装記録）。
 
@@ -19,7 +20,7 @@
 | `tools/card-art` | カード画像を作るツール（実写の肖像の生成用の指示文・ダウンロード・カード作成、イラストの描き込み） |
 | `packages/ui` | 選手カード（データベースのカード画像を表示）・国旗 |
 | `apps/api` | ゲームのバックエンド。Cloudflare Workers（Hono）＋ D1 ＋ Durable Objects（`RoomDO`：ルーム・ドラフト・試合の進行をサーバーで確定） |
-| `apps/web` | ゲーム本体（React＋Vite） |
+| `apps/web` | ゲーム本体（React＋Vite）。`src/shoot/` は SHOOT GACHA の 3D 演出（three.js） |
 | `apps/admin` | FOOTBALL DRAFT ADMIN（運営管理サイト。管理者専用認証） |
 
 ## ローカルで動かす
@@ -91,3 +92,7 @@ GitHub Actions で Cloudflare に公開します（開発ブランチへのプ�
 - `docs/07-phase4-plan.md` Phase 4（コレクション・経済）の計画
 - `docs/08-phase5-plan.md` Phase 5（運営管理サイト）の計画
 - `docs/09-phase6-plan.md` Phase 6（課金・運営）の計画
+- `docs/10-phase7-plan.md` Phase 7（ベータテスト）の計画
+- `docs/11-match-plan.md` MATCH・チーム画面（仕様書 v2.0）
+- `docs/12-draft-match-plan.md` DRAFT MATCH（仕様書 v2.0）
+- `docs/13-shoot-gacha-plan.md` SHOOT GACHA（3D の PK ガシャ演出）

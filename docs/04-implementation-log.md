@@ -1,5 +1,27 @@
 # 実装記録
 
+## 2026-11-17 SHOOT GACHA（3D の PK ガシャ演出）と無償 GEMS のガシャ利用
+
+計画：`docs/13-shoot-gacha-plan.md`。決定事項：`docs/02-decisions.md` の 86〜93。
+
+| 区分 | 内容 | 主なファイル |
+| --- | --- | --- |
+| 無償 GEMS | ガシャごとに「無償GEMSも使える」を設定（管理サイトのガシャ管理）。今の Premium は使える。無償 → 有償の順に自動で使い、台帳に分けて記録。ガシャ画面に「無償GEMSも使えます」と表示 | `api/migrations/0011_free_gems_gacha.sql`, `api/src/routes/gacha.ts`, `admin/src/GachaAdminPage.tsx`, `web/src/pages/GachaPage.tsx` |
+| 抽選との関係 | 「引く」でサーバーが抽選・引き落とし・付与を確定してから演出を始める。演出は確定した結果を見せるだけ（確率・天井・通貨・プールは変更なし） | `web/src/pages/GachaPage.tsx` |
+| 3D スタジアム | three.js。夜のスタジアム（芝・ライン・ゴール・LED 広告板・観客席・照明塔）、影、ブルーム。テクスチャはすべてコードで描く | `web/src/shoot/stadium.ts`, `textures.ts` |
+| 操作 | ボールに触れて下に引く → 引いた量だけ右足を振り上げ、狙いの点線を表示 → 離すと軸足の踏み込み・キック・フォロースルー。引く向きで狙いが変わる。シュート後は入力を受け付けない | `web/src/shoot/engine.ts`, `kicker.ts`, `plan.ts` |
+| ボール・ネット | 重力・カーブ・回転・光の軌跡。ネットは布のシミュレーションで膨らんで揺れる | `engine.ts`, `net.ts`, `effects.ts` |
+| キーパー | レアリティ別の反応（COMMON 遅れる・RARE 素早い／青・EPIC 指先で触れる／紫・LEGENDARY 完璧な飛び込み／金・ICON 時間停止・暗転・虹色）。必ずゴール | `keeper.ts`, `plan.ts` |
+| カード登場 | 暗転 → シルエット → 回転 → 絵柄 → レアリティの演出 → 選手名・能力値・NEW／強化／交換ポイント。今のカードを使う。10連は1枚ずつ（タップで早送り、まとめて表示）。最後に今の抽選結果の一覧 | `shoot/CardReveal.tsx` |
+| スキップ・音 | いつでもスキップ（Esc も）。Web Audio の効果音、アニメーション中のボタンと設定画面の「サウンド」で消せる | `shoot/ShootGacha.tsx`, `shoot/audio.ts`, `lib/sound.ts`, `pages/SettingsPage.tsx` |
+| 読み込み | 3D の部分は別のファイル（ガシャ画面を開いた時に先に読み込む）。WebGL が使えない端末はカードの登場から | `pages/GachaPage.tsx` |
+| 確認用 | 開発サーバーだけの `/dev/shoot?rarity=...`（公開版には含まれない） | `shoot/DevShootPage.tsx`, `App.tsx` |
+
+検証：
+- 結合テスト `npm run e2e:match`：無償 GEMS で Premium を引ける・無償 → 有償（配布）→ 有償（購入）の順・有償限定のガシャでは無償 GEMS を使わない・台帳と残高が一致
+- ブラウザ（iPhone 15 の大きさ、ソフトウェア描画）：5つのレアリティそれぞれで、構え → 引く → キック → 飛行 → キーパー → ネット → カード登場。ICON の時間停止。実際のガシャ画面から Premium 10連（無償 GEMS）→ シュート → 10枚 → 一覧、Standard 1回 → スキップ → 一覧。コンソールエラーなし
+- 実際のスマートフォンでの確認はまだ（staging で確認してほしい）
+
 ## 2026-11-17 DRAFT MATCH（チンチロ・共通カードプール・スネークドラフト・ランキング）
 
 計画：`docs/12-draft-match-plan.md`。決定事項：`docs/02-decisions.md` の 75〜85。

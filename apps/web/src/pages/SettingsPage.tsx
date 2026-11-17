@@ -3,6 +3,7 @@ import { api, getLastErrorCode } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { InstallGuide } from '../lib/beta';
 import { errorText, formatDateTime } from '../lib/labels';
+import { setSoundOn, soundOn } from '../lib/sound';
 
 const CATEGORIES = [
   ['bug', '不具合の報告（Bug Report）'],
@@ -38,6 +39,7 @@ export default function SettingsPage() {
   const [error, setError] = useState<string | null>(null);
   const [items, setItems] = useState<Item[]>([]);
   const [open, setOpen] = useState<string | null>(null);
+  const [sound, setSound] = useState(soundOn);
 
   const load = () =>
     api<{ items: Item[] }>('/api/feedback')
@@ -89,6 +91,22 @@ export default function SettingsPage() {
         </div>
         {nameMsg && <div className="small muted" style={{ marginTop: 6 }}>{nameMsg}</div>}
       </form>
+
+      <div className="panel">
+        <h3>サウンド</h3>
+        <label className="row small">
+          <input
+            type="checkbox"
+            checked={sound}
+            onChange={(e) => {
+              setSound(e.target.checked);
+              setSoundOn(e.target.checked);
+            }}
+            style={{ minHeight: 0 }}
+          />{' '}
+          効果音を鳴らす（SHOOT GACHA の演出など）
+        </label>
+      </div>
 
       <div className="panel">
         <h3>ホーム画面に追加</h3>
