@@ -5,6 +5,7 @@ import { randomId } from './crypto';
 /**
  * Test data reset (spec 15-2, decision 67): sets a player's belongings back to
  * the start. Balances are emptied through the ledgers (reason "test_reset"),
+ * the MATCH teams are removed (the first 11 cards come again, lib/team.ts),
  * so ledger and balance stay equal. Kept: account, tags, match / draft
  * records, ranked rating, gacha / exchange / purchase history, feedback,
  * analytics, login-bonus and distribution claims, membership.
@@ -68,6 +69,9 @@ export function resetStmts(env: Env, userId: string, runId: string, summary: Res
     // the Collection Draft roster refers to the collection, so it goes first
     env.DB.prepare('DELETE FROM collection_draft_rosters WHERE user_id = ?').bind(userId),
     env.DB.prepare('DELETE FROM user_collections WHERE user_id = ?').bind(userId),
+    // MATCH teams (decision 73); the first 11 cards are given again on the next visit
+    env.DB.prepare('DELETE FROM user_squads WHERE user_id = ?').bind(userId),
+    env.DB.prepare('DELETE FROM user_squad_active WHERE user_id = ?').bind(userId),
     env.DB.prepare('DELETE FROM gacha_pity WHERE user_id = ?').bind(userId),
     env.DB.prepare('DELETE FROM mission_progress WHERE user_id = ?').bind(userId),
     env.DB.prepare("DELETE FROM reward_claims WHERE user_id = ? AND (reward_key LIKE 'mission:%' OR reward_key LIKE 'pass:%')").bind(userId),

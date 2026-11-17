@@ -61,6 +61,8 @@ type Phase = 'build' | 'mid' | 'final' | 'counter' | 'press_win' | 'corner' | 'f
 
 interface OnPitch {
   p: Player;
+  /** the team of the player (the same card can be in both teams in MATCH) */
+  side: Side;
   slot: FormationSlot;
   fam: number;
   /** card OVR / attribute level: SIM uses the attribute profile at the card's OVR level */
@@ -174,7 +176,7 @@ export class MatchSimulator {
     const lineup: OnPitch[] = formation.slots.map((slot, i) => {
       const p = byId.get(input.lineup.starters[i]);
       if (!p) throw new Error(`unknown starter ${input.lineup.starters[i]}`);
-      return { p, slot, fam: positionFamiliarity(p.positions, slot.pos), scale: ovrScale(p), stamina: 100, yellow: 0, off: false, enteredAt: 0, leftAt: null };
+      return { p, side, slot, fam: positionFamiliarity(p.positions, slot.pos), scale: ovrScale(p), stamina: 100, yellow: 0, off: false, enteredAt: 0, leftAt: null };
     });
     const bench = input.lineup.bench.map((id) => {
       const p = byId.get(id);
@@ -204,7 +206,7 @@ export class MatchSimulator {
   }
 
   private addPStat(p: Player, side: Side, started: boolean) {
-    this.pstats.set(p.id, {
+    this.pstats.set(`${side}:${p.id}`, {
       playerId: p.id,
       side,
       started,
@@ -349,7 +351,7 @@ export class MatchSimulator {
   }
 
   private stat(o: OnPitch): PStat {
-    return this.pstats.get(o.p.id) as PStat;
+    return this.pstats.get(`${o.side}:${o.p.id}`) as PStat;
   }
 
   // ------------------------------------------------------------ team units
@@ -954,6 +956,7 @@ export class MatchSimulator {
       o.leftAt = this.minute;
       const newcomer: OnPitch = {
         p: incoming,
+        side: t.side,
         slot: o.slot,
         fam: positionFamiliarity(incoming.positions, o.slot.pos),
         scale: ovrScale(incoming),

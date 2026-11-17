@@ -29,3 +29,4 @@ export * from './economy/missions';
 export * from './economy/pass';
 export * from './economy/shop';
 export * from './beta';
+export * from './match';

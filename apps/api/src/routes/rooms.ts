@@ -7,6 +7,7 @@ import { randomId, signTicket, verifyTicket } from '../lib/crypto';
 import { ApiError, readJson, str } from '../lib/http';
 import { callRoom, randomRoomCode, roomStub } from '../lib/room';
 import { sanitizeSettings } from '../room/RoomDO';
+import { ensureStarter } from '../lib/team';
 import type { AppEnv, AuthUser, Env } from '../env';
 
 export const roomRoutes = new Hono<AppEnv>();
@@ -30,6 +31,8 @@ export async function createRoom(env: Env, user: AuthUser, mode: RoomMode, setti
   const timed = (TIMER_EXPERIMENT_MODES as readonly string[]).includes(mode) && input.pickSeconds === undefined;
   const pickSeconds = timed ? pickSecondsFor(id, await draftTimerSetting(env)) : GAME_CONFIG.pickSeconds;
   const clean = sanitizeSettings({ pickSeconds, fillWithCpu: true, ...input }, allowTest);
+  // a MATCH room for friends is never offered by matchmaking
+  if (opts.variant?.kind === 'match' && opts.variant.private) clean.privateRoom = true;
   let code = '';
   for (let i = 0; i < 5; i++) {
     code = randomRoomCode();
@@ -90,7 +93,9 @@ roomRoutes.post('/join', async (c) => {
   const room = await c.env.DB.prepare('SELECT id, mode FROM rooms WHERE code = ?').bind(code).first<{ id: string; mode: RoomMode }>();
   if (!room) throw new ApiError('NOT_FOUND', 'room not found');
   // ranked / solo / event rooms are only joined through their own matchmaking
-  if (room.mode !== 'quick' && room.mode !== 'private') throw new ApiError('ROOM_NOT_JOINABLE', 'this room cannot be joined with a code');
+  if (room.mode !== 'quick' && room.mode !== 'private' && room.mode !== 'match') throw new ApiError('ROOM_NOT_JOINABLE', 'this room cannot be joined with a code');
+  // MATCH: the first 11 cards make sure everybody has a team
+  if (room.mode === 'match') await ensureStarter(c.env, c.get('user').id);
   const user = c.get('user');
   const joined = await callRoom<{ seat: number }>(c.env, room.id, '/join', { userId: user.id, displayName: user.displayName });
   return c.json({ roomId: room.id, code, seat: joined.seat });

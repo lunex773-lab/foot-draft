@@ -7,6 +7,7 @@ import { analyticsWhen, pointStmts, requestIdOf, runOperation, walletOf } from '
 import { ApiError, readJson } from '../lib/http';
 import { loadCatalog } from '../lib/players';
 import type { AppEnv, Env } from '../env';
+import { ensureStarter } from '../lib/team';
 import { createRoom, joinOpenRoom } from './rooms';
 
 /**
@@ -26,10 +27,13 @@ async function rosterOf(env: Env, userId: string): Promise<(string | null)[]> {
 /** owned cards, Collection Draft roster and the size of the whole catalog */
 collectionRoutes.get('/', async (c) => {
   const user = c.get('user');
-  const rows = await c.env.DB.prepare('SELECT player_id, source, obtained_at FROM user_collections WHERE user_id = ? ORDER BY obtained_at DESC').bind(user.id).all<{
+  await ensureStarter(c.env, user.id);
+  const rows = await c.env.DB.prepare('SELECT player_id, source, obtained_at, level, favorite FROM user_collections WHERE user_id = ? ORDER BY obtained_at DESC').bind(user.id).all<{
     player_id: string;
     source: string;
     obtained_at: number;
+    level: number;
+    favorite: number;
   }>();
   const catalog = await loadCatalog(c.env);
   const total = Object.fromEntries(RARITIES.map((r) => [r, catalog.filter((p) => p.rarity === r).length])) as Record<Rarity, number>;
@@ -37,7 +41,7 @@ collectionRoutes.get('/', async (c) => {
   const owned = rows.results.filter((r) => byId.has(r.player_id));
   const ownedByRarity = Object.fromEntries(RARITIES.map((r) => [r, owned.filter((o) => byId.get(o.player_id)!.rarity === r).length])) as Record<Rarity, number>;
   return c.json({
-    items: owned.map((r) => ({ playerId: r.player_id, source: r.source, obtainedAt: r.obtained_at })),
+    items: owned.map((r) => ({ playerId: r.player_id, source: r.source, obtainedAt: r.obtained_at, level: r.level, favorite: r.favorite === 1 })),
     roster: await rosterOf(c.env, user.id),
     slots: ECONOMY_CONFIG.collectionDraftSlots,
     counts: { owned: owned.length, total: catalog.length, ownedByRarity, totalByRarity: total },

@@ -6,6 +6,7 @@ import {
   cryptoRandom,
   pityStatus,
   ratesSum,
+  MAX_CARD_LEVEL,
   runGacha,
   splitPaidGems,
   type Currency,
@@ -186,13 +187,17 @@ gachaRoutes.post('/banners/:id/draw', async (c) => {
     if (banner.cost.currency === 'COINS') split = wallet.coins >= cost ? { COINS: cost } : null;
     else split = splitPaidGems(cost, { GEMS_PAID_GRANTED: wallet.gems.paidGranted, GEMS_PAID_PURCHASED: wallet.gems.paidPurchased });
     if (!split) throw new ApiError('INSUFFICIENT_FUNDS', banner.cost.currency === 'COINS' ? 'not enough COINS' : 'not enough PAID GEMS');
-    const owned = new Set(
-      (await c.env.DB.prepare('SELECT player_id FROM user_collections WHERE user_id = ?').bind(user.id).all<{ player_id: string }>()).results.map((r) => r.player_id),
+    // owned cards with their strengthening level: a duplicate adds +1 up to +5, then points (decision 70)
+    const owned = new Map(
+      (await c.env.DB.prepare('SELECT player_id, level FROM user_collections WHERE user_id = ?').bind(user.id).all<{ player_id: string; level: number }>()).results.map(
+        (r) => [r.player_id, r.level] as [string, number],
+      ),
     );
     const pityBefore = await pityOf(c.env, user.id, banner.seriesId);
     const run = runGacha(banner, pool, owned, pityBefore, count, cryptoRandom());
     const drawId = randomId();
-    const metrics = { gacha_draw: count };
+    const enhancedCount = run.results.filter((r) => r.enhancedTo !== null).length;
+    const metrics = { gacha_draw: count, ...(enhancedCount ? { card_enhanced: enhancedCount } : {}) };
     const completed = await missionsCompletedBy(c.env, user.id, metrics, now);
     const stmts: D1PreparedStatement[] = [];
     for (const [currency, amount] of Object.entries(split) as [Currency, number][]) {
@@ -206,9 +211,10 @@ gachaRoutes.post('/banners/:id/draw', async (c) => {
     // all cards of the draw in one statement each (bound parameters stay small)
     stmts.push(
       c.env.DB.prepare(
-        `INSERT INTO gacha_history (draw_id, idx, user_id, player_id, rarity, guarantee, is_free, is_duplicate, point_type, points, created_at)
+        `INSERT INTO gacha_history (draw_id, idx, user_id, player_id, rarity, guarantee, is_free, is_duplicate, point_type, points, enhanced_to, created_at)
          SELECT ?1, j.key, ?2, json_extract(j.value, '$.playerId'), json_extract(j.value, '$.rarity'), json_extract(j.value, '$.guarantee'),
-                json_extract(j.value, '$.free'), json_extract(j.value, '$.duplicate'), json_extract(j.value, '$.pointType'), json_extract(j.value, '$.points'), ?3
+                json_extract(j.value, '$.free'), json_extract(j.value, '$.duplicate'), json_extract(j.value, '$.pointType'), json_extract(j.value, '$.points'),
+                json_extract(j.value, '$.enhancedTo'), ?3
            FROM json_each(?4) j`,
       ).bind(drawId, user.id, now, JSON.stringify(run.results.map((r) => ({ ...r, free: r.free ? 1 : 0, duplicate: r.duplicate ? 1 : 0 })))),
     );
@@ -224,9 +230,20 @@ gachaRoutes.post('/banners/:id/draw', async (c) => {
         ),
       );
     }
+    const levels = Object.entries(run.enhanced).map(([id, level]) => ({ id, level }));
+    if (levels.length > 0) {
+      // the final level of every strengthened card (also cards that were new in this draw)
+      stmts.push(
+        c.env.DB.prepare(
+          `UPDATE user_collections SET level = (SELECT json_extract(j.value, '$.level') FROM json_each(?2) j WHERE json_extract(j.value, '$.id') = user_collections.player_id)
+            WHERE user_id = ?1 AND player_id IN (SELECT json_extract(j.value, '$.id') FROM json_each(?2) j)`,
+        ).bind(user.id, JSON.stringify(levels)),
+        analyticsWhen(c.env, 'card_enhanced', user.id, { drawId, cards: levels.length, steps: enhancedCount, maxed: levels.filter((l) => l.level >= MAX_CARD_LEVEL).length }, now),
+      );
+    }
     if (run.pointsTotal > 0) {
       stmts.push(...pointStmts(c.env, { userId: user.id, pointType: banner.kind, amount: run.pointsTotal, reason: 'duplicate', refType: 'gacha_draw', refId: drawId, opId, now }));
-      stmts.push(analyticsWhen(c.env, 'duplicate_converted', user.id, { drawId, pointType: banner.kind, points: run.pointsTotal, cards: run.results.filter((r) => r.duplicate).length }, now));
+      stmts.push(analyticsWhen(c.env, 'duplicate_converted', user.id, { drawId, pointType: banner.kind, points: run.pointsTotal, cards: run.results.filter((r) => r.points > 0).length }, now));
     }
     if (run.pity) {
       stmts.push(
@@ -250,6 +267,7 @@ gachaRoutes.post('/banners/:id/draw', async (c) => {
           rarities: Object.fromEntries(RARITIES.map((r) => [r, run.results.filter((x) => x.rarity === r).length])),
           guarantees: run.results.filter((x) => x.guarantee !== 'none').map((x) => x.guarantee),
           duplicates: run.results.filter((x) => x.duplicate).length,
+          enhanced: enhancedCount,
           cost,
           currency: banner.cost.currency,
         },
@@ -290,7 +308,7 @@ gachaRoutes.get('/history', async (c) => {
   const user = c.get('user');
   const limit = Math.min(Math.max(Number(c.req.query('limit') ?? 50) || 50, 1), 200);
   const rows = await c.env.DB.prepare(
-    `SELECT h.draw_id, h.idx, h.player_id, p.name, h.rarity, h.guarantee, h.is_free, h.is_duplicate, h.point_type, h.points, h.created_at, d.banner_id, b.name AS banner_name, d.rates_version
+    `SELECT h.draw_id, h.idx, h.player_id, p.name, h.rarity, h.guarantee, h.is_free, h.is_duplicate, h.point_type, h.points, h.enhanced_to, h.created_at, d.banner_id, b.name AS banner_name, d.rates_version
        FROM gacha_history h JOIN gacha_draws d ON d.id = h.draw_id JOIN gacha_banners b ON b.id = d.banner_id JOIN player_cards p ON p.id = h.player_id
       WHERE h.user_id = ? ORDER BY h.created_at DESC, h.idx ASC LIMIT ?`,
   )

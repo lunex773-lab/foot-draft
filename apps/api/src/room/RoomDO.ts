@@ -22,6 +22,10 @@ import {
   teamRecord,
   CPU_NAMES,
   RANKED_CONFIG,
+  MATCH_CONFIG,
+  buildCpuSquad,
+  enhancePlayer,
+  seededRandom,
   type ClientMessage,
   type DraftState,
   type FixtureResult,
@@ -49,8 +53,9 @@ import { loadCatalog } from '../lib/players';
 import { membershipOf } from '../lib/purchases';
 import { grantLeagueRewards, type LeagueRewardInput } from '../lib/rewards';
 import { ensureCurrentSeason, ratingOf } from '../lib/seasons';
+import { loadMatchTeam, type MatchTeam } from '../lib/team';
 
-const ROOM_MODES: RoomMode[] = ['quick', 'private', 'ranked', 'solo', 'event', 'collection'];
+const ROOM_MODES: RoomMode[] = ['quick', 'private', 'ranked', 'solo', 'event', 'collection', 'match'];
 
 /**
  * RoomDO — one Durable Object per room. It is the single authority for the
@@ -112,6 +117,8 @@ interface RoomState {
   variant?: RoomVariant;
   lobbyDeadline?: number | null;
   outcome?: RoomOutcome | null;
+  /** MATCH: strengthening level of each seat's cards (seat -> player id -> level) */
+  levels?: Record<number, Record<string, number>>;
 }
 
 interface WsAttachment {
@@ -125,6 +132,8 @@ const fail = (code: string, message: string, status = 400): HttpResult => ({ ok:
 export class RoomDO extends DurableObject<Env> {
   private state: RoomState | null = null;
   private players = new Map<string, Player>();
+  /** MATCH: the strengthened cards of each seat (built from players + levels) */
+  private seatCards = new Map<number, Map<string, Player>>();
   private live = new Map<string, LiveMatch>();
   private dbQueue: Promise<void> = Promise.resolve();
 
@@ -216,7 +225,17 @@ export class RoomDO extends DurableObject<Env> {
   /** modes whose rooms start by themselves when 4 humans are in */
   private autoStartsWhenFull(): boolean {
     const m = this.state!.mode;
-    return m === 'quick' || m === 'ranked' || m === 'event' || m === 'collection';
+    return m === 'quick' || m === 'ranked' || m === 'event' || m === 'collection' || m === 'match';
+  }
+
+  private isMatch(): boolean {
+    return this.state?.mode === 'match';
+  }
+
+  /** a draft league starts with the draft, a MATCH league with the lineups of the owned teams */
+  private async startLeague() {
+    if (this.isMatch()) await this.startMatchLeague();
+    else await this.startDraft();
   }
 
   // -------------------------------------------------------------- snapshot
@@ -274,6 +293,7 @@ export class RoomDO extends DurableObject<Env> {
       standings: this.standings(),
       finalRanks: s.finalRanks,
       outcome: s.outcome ?? null,
+      ...(s.levels ? { levels: s.levels } : {}),
     };
   }
 
@@ -338,7 +358,7 @@ export class RoomDO extends DurableObject<Env> {
     const now = this.now();
     if (s.phase === 'lobby' && s.lobbyDeadline && s.lobbyDeadline <= now + 25) {
       // ranked: nobody else came within the queue time -> CPU fill and start
-      if (this.humanSeats().length > 0) await this.startDraft();
+      if (this.humanSeats().length > 0) await this.startLeague();
     } else if (s.phase === 'drafting' && s.draft) {
       const due = s.draft.cpuDueAt ?? s.draft.deadline;
       if (due !== null && due <= now + 25) {
@@ -475,7 +495,7 @@ export class RoomDO extends DurableObject<Env> {
     );
     this.broadcastSnapshot();
     // a full quick / ranked / event room starts automatically; a solo room starts right away
-    if ((this.autoStartsWhenFull() && this.humanSeats().length === GAME_CONFIG.maxPlayers) || s.mode === 'solo') await this.startDraft();
+    if ((this.autoStartsWhenFull() && this.humanSeats().length === GAME_CONFIG.maxPlayers) || s.mode === 'solo') await this.startLeague();
     return { ok: true, seat, rejoined: false };
   }
 
@@ -516,22 +536,33 @@ export class RoomDO extends DurableObject<Env> {
     if (s.hostUserId !== userId) return fail('FORBIDDEN', 'only the host can start', 403);
     const humans = this.humanSeats().length;
     if (!s.settings.fillWithCpu && humans < GAME_CONFIG.maxPlayers) return fail('CONFLICT', '4 players are required (CPU fill is off)', 409);
-    await this.startDraft();
+    await this.startLeague();
     return { ok: true };
   }
 
   // ------------------------------------------------------------------ draft
 
-  private async startDraft() {
+  /** fill empty seats with CPU teams */
+  private fillCpuSeats(now: number) {
     const s = this.state!;
-    if (s.phase !== 'lobby') return;
-    const now = this.now();
-    // fill empty seats with CPU
     let cpuIdx = 0;
     const cpuNames = new Rng(`${s.seed}:cpu-names`).shuffle(CPU_NAMES);
     for (let seat = 0; seat < GAME_CONFIG.maxPlayers; seat++) {
       if (!s.seats[seat]) s.seats[seat] = { seat, userId: null, displayName: cpuNames[cpuIdx++ % cpuNames.length], isCpu: true, joinedAt: now };
     }
+  }
+
+  private cpuMemberStmts(now: number): D1PreparedStatement[] {
+    const s = this.state!;
+    const cpuSeats = s.seats.filter((x) => x?.isCpu) as SeatState[];
+    return cpuSeats.map((c) => this.env.DB.prepare('INSERT OR REPLACE INTO room_members (room_id, seat, user_id, display_name, is_cpu, joined_at) VALUES (?,?,NULL,?,1,?)').bind(s.roomId, c.seat, c.displayName, now));
+  }
+
+  private async startDraft() {
+    const s = this.state!;
+    if (s.phase !== 'lobby') return;
+    const now = this.now();
+    this.fillCpuSeats(now);
     const catalog = await loadCatalog(this.env);
     if (s.phase !== 'lobby') return; // another event started it meanwhile
     const rng = new Rng(`${s.seed}:draft`);
@@ -561,11 +592,10 @@ export class RoomDO extends DurableObject<Env> {
     await this.ctx.storage.put('players', [...this.players.values()]);
     await this.save();
 
-    const cpuSeats = s.seats.filter((x) => x?.isCpu) as SeatState[];
     this.db(() =>
       this.env.DB.batch([
         this.env.DB.prepare("UPDATE rooms SET status = 'drafting', started_at = ? WHERE id = ?").bind(now, s.roomId),
-        ...cpuSeats.map((c) => this.env.DB.prepare('INSERT OR REPLACE INTO room_members (room_id, seat, user_id, display_name, is_cpu, joined_at) VALUES (?,?,NULL,?,1,?)').bind(s.roomId, c.seat, c.displayName, now)),
+        ...this.cpuMemberStmts(now),
         this.env.DB.prepare("INSERT INTO drafts (id, room_id, seed, pool_json, pick_seconds, status, started_at) VALUES (?,?,?,?,?,'active',?)").bind(
           s.draft!.draftId,
           s.roomId,
@@ -665,6 +695,21 @@ export class RoomDO extends DurableObject<Env> {
     const d = s.draft!;
     const now = this.now();
     for (let seat = 0; seat < GAME_CONFIG.maxPlayers; seat++) s.rosters[seat] = rosterOf(d.state, seat);
+    this.scheduleLeague(now, (seat) => autoLineup(this.roster(seat), this.lockedFormation(seat) ?? undefined));
+    await this.save();
+    this.db(() =>
+      this.env.DB.batch([
+        this.env.DB.prepare("UPDATE drafts SET status = 'completed', completed_at = ? WHERE id = ?").bind(now, d.draftId),
+        this.roomStatusSql('lineup'),
+        ...this.humanSeats().map((h) => analyticsStatement(this.env, { name: 'draft_completed', userId: h.userId, properties: { draftId: d.draftId, roomId: s.roomId, mode: s.mode, pickSeconds: s.settings.pickSeconds } })),
+      ]),
+    );
+    this.broadcastSnapshot();
+  }
+
+  /** fixtures, first lineups (CPU ready, people edit) and the lineup phase */
+  private scheduleLeague(now: number, humanLineup: (seat: number) => Lineup) {
+    const s = this.state!;
     // schedule: fixtures with pre-assigned ids & seeds
     s.fixtures = [];
     ROUND_ROBIN_4.forEach((md, i) => {
@@ -679,25 +724,108 @@ export class RoomDO extends DurableObject<Env> {
         s.lineups[seat] = cpuLineup(roster, new Rng(`${s.seed}:cpu-lineup:${seat}:1`), this.roster(this.opponentOf(seat, 1)));
         s.lineupReady[seat] = true;
       } else {
-        s.lineups[seat] = autoLineup(roster, this.lockedFormation(seat) ?? undefined);
+        s.lineups[seat] = humanLineup(seat);
         s.lineupReady[seat] = false;
       }
     }
     s.phase = 'lineup';
     s.phaseDeadline = now + this.timing('lineupSecondsFirst');
+  }
+
+  // ------------------------------------------------------------------ MATCH
+
+  /**
+   * MATCH (decisions 68-74): every person brings their active team of owned
+   * cards (strengthened by duplicates), empty seats get CPU teams around the
+   * strength of the people in the room. No draft: straight to the lineups.
+   */
+  private async startMatchLeague() {
+    const s = this.state!;
+    if (s.phase !== 'lobby') return;
+    const now = this.now();
+    const catalog = await loadCatalog(this.env);
+    const teams = new Map<number, MatchTeam>();
+    for (const h of this.humanSeats()) {
+      try {
+        teams.set(h.seat, await loadMatchTeam(this.env, h.userId!, catalog));
+      } catch (err) {
+        console.error('MATCH team could not be loaded', err);
+      }
+    }
+    if (s.phase !== 'lobby') return; // another event started it meanwhile
+    this.fillCpuSeats(now);
+    const byId = new Map(catalog.map((p) => [p.id, p]));
+    const levels: Record<number, Record<string, number>> = {};
+    const used = new Set<string>();
+    const strengths: number[] = [];
+    for (let seat = 0; seat < GAME_CONFIG.maxPlayers; seat++) {
+      const t = teams.get(seat);
+      if (!t) continue;
+      s.rosters[seat] = [...t.lineup.starters, ...t.lineup.bench];
+      levels[seat] = t.levels;
+      for (const id of s.rosters[seat]) used.add(id);
+      const starters = t.lineup.starters.map((id) => enhancePlayer(byId.get(id)!, t.levels[id] ?? 0));
+      strengths.push(starters.reduce((sum, p) => sum + p.ovr, 0) / starters.length);
+    }
+    // CPU teams: around the average strength of the people (cards of the people avoided when possible)
+    const target = strengths.length ? Math.round(strengths.reduce((a, b) => a + b, 0) / strengths.length) : 60;
+    const rnd = seededRandom(`${s.seed}:cpu-squads`);
+    for (let seat = 0; seat < GAME_CONFIG.maxPlayers; seat++) {
+      if (s.rosters[seat]) continue;
+      if (!s.seats[seat]!.isCpu) {
+        // a person whose team could not be loaded plays with a CPU-made team
+        levels[seat] = {};
+      }
+      let squad: ReturnType<typeof buildCpuSquad>;
+      try {
+        squad = buildCpuSquad(catalog, target, rnd, used);
+      } catch {
+        squad = buildCpuSquad(catalog, target, rnd);
+      }
+      s.rosters[seat] = squad.cards.map((p) => p.id);
+      for (const id of s.rosters[seat]) used.add(id);
+    }
+    const ids = new Set(Object.values(s.rosters).flat());
+    this.players = new Map([...ids].map((id) => [id, byId.get(id)!]));
+    this.seatCards.clear();
+    s.levels = levels;
+    this.scheduleLeague(now, (seat) => {
+      const t = teams.get(seat);
+      return t ? { ...t.lineup, tactics: { ...t.lineup.tactics } } : autoLineup(this.roster(seat));
+    });
+    await this.ctx.storage.put('players', [...this.players.values()]);
     await this.save();
     this.db(() =>
       this.env.DB.batch([
-        this.env.DB.prepare("UPDATE drafts SET status = 'completed', completed_at = ? WHERE id = ?").bind(now, d.draftId),
-        this.roomStatusSql('lineup'),
-        ...this.humanSeats().map((h) => analyticsStatement(this.env, { name: 'draft_completed', userId: h.userId, properties: { draftId: d.draftId, roomId: s.roomId, mode: s.mode, pickSeconds: s.settings.pickSeconds } })),
+        this.env.DB.prepare("UPDATE rooms SET status = 'lineup', started_at = ?, member_count = 4 WHERE id = ?").bind(now, s.roomId),
+        ...this.cpuMemberStmts(now),
+        ...this.humanSeats().map((h) =>
+          analyticsStatement(this.env, { name: 'league_started', userId: h.userId, properties: { roomId: s.roomId, mode: s.mode, humans: this.humanSeats().length, cpuTarget: target } }),
+        ),
       ]),
     );
+    this.sendPlayers();
     this.broadcastSnapshot();
   }
 
+  /** the cards of a seat as they play (MATCH: strengthened by the seat's levels) */
+  private seatPlayers(seat: number): Map<string, Player> {
+    let m = this.seatCards.get(seat);
+    if (!m) {
+      const lv = this.state!.levels?.[seat] ?? {};
+      m = new Map();
+      for (const id of this.state!.rosters[seat] ?? []) {
+        const p = this.players.get(id);
+        if (p) m.set(id, lv[id] ? enhancePlayer(p, lv[id]) : p);
+      }
+      this.seatCards.set(seat, m);
+    }
+    return m;
+  }
+
   private roster(seat: number): Player[] {
-    return (this.state!.rosters[seat] ?? []).map((id) => this.players.get(id)!).filter(Boolean);
+    const m = this.seatPlayers(seat);
+    return (this.state!.rosters[seat] ?? []).map((id) => m.get(id)!).filter(Boolean);
   }
 
   private opponentOf(seat: number, matchday: number): number {
@@ -769,7 +897,7 @@ export class RoomDO extends DurableObject<Env> {
       s.usedLineups[f.awaySeat] = away.lineup;
       const homeUser = s.seats[f.homeSeat]!.userId;
       const awayUser = s.seats[f.awaySeat]!.userId;
-      const chem = (t: typeof home) => computeChemistry(t.lineup.starters.map((id) => this.players.get(id)), t.lineup.formation, t.lineup.tactics).score;
+      const chem = (t: typeof home) => computeChemistry(t.lineup.starters.map((id) => this.seatPlayers(t.seat).get(id)), t.lineup.formation, t.lineup.tactics).score;
       writes.push(
         this.env.DB.prepare("INSERT INTO matches (id, room_id, matchday, seed, sim_version, home_seat, away_seat, home_user_id, away_user_id, status, created_at, playback_start_at) VALUES (?,?,?,?,?,?,?,?,?,'simulated',?,?)").bind(
           f.matchId,
@@ -922,13 +1050,19 @@ export class RoomDO extends DurableObject<Env> {
     const s = this.state!;
     const humans = this.humanSeats();
     const picks = s.draft?.state.picks ?? [];
-    const inputs: LeagueRewardInput[] = humans.map((h) => ({
-      userId: h.userId!,
-      rank: table.find((r) => r.seat === h.seat)!.rank,
-      matchWins: s.results.filter((r) => (r.home === h.seat && r.homeGoals > r.awayGoals) || (r.away === h.seat && r.awayGoals > r.homeGoals)).length,
-      manualPicks: picks.filter((p) => p.seat === h.seat && !p.auto).length,
-      soloClearedChallengeId: soloCleared,
-    }));
+    const inputs: LeagueRewardInput[] = humans.map((h) => {
+      const rank = table.find((r) => r.seat === h.seat)!.rank;
+      return {
+        userId: h.userId!,
+        rank,
+        matchWins: s.results.filter((r) => (r.home === h.seat && r.homeGoals > r.awayGoals) || (r.away === h.seat && r.awayGoals > r.homeGoals)).length,
+        manualPicks: picks.filter((p) => p.seat === h.seat && !p.auto).length,
+        goals: s.results.reduce((sum, r) => sum + (r.home === h.seat ? r.homeGoals : r.away === h.seat ? r.awayGoals : 0), 0),
+        soloClearedChallengeId: soloCleared,
+        // MATCH: Standard exchange points by rank (decision 71)
+        exchangePoints: s.mode === 'match' ? MATCH_CONFIG.rankPoints[rank] ?? 0 : 0,
+      };
+    });
     const granted = await grantLeagueRewards(this.env, s.roomId, s.mode, inputs, now);
     const out: Record<number, SeatReward> = {};
     for (const h of humans) {
@@ -1061,7 +1195,7 @@ export class RoomDO extends DurableObject<Env> {
     if (s.phase !== 'lobby') return fail('CONFLICT', 'settings are locked', 409);
     if (s.mode !== 'quick' && s.mode !== 'private') return fail('FORBIDDEN', 'settings are fixed in this mode', 403);
     if (s.hostUserId !== userId) return fail('FORBIDDEN', 'only the host can change settings', 403);
-    const next = sanitizeSettings({ ...s.settings, ...patch }, s.allowTestTimings);
+    const next = sanitizeSettings({ ...s.settings, ...patch, privateRoom: s.settings.privateRoom }, s.allowTestTimings);
     s.settings = next;
     await this.save();
     this.db(() => this.env.DB.prepare('UPDATE rooms SET settings_json = ? WHERE id = ?').bind(JSON.stringify(next), s.roomId).run());
@@ -1084,6 +1218,7 @@ export function sanitizeSettings(input: Partial<RoomSettings>, allowTestTimings:
     pickSeconds: GAME_CONFIG.pickSecondsOptions.includes(pick) ? pick : allowTestTimings && pick >= 1 && pick <= 60 ? pick : GAME_CONFIG.pickSeconds,
     fillWithCpu: input.fillWithCpu !== false,
   };
+  if (input.privateRoom === true) out.privateRoom = true;
   if (allowTestTimings) {
     for (const k of ['queueSeconds', 'lineupSecondsFirst', 'lineupSecondsBetween', 'playbackSeconds'] as const) {
       const v = Number(input[k]);

@@ -131,7 +131,9 @@ export interface DrawResult {
   /** a free draw that did not cost anything */
   free: boolean;
   duplicate: boolean;
-  /** exchange points received for a duplicate */
+  /** decision 70: a duplicate strengthens the card (+1, up to +5); the new level, or null */
+  enhancedTo: number | null;
+  /** exchange points received for a duplicate (only once the card is at +5) */
   points: number;
   pointType: PointType;
 }
@@ -153,7 +155,12 @@ export interface GachaRun {
   results: DrawResult[];
   pity: PityState | null;
   pointsTotal: number;
+  /** level of every card strengthened by this run (player id -> level after) */
+  enhanced: Record<string, number>;
 }
+
+/** strengthening levels by card (decision 70) */
+export const MAX_CARD_LEVEL = 5;
 
 /**
  * Runs `count` paid draws (+ free bonus draws reached on the way).
@@ -162,13 +169,15 @@ export interface GachaRun {
 export function runGacha(
   banner: GachaBannerDef,
   pool: Record<Rarity, string[]>,
-  owned: ReadonlySet<string>,
+  owned: ReadonlySet<string> | ReadonlyMap<string, number>,
   pityBefore: PityState | null,
   count: number,
   rnd: RandomSource,
 ): GachaRun {
   const pointType: PointType = banner.kind;
-  const have = new Set(owned);
+  // owned cards and their strengthening level (a plain set = level 0)
+  const level = new Map<string, number>(owned instanceof Map ? owned : [...(owned as ReadonlySet<string>)].map((id) => [id, 0] as [string, number]));
+  const enhanced: Record<string, number> = {};
   const pity = banner.pity ? { ...(pityBefore ?? EMPTY_PITY) } : null;
   const results: DrawResult[] = [];
   let pointsTotal = 0;
@@ -176,11 +185,14 @@ export function runGacha(
     const cards = pool[rarity];
     if (!cards.length) throw new Error(`empty pool for ${rarity}`);
     const playerId = cards[rnd.int(cards.length)];
-    const duplicate = have.has(playerId);
-    const points = duplicate ? ECONOMY_CONFIG.duplicatePoints[rarity] : 0;
-    have.add(playerId);
+    const duplicate = level.has(playerId);
+    const before = level.get(playerId) ?? 0;
+    const enhancedTo = duplicate && before < MAX_CARD_LEVEL ? before + 1 : null;
+    const points = duplicate && enhancedTo === null ? ECONOMY_CONFIG.duplicatePoints[rarity] : 0;
+    if (enhancedTo !== null) enhanced[playerId] = enhancedTo;
+    level.set(playerId, enhancedTo ?? before);
     pointsTotal += points;
-    results.push({ playerId, rarity, guarantee, free, duplicate, points, pointType });
+    results.push({ playerId, rarity, guarantee, free, duplicate, enhancedTo, points, pointType });
   };
   for (let i = 0; i < count; i++) {
     let guarantee: Guarantee = 'none';
@@ -217,7 +229,7 @@ export function runGacha(
       }
     }
   }
-  return { results, pity, pointsTotal };
+  return { results, pity, pointsTotal, enhanced };
 }
 
 /** draws left until each guarantee (for the UI, spec 9-6) */

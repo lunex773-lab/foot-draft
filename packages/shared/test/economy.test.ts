@@ -69,18 +69,35 @@ describe('gacha rates and pools (spec 9)', () => {
     }
   });
 
-  it('Standard: 10 draws are independent, duplicates become Standard points', () => {
+  it('Standard: 10 draws are independent, duplicates of +5 cards become Standard points', () => {
     const pool = bannerPool(standard, catalog);
-    const owned = new Set(pool.common);
+    const owned = new Map(pool.common.map((id) => [id, 5] as [string, number]));
     const run = runGacha(standard, pool, owned, null, 10, seededRandom('std'));
     expect(run.results).toHaveLength(10);
     expect(run.pity).toBeNull();
     for (const r of run.results) {
       expect(r.guarantee).toBe('none');
       expect(r.pointType).toBe('standard');
-      if (r.rarity === 'common') expect(r.duplicate && r.points === 10).toBe(true);
+      if (r.rarity === 'common') expect(r.duplicate && r.enhancedTo === null && r.points === 10).toBe(true);
     }
     expect(run.pointsTotal).toBe(run.results.reduce((s, r) => s + r.points, 0));
+  });
+
+  it('decision 70: a duplicate strengthens the card +1 (up to +5), no points until then', () => {
+    const pool = bannerPool(standard, catalog);
+    // a random source that always draws the first card of the lowest rarity: always the same common card
+    const same = { int: () => 0 };
+    const first = pool.common[0];
+    const run = runGacha(standard, pool, new Map([[first, 3]]), null, 4, same);
+    expect(run.results.map((r) => r.enhancedTo)).toEqual([4, 5, null, null]);
+    expect(run.results.map((r) => r.points)).toEqual([0, 0, 10, 10]);
+    expect(run.enhanced).toEqual({ [first]: 5 });
+    // a new card: the first copy is not a duplicate, the second strengthens it
+    const fresh = runGacha(standard, pool, new Map(), null, 2, same);
+    expect(fresh.results.map((r) => [r.duplicate, r.enhancedTo])).toEqual([
+      [false, null],
+      [true, 1],
+    ]);
   });
 });
 

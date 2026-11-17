@@ -2,7 +2,7 @@ import { ECONOMY_CONFIG, MEMBERSHIP_CONFIG, jstDateKey, leagueXp, seasonAt, leag
 import type { Env } from '../env';
 import { randomId } from './crypto';
 import { membershipOf } from './purchases';
-import { currentMissionProgress, ensureWalletStmts, missionCompletedAnalytics, missionProgressStmts, missionsCompletedFrom, rewardStmts } from './economy';
+import { claimedNow, currentMissionProgress, ensureWalletStmts, missionCompletedAnalytics, missionProgressStmts, missionsCompletedFrom, pointStmts, rewardStmts } from './economy';
 
 /**
  * Rewards (spec 10, decisions 40-41). Every reward has a unique key per user;
@@ -21,8 +21,12 @@ export interface LeagueRewardInput {
   rank: number;
   matchWins: number;
   manualPicks: number;
+  /** goals scored in the league (mission "goals") */
+  goals?: number;
   /** Solo Challenge cleared (the first clear of a challenge is rewarded) */
   soloClearedChallengeId?: string | null;
+  /** MATCH: Standard exchange points by rank, paid with the match reward only (decision 71) */
+  exchangePoints?: number;
 }
 
 /**
@@ -51,7 +55,7 @@ export async function grantLeagueRewards(env: Env, roomId: string, mode: RoomMod
   for (const input of inputs) {
     const { userId } = input;
     const keys = [matchKey];
-    const metrics = leagueMetrics({ mode, rank: input.rank, matchWins: input.matchWins, manualPicks: input.manualPicks });
+    const metrics = leagueMetrics({ mode, rank: input.rank, matchWins: input.matchWins, manualPicks: input.manualPicks, goals: input.goals });
     const slotHeld = { sql: 'EXISTS (SELECT 1 FROM daily_match_rewards WHERE user_id = ? AND room_id = ?)', binds: [userId, roomId] };
     stmts.push(
       ...ensureWalletStmts(env, userId, now),
@@ -63,6 +67,18 @@ export async function grantLeagueRewards(env: Env, roomId: string, mode: RoomMod
       ).bind(userId, day, roomId, now, CAP, matchKey),
       ...rewardStmts(env, { userId, key: matchKey, kind: 'match_reward', currency: 'COINS', amount: matchRewardFor(input.rank).total, refType: 'room', refId: roomId, opId, now }, slotHeld),
     );
+    if (input.exchangePoints && input.exchangePoints > 0) {
+      // recorded like a reward (key per room), paid as Standard points when the daily slot was taken
+      const key = `mpoints:${roomId}`;
+      keys.push(key);
+      stmts.push(
+        env.DB.prepare(
+          `INSERT OR IGNORE INTO reward_claims (id, user_id, reward_key, kind, currency, amount, op_id, created_at)
+           SELECT ?, ?, ?, 'match_points', 'POINTS_STANDARD', CASE WHEN ${slotHeld.sql} THEN ? ELSE 0 END, ?, ?`,
+        ).bind(randomId(), userId, key, ...slotHeld.binds, input.exchangePoints, opId, now),
+        ...pointStmts(env, { userId, pointType: 'standard', amount: input.exchangePoints, reason: 'match_reward', refType: 'room', refId: roomId, opId, now }, claimedNow({ userId, key, opId })),
+      );
+    }
     if (input.soloClearedChallengeId) {
       const key = `solo:${input.soloClearedChallengeId}`;
       keys.push(key);
@@ -100,9 +116,9 @@ export async function grantLeagueRewards(env: Env, roomId: string, mode: RoomMod
   const soloId = inputs.find((i) => i.soloClearedChallengeId)?.soloClearedChallengeId;
   const soloKey = soloId ? `solo:${soloId}` : null;
   const claims = await env.DB.prepare(
-    `SELECT user_id, reward_key, amount, op_id FROM reward_claims WHERE user_id IN (${inList}) AND reward_key IN (?, ?, ?)`,
+    `SELECT user_id, reward_key, amount, op_id FROM reward_claims WHERE user_id IN (${inList}) AND reward_key IN (?, ?, ?, ?)`,
   )
-    .bind(...users, matchKey, `event:${roomId}`, soloKey ?? '-')
+    .bind(...users, matchKey, `event:${roomId}`, soloKey ?? '-', `mpoints:${roomId}`)
     .all<{ user_id: string; reward_key: string; amount: number; op_id: string }>();
   const xpRows = await env.DB.prepare(`SELECT user_id, xp FROM season_pass_xp WHERE room_id = ? AND user_id IN (${inList})`)
     .bind(roomId, ...users)
@@ -113,8 +129,11 @@ export async function grantLeagueRewards(env: Env, roomId: string, mode: RoomMod
   for (const userId of users) {
     const mine = claims.results.filter((c) => c.user_id === userId && keysOf.get(userId)!.includes(c.reward_key));
     const matchPaid = mine.find((c) => c.reward_key === matchKey)?.amount ?? 0;
+    const exchangePoints = mine.find((c) => c.reward_key.startsWith('mpoints:'))?.amount ?? 0;
     // a solo clear is paid once per challenge: a later clear of the same challenge shows no bonus
-    const bonus = mine.filter((c) => c.reward_key !== matchKey && (c.op_id === opId || c.reward_key.startsWith('event:'))).reduce((sum, c) => sum + c.amount, 0);
+    const bonus = mine
+      .filter((c) => c.reward_key !== matchKey && !c.reward_key.startsWith('mpoints:') && (c.op_id === opId || c.reward_key.startsWith('event:')))
+      .reduce((sum, c) => sum + c.amount, 0);
     out.set(userId, {
       coins: matchPaid + bonus,
       matchRewardGiven: matchPaid > 0,
@@ -122,6 +141,7 @@ export async function grantLeagueRewards(env: Env, roomId: string, mode: RoomMod
       leaguesToday: counts.results.find((r) => r.user_id === userId)?.n ?? 0,
       missionsCompleted: completedOf.get(userId) ?? [],
       passXp: xpRows.results.find((r) => r.user_id === userId)?.xp ?? 0,
+      ...(mode === 'match' ? { exchangePoints } : {}),
     });
   }
   return out;

@@ -9,7 +9,12 @@ import type { PoolFilter } from './pool';
 import type { MatchResultData } from './sim/types';
 import type { Lineup, Player } from './types';
 
-export type RoomMode = 'quick' | 'private' | 'ranked' | 'solo' | 'event' | 'collection';
+/**
+ * 'match' = MATCH (official spec v2.0, decisions 68-74): the teams of owned cards.
+ * 'draft_match' = DRAFT MATCH (next step). The draft modes before them are kept
+ * on the server (records, tests) but are no longer offered in the game.
+ */
+export type RoomMode = 'quick' | 'private' | 'ranked' | 'solo' | 'event' | 'collection' | 'match' | 'draft_match';
 
 /** What kind of league the room plays (Phase 3). */
 export type RoomVariant =
@@ -17,7 +22,9 @@ export type RoomVariant =
   | { kind: 'ranked' }
   | { kind: 'solo'; challenge: SoloChallenge }
   | { kind: 'event'; eventId: string; name: string; description: string; filter: PoolFilter | null; endsAt: number }
-  | { kind: 'collection' };
+  | { kind: 'collection' }
+  /** MATCH: private = joined by code only (not matched with strangers) */
+  | { kind: 'match'; private: boolean };
 
 /** rating change of one seat in a ranked league */
 export interface SeatRatingChange {
@@ -52,6 +59,8 @@ export interface SeatReward {
   missionsCompleted: string[];
   /** Season Pass experience from this league (0 above the daily cap) */
   passXp?: number;
+  /** MATCH: Standard exchange points by final rank (decision 71, with the match reward only) */
+  exchangePoints?: number;
 }
 
 export interface RoomOutcome {
@@ -66,6 +75,8 @@ export interface RoomSettings {
   pickSeconds: number;
   /** fill empty seats with CPU when the host starts */
   fillWithCpu: boolean;
+  /** MATCH: a room for friends (joined by code only, never by matchmaking) */
+  privateRoom?: boolean;
   /** dev/test only: override timings (ignored in production) */
   queueSeconds?: number;
   lineupSecondsFirst?: number;
@@ -143,6 +154,12 @@ export interface RoomSnapshot {
   finalRanks: Record<number, number> | null;
   /** results decided by the server after the league (rating change, challenge result) */
   outcome: RoomOutcome | null;
+  /**
+   * MATCH: strengthening level of each seat's cards (seat -> player id -> +level).
+   * The cards sent in the players message are the plain cards; a seat's card
+   * plays with enhancePlayer(card, level).
+   */
+  levels?: Record<number, Record<string, number>>;
 }
 
 export type ClientMessage =

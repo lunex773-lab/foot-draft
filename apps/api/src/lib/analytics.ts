@@ -42,7 +42,11 @@ export type AnalyticsEventName =
   | 'membership_started'
   | 'pass_purchased'
   | 'league_rated'
-  | 'test_data_reset';
+  | 'test_data_reset'
+  | 'starter_granted'
+  | 'squad_saved'
+  | 'card_enhanced'
+  | 'league_started';
 
 export interface AnalyticsInput {
   name: AnalyticsEventName;

@@ -45,4 +45,4 @@ export const RATING_QUESTIONS = [
 ] as const;
 
 /** what a test data reset sets back (decision 67) */
-export const TEST_RESET_SCOPE = ['currencies', 'exchange_points', 'collection', 'collection_draft_roster', 'gacha_pity', 'missions', 'season_pass'] as const;
+export const TEST_RESET_SCOPE = ['currencies', 'exchange_points', 'collection', 'collection_draft_roster', 'match_teams', 'gacha_pity', 'missions', 'season_pass'] as const;
