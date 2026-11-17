@@ -1,53 +1,56 @@
-import { GAME_CONFIG, type SoloChallenge } from '@fd/shared';
+import { type SoloChallenge } from '@fd/shared';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { DuelButton } from '../components/DuelButton';
 import { TierBadge } from '../components/TierBadge';
 import { api } from '../lib/api';
 import { useAuth } from '../lib/auth';
-import { errorText, modeLabel } from '../lib/labels';
+import { errorText } from '../lib/labels';
 import { fmt, useWallet } from '../lib/wallet';
-import { eventPeriod, type EventItem } from './EventsPage';
-import { Stars } from './SoloPage';
+import { type EventItem } from './EventsPage';
+import { ActiveRooms, type HistoryRow } from './PlayPage';
 
-interface HistoryRow {
-  room_id: string;
-  code: string;
-  mode: string;
-  status: string;
-  created_at: number;
-  final_rank: number | null;
+interface Board {
+  season: { id: string; name: string };
+  items: { position: number; userId: string; displayName: string; rating: number; member?: boolean }[];
+  me: { position: number | null; players: number };
 }
 
+/**
+ * Home (design from the user, 2026-11-17): hero, the DUEL button (opens the
+ * mode select), the main modes, today's rewards, events and the top of the
+ * ranked leaderboard. Every number comes from the server.
+ */
 export default function HomePage() {
   const { me } = useAuth();
   const nav = useNavigate();
-  const [code, setCode] = useState('');
-  const [pickSeconds, setPickSeconds] = useState<number>(GAME_CONFIG.pickSeconds);
+  const { wallet, login, matchRewards } = useWallet();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [active, setActive] = useState<HistoryRow[]>([]);
   const [stats, setStats] = useState<{ leaguesPlayed: number; leaguesWon: number } | null>(null);
   const [ranked, setRanked] = useState<{ rating: number; games: number; position: number | null; season: { name: string } } | null>(null);
   const [solo, setSolo] = useState<{ challenge: SoloChallenge; cleared: boolean } | null>(null);
+  const [board, setBoard] = useState<Board | null>(null);
   const [events, setEvents] = useState<EventItem[]>([]);
-  const { wallet, login, matchRewards } = useWallet();
   const [missionsReady, setMissionsReady] = useState(0);
-  const [roster, setRoster] = useState<number | null>(null);
+  const [pass, setPass] = useState<{ level: number; claimable: number } | null>(null);
 
   useEffect(() => {
     api<typeof ranked>('/api/ranked/me').then(setRanked).catch(() => undefined);
     api<typeof solo>('/api/solo/today').then(setSolo).catch(() => undefined);
+    api<Board>('/api/ranked/leaderboard').then(setBoard).catch(() => undefined);
     api<{ items: EventItem[] }>('/api/events')
-      .then((r) => setEvents(r.items))
+      .then((r) => setEvents(r.items.filter((e) => e.open)))
       .catch(() => undefined);
     api<{ items: HistoryRow[] }>('/api/users/me/history')
-      .then((r) => setActive(r.items.filter((x) => x.status !== 'finished')))
+      .then((r) => setActive(r.items.filter((x) => x.status !== 'finished' && x.status !== 'closed')))
       .catch(() => undefined);
     api<{ items: { completed: boolean; claimed: boolean }[] }>('/api/missions')
       .then((r) => setMissionsReady(r.items.filter((m) => m.completed && !m.claimed).length))
       .catch(() => undefined);
-    api<{ roster: (string | null)[] }>('/api/collection')
-      .then((r) => setRoster(r.roster.filter(Boolean).length))
+    api<{ level: number; claimable: number }>('/api/pass')
+      .then((r) => setPass({ level: r.level, claimable: r.claimable }))
       .catch(() => undefined);
     api<{ stats: { leaguesPlayed: number; leaguesWon: number } }>('/api/users/me')
       .then((r) => setStats(r.stats))
@@ -68,191 +71,183 @@ export default function HomePage() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div className="hero">
+    <div className="screen">
+      <section className="hero">
+        <div className="eyebrow">BUILD YOUR LEGACY</div>
         <h1>
           FOOTBALL <span>DRAFT</span>
         </h1>
         <p>
-          ようこそ、{me?.displayName} さん{stats && `　リーグ ${stats.leaguesPlayed}回・優勝 ${stats.leaguesWon}回`}
+          ようこそ、{me?.displayName} さん。次の対決に挑戦しよう。
+          {stats && stats.leaguesPlayed > 0 && (
+            <>
+              <br />
+              リーグ {stats.leaguesPlayed}回・優勝 {stats.leaguesWon}回
+            </>
+          )}
         </p>
+      </section>
+
+      <ActiveRooms rooms={active} />
+
+      <section className="duel-card">
+        <div className="duel-kicker">ENTER THE ARENA</div>
+        <DuelButton onClick={() => nav('/play')} />
+        <div className="duel-caption">モードを選んで、次の対決へ。</div>
+      </section>
+
+      {error && <div className="error">{error}</div>}
+
+      <div className="section-title">
+        <h2>GAME MODES</h2>
+        <span>{ranked?.season.name ?? ''}</span>
       </div>
-      {active.length > 0 && (
-        <div className="panel">
-          <h3>進行中のルーム</h3>
-          {active.map((r) => (
-            <div key={r.room_id} className="spread small" style={{ padding: '4px 0' }}>
-              <span>
-                {modeLabel(r.mode)}
-                {r.mode === 'quick' || r.mode === 'private' ? `・コード ${r.code}` : ''}・{r.status}
-              </span>
-              <Link className="btn small" to={`/room/${r.room_id}`}>
-                戻る
-              </Link>
-            </div>
-          ))}
-        </div>
-      )}
-      <div className="grid3">
-        <div className="panel mode-card">
-          <div className="title">QUICK DRAFT</div>
-          <div className="small muted">空いているルームに参加します。ホストはいつでも開始でき、空席はCPUが入ります。4人そろうと自動で開始。</div>
-          <button className="btn primary" disabled={busy} onClick={() => go(() => api('/api/rooms/quick', { body: {} }))}>
-            クイックドラフト
-          </button>
-        </div>
-        <div className="panel mode-card">
-          <div className="spread">
-            <div className="title">RANKED</div>
+      <section className="cards">
+        <article className="fd-card">
+          <div className="fd-card-header">
+            <h3>QUICK DRAFT</h3>
+            <span className="badge">4 PLAYERS</span>
+          </div>
+          <p>空いているルームに参加します。4人そろうと自動で開始。空席はCPUが入ります。</p>
+          <div className="button-row">
+            <button className="btn primary" disabled={busy} onClick={() => go(() => api('/api/rooms/quick', { body: {} }))}>
+              クイックドラフト
+            </button>
+            <Link className="btn" to="/play">
+              ほかのモード
+            </Link>
+          </div>
+        </article>
+        <article className="fd-card">
+          <div className="fd-card-header">
+            <h3>RANKED</h3>
             {ranked && <TierBadge rating={ranked.rating} />}
           </div>
-          <div className="small muted">
-            {ranked ? `${ranked.season.name}・${ranked.games}試合${ranked.position ? `・${ranked.position}位` : ''}` : 'レーティング対戦'}。60秒で4人そろわなければCPUが入ります（レートは人間同士の順位で変動）。
-          </div>
-          <div className="row">
+          <p>
+            ライバルとの対決に挑戦。ドラフトで最高のチームを目指そう。
+            {ranked && ranked.games > 0 && `（${ranked.games}試合${ranked.position ? `・${ranked.position}位` : ''}）`}
+          </p>
+          <div className="button-row">
             <button className="btn primary" disabled={busy} onClick={() => go(() => api('/api/ranked/queue', { body: {} }))}>
               ランク戦を探す
             </button>
-            <Link className="btn ghost small" to="/ranked">
+            <Link className="btn" to="/ranked">
               ランキング
             </Link>
           </div>
-        </div>
-        <div className="panel mode-card">
-          <div className="spread">
-            <div className="title">SOLO CHALLENGE</div>
-            {solo?.cleared && <span className="chip on">達成済み</span>}
+        </article>
+        <article className="fd-card">
+          <div className="fd-card-header">
+            <h3>SOLO CHALLENGE</h3>
+            <span className={`badge ${solo?.cleared ? 'on' : ''}`}>{solo?.cleared ? '達成済み' : 'DAILY'}</span>
           </div>
-          <div className="small">
-            {solo ? (
-              <>
-                今日の課題 <Stars n={solo.challenge.difficulty} />
-                <br />
-                <b>{solo.challenge.titleJa}</b>
-              </>
-            ) : (
-              <span className="muted">CPU 3チームと日替わりの課題に挑戦</span>
+          <p>{solo ? `今日の課題：${solo.challenge.titleJa}` : '今日の課題に挑戦。CPU 3チームと戦います。'}</p>
+          <div className="button-row">
+            <Link className="btn primary" to="/solo">
+              チャレンジを始める
+            </Link>
+          </div>
+        </article>
+      </section>
+
+      <div className="section-title">
+        <h2>TODAY</h2>
+        <Link to="/me">MY PAGE</Link>
+      </div>
+      <section className="cards">
+        <article className="fd-card">
+          <div className="list">
+            <Link className="list-item" to="/missions">
+              <span>ミッション</span>
+              {missionsReady > 0 ? <strong>{missionsReady}件 受け取れます</strong> : <span className="muted">進行中</span>}
+            </Link>
+            <Link className="list-item" to="/pass">
+              <span>Season Pass</span>
+              {pass ? (
+                <strong>
+                  Lv {pass.level}
+                  {pass.claimable > 0 ? `・報酬 ${pass.claimable}` : ''}
+                </strong>
+              ) : (
+                <span className="muted">—</span>
+              )}
+            </Link>
+            <div className="list-item">
+              <span>対戦報酬</span>
+              <span className="muted">{matchRewards ? `今日 ${matchRewards.leaguesToday}/${matchRewards.cap} リーグ` : '—'}</span>
+            </div>
+            <div className="list-item">
+              <span>ログインボーナス</span>
+              <span className="muted">{login?.claimedToday ? `受け取り済み（${login.streak}日連続）` : '—'}</span>
+            </div>
+            {wallet && (
+              <Link className="list-item" to="/wallet">
+                <span>残高</span>
+                <strong>
+                  {fmt(wallet.coins)} COINS・{fmt(wallet.gems.total)} GEMS
+                </strong>
+              </Link>
             )}
           </div>
-          <Link className="btn primary" to="/solo">
-            課題を見る
-          </Link>
-        </div>
+        </article>
+      </section>
+
+      {events.length > 0 && (
+        <>
+          <div className="section-title">
+            <h2>SPECIAL EVENTS</h2>
+            <Link to="/events">VIEW ALL</Link>
+          </div>
+          <section className="cards">
+            {events.slice(0, 2).map((e) => (
+              <article key={e.id} className="fd-card">
+                <div className="fd-card-header">
+                  <h3>{e.name}</h3>
+                  <span className="badge on">開催中</span>
+                </div>
+                <p>{e.conditions.join('・')}</p>
+                <div className="button-row">
+                  <button className="btn primary" disabled={busy} onClick={() => go(() => api(`/api/events/${e.id}/join`, { body: {} }))}>
+                    参加する
+                  </button>
+                  <Link className="btn" to={`/events/${e.id}`}>
+                    詳細
+                  </Link>
+                </div>
+              </article>
+            ))}
+          </section>
+        </>
+      )}
+
+      <div className="section-title">
+        <h2>TOP RANKING</h2>
+        <Link to="/ranked">VIEW ALL</Link>
       </div>
-      <div className="grid2">
-        <div className="panel mode-card">
-          <div className="spread">
-            <div className="title">COLLECTION DRAFT</div>
-            {roster !== null && <span className="chip">専用枠 {roster}/3</span>}
-          </div>
-          <div className="small muted">所持カードから最大3枚を「自分専用枠」に登録して参加。登録カードはあなただけが指名できます。ほかの候補は通常どおり共通です。</div>
-          <div className="row">
-            <button className="btn primary" disabled={busy} onClick={() => go(() => api('/api/collection/draft/quick', { body: {} }))}>
-              Collection Draft
-            </button>
-            <Link className="btn ghost small" to="/collection">
-              専用枠を選ぶ
-            </Link>
-          </div>
-        </div>
-        <div className="panel mode-card">
-          <div className="title">GACHA・REWARDS</div>
-          <div className="small">
-            {wallet ? (
-              <>
-                COINS <b>{fmt(wallet.coins)}</b>　GEMS <b>{fmt(wallet.gems.total)}</b>
-                <span className="muted">（無償 {fmt(wallet.gems.free)}・有償 {fmt(wallet.gems.paid)}）</span>
-              </>
-            ) : (
-              <span className="muted">残高を読み込み中…</span>
-            )}
-            <br />
-            <span className="muted">
-              {login?.claimedToday ? `ログインボーナス受け取り済み（${login.streak}日連続）` : 'ログインボーナス未受け取り'}
-              {matchRewards && `・今日の対戦報酬 ${matchRewards.leaguesToday}/${matchRewards.cap}リーグ`}
-            </span>
-          </div>
-          <div className="row">
-            <Link className="btn primary small" to="/gacha">
-              ガシャ
-            </Link>
-            <Link className="btn small" to="/missions">
-              ミッション{missionsReady > 0 && <span className="chip on">{missionsReady}</span>}
-            </Link>
-            <Link className="btn small" to="/pass">
-              Season Pass
-            </Link>
-            <Link className="btn small ghost" to="/shop">
-              ショップ
-            </Link>
-          </div>
-        </div>
-      </div>
-      <div className="panel">
-        <div className="spread" style={{ marginBottom: 8 }}>
-          <h3 style={{ margin: 0 }}>SPECIAL EVENTS</h3>
-          <Link className="small" to="/events">
-            すべて見る
-          </Link>
-        </div>
-        {events.length === 0 && <div className="small muted">開催中・開催予定のイベントはありません。</div>}
-        {events.slice(0, 3).map((e) => (
-          <div key={e.id} className="spread small" style={{ padding: '6px 0', borderTop: '1px solid var(--line)' }}>
-            <span>
-              <b>{e.name}</b>　<span className="muted">{eventPeriod(e)}・{e.conditions.join('・')}</span>
-            </span>
-            {e.open ? (
-              <button className="btn small primary" disabled={busy} onClick={() => go(() => api(`/api/events/${e.id}/join`, { body: {} }))}>
-                参加する
-              </button>
-            ) : (
-              <span className="chip">開催予定</span>
+      <section className="cards">
+        <article className="fd-card">
+          {board && board.items.length === 0 && <p className="flush">今シーズンのランク戦はまだ行われていません。</p>}
+          <div className="list">
+            {board?.items.slice(0, 3).map((r) => (
+              <div key={r.userId} className={`list-item rank ${r.userId === me?.id ? 'me' : ''}`}>
+                <span>
+                  {String(r.position).padStart(2, '0')} · {r.displayName}
+                  {r.member && <span className="member-badge inline">★</span>}
+                </span>
+                <strong>{fmt(r.rating)} PTS</strong>
+              </div>
+            ))}
+            {board && board.me.position !== null && board.me.position > 3 && ranked && (
+              <div className="list-item rank me">
+                <span>
+                  {String(board.me.position).padStart(2, '0')} · {me?.displayName}
+                </span>
+                <strong>{fmt(ranked.rating)} PTS</strong>
+              </div>
             )}
           </div>
-        ))}
-      </div>
-      <div className="grid2">
-        <div className="panel mode-card">
-          <div className="title">PRIVATE ROOM</div>
-          <div className="small muted">友だちと対戦。招待コード・招待リンクで参加できます。</div>
-          <label className="field">
-            1ピックの制限時間
-            <select value={pickSeconds} onChange={(e) => setPickSeconds(Number(e.target.value))}>
-              {GAME_CONFIG.pickSecondsOptions.map((s) => (
-                <option key={s} value={s}>
-                  {s}秒
-                </option>
-              ))}
-            </select>
-          </label>
-          <button className="btn" disabled={busy} onClick={() => go(() => api('/api/rooms', { body: { settings: { pickSeconds, fillWithCpu: true } } }))}>
-            ルームを作成
-          </button>
-        </div>
-        <div className="panel mode-card">
-          <div className="title">JOIN</div>
-          <div className="small muted">招待コード（6文字）を入力して参加します。</div>
-          <input value={code} onChange={(e) => setCode(e.target.value.toUpperCase().slice(0, 6))} placeholder="例：AB12CD" aria-label="招待コード" style={{ letterSpacing: '0.2em', fontFamily: 'var(--display)', fontSize: 18 }} />
-          <button className="btn" disabled={busy || code.length !== 6} onClick={() => go(() => api('/api/rooms/join', { body: { code } }))}>
-            参加する
-          </button>
-        </div>
-      </div>
-      {error && <div className="error">{error}</div>}
-      <div className="row" style={{ justifyContent: 'center' }}>
-        <Link className="btn ghost" to="/history">
-          対戦履歴
-        </Link>
-        <Link className="btn ghost" to="/ranked">
-          ランキング
-        </Link>
-        <Link className="btn ghost" to="/events">
-          イベント
-        </Link>
-        <Link className="btn ghost" to="/cards">
-          選手図鑑
-        </Link>
-      </div>
+        </article>
+      </section>
     </div>
   );
 }

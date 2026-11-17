@@ -75,8 +75,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     })();
   }, [refresh]);
 
+  const clearNotice = useCallback(() => setNotice(null), []);
   return (
-    <Ctx.Provider value={{ wallet, membership, login, matchRewards, notice, clearNotice: () => setNotice(null), refresh, setWallet }}>{children}</Ctx.Provider>
+    <Ctx.Provider value={{ wallet, membership, login, matchRewards, notice, clearNotice, refresh, setWallet }}>{children}</Ctx.Provider>
   );
 }
 
