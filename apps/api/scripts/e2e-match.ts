@@ -169,6 +169,34 @@ async function main() {
   const enhanceMission = missions.data.items?.find((m: any) => m.id === 'b-enhance');
   check(enhanceMission && enhanceMission.progress >= 1, 'beginner mission "strengthen a card" progressed');
 
+  // ------------------------------------------------------------ FREE GEMS in the gacha (decisions 86-87)
+  console.log('\n[free gems]');
+  const g = (kind: string, amount: number) => api('/api/admin/economy/test-grants', { token: at, body: { username: c.username, kind, amount, note: 'e2e' } });
+  await g('GEMS_FREE', 700);
+  await g('GEMS_PAID_GRANTED', 200);
+  await g('GEMS_PAID_PURCHASED', 300);
+  const banners = await api('/api/gacha/banners', { token: c.token });
+  const prem = banners.data.items.find((x: any) => x.id === 'premium-s1');
+  check(prem?.cost.acceptsFreeGems === true, 'Premium accepts FREE GEMS');
+  const fd = await api('/api/gacha/banners/premium-s1/draw', { token: c.token, body: { count: 10, requestId: rid() } });
+  check(fd.status === 200 && fd.data.cost.split.GEMS_FREE === 700 && fd.data.cost.split.GEMS_PAID_GRANTED === 200 && fd.data.cost.split.GEMS_PAID_PURCHASED === 100, `10 draws: FREE 700 first, then distributed 200, then purchased 100 (${JSON.stringify(fd.data.cost?.split)})`);
+  check(fd.data.wallet.gems.free === 0 && fd.data.wallet.gems.paidPurchased === 200 && fd.data.wallet.gems.total === 200, 'balances after the draw');
+  const pity = fd.data.pity;
+  check(pity && pity.total === 10, 'pity counts the draw as before');
+  // a paid-only banner: FREE GEMS are not used
+  await g('GEMS_FREE', 500);
+  d1("UPDATE gacha_banners SET accepts_free_gems = 0 WHERE id = 'premium-s1'");
+  const po = await api('/api/gacha/banners/premium-s1/draw', { token: c.token, body: { count: 10, requestId: rid() } });
+  check(po.status === 409 && po.data?.error?.code === 'INSUFFICIENT_FUNDS', 'paid-only banner: 500 FREE + 200 PAID is not enough for 1,000');
+  const one = await api('/api/gacha/banners/premium-s1/draw', { token: c.token, body: { count: 1, requestId: rid() } });
+  check(one.status === 200 && !one.data.cost.split.GEMS_FREE && one.data.cost.split.GEMS_PAID_PURCHASED === 100, 'paid-only banner: only PAID GEMS are used');
+  d1("UPDATE gacha_banners SET accepts_free_gems = 1 WHERE id = 'premium-s1'");
+  check(await (async () => {
+    const [w, h] = await Promise.all([api('/api/currency', { token: c.token }), api('/api/currency/history?limit=200', { token: c.token })]);
+    const sum = (cur: string) => (h.data.items as any[]).filter((x) => x.currency === cur).reduce((s2, x) => s2 + x.amount, 0);
+    return sum('GEMS_FREE') === w.data.wallet.gems.free && sum('GEMS_PAID_PURCHASED') === w.data.wallet.gems.paidPurchased && sum('GEMS_PAID_GRANTED') === w.data.wallet.gems.paidGranted;
+  })(), 'the ledger matches the balances');
+
   // ------------------------------------------------------------ team screen API
   console.log('\n[team screen]');
   const teamA = await api('/api/team', { token: a.token });

@@ -8,6 +8,7 @@ import {
   ratesSum,
   MAX_CARD_LEVEL,
   runGacha,
+  splitGemsFreeFirst,
   splitPaidGems,
   type Currency,
   type DrawResult,
@@ -41,6 +42,8 @@ interface BannerRow {
   cost_currency: 'COINS' | 'GEMS_PAID';
   cost_single: number;
   cost_multi: number;
+  /** decision 87: FREE GEMS can pay for this GEMS banner (used first) */
+  accepts_free_gems: number;
   rates_version: number;
   pity_json: string | null;
   starts_at: number;
@@ -61,7 +64,7 @@ async function bannerDef(env: Env, row: BannerRow): Promise<GachaBannerDef> {
     seriesId: row.series_id,
     nameJa: row.name,
     descriptionJa: row.description,
-    cost: { currency: row.cost_currency, single: row.cost_single, multi: row.cost_multi },
+    cost: { currency: row.cost_currency, single: row.cost_single, multi: row.cost_multi, acceptsFreeGems: row.cost_currency === 'GEMS_PAID' && row.accepts_free_gems === 1 },
     ratesPpm,
     pity: row.pity_json ? JSON.parse(row.pity_json) : null,
     ratesVersion: row.rates_version,
@@ -150,7 +153,7 @@ gachaRoutes.get('/banners/:id', async (c) => {
     counts: Object.fromEntries(RARITIES.map((r) => [r, pool[r].length])),
     cards,
     duplicatePoints: { type: b.kind, values: ECONOMY_CONFIG.duplicatePoints },
-    paidGemsSpendOrder: b.cost.currency === 'GEMS_PAID' ? ECONOMY_CONFIG.paidGemsSpendOrder : null,
+    paidGemsSpendOrder: b.cost.currency === 'GEMS_PAID' ? (b.cost.acceptsFreeGems ? ['GEMS_FREE', ...ECONOMY_CONFIG.paidGemsSpendOrder] : ECONOMY_CONFIG.paidGemsSpendOrder) : null,
   });
 });
 
@@ -185,8 +188,10 @@ gachaRoutes.post('/banners/:id/draw', async (c) => {
     const cost = count === 10 ? banner.cost.multi : banner.cost.single;
     let split: Partial<Record<Currency, number>> | null;
     if (banner.cost.currency === 'COINS') split = wallet.coins >= cost ? { COINS: cost } : null;
+    // decision 86: FREE GEMS first, then distributed PAID GEMS, then purchased PAID GEMS
+    else if (banner.cost.acceptsFreeGems) split = splitGemsFreeFirst(cost, { GEMS_FREE: wallet.gems.free, GEMS_PAID_GRANTED: wallet.gems.paidGranted, GEMS_PAID_PURCHASED: wallet.gems.paidPurchased });
     else split = splitPaidGems(cost, { GEMS_PAID_GRANTED: wallet.gems.paidGranted, GEMS_PAID_PURCHASED: wallet.gems.paidPurchased });
-    if (!split) throw new ApiError('INSUFFICIENT_FUNDS', banner.cost.currency === 'COINS' ? 'not enough COINS' : 'not enough PAID GEMS');
+    if (!split) throw new ApiError('INSUFFICIENT_FUNDS', banner.cost.currency === 'COINS' ? 'not enough COINS' : banner.cost.acceptsFreeGems ? 'not enough GEMS' : 'not enough PAID GEMS');
     // owned cards with their strengthening level: a duplicate adds +1 up to +5, then points (decision 70)
     const owned = new Map(
       (await c.env.DB.prepare('SELECT player_id, level FROM user_collections WHERE user_id = ?').bind(user.id).all<{ player_id: string; level: number }>()).results.map(
@@ -288,11 +293,11 @@ gachaRoutes.post('/banners/:id/draw', async (c) => {
       wallet: {
         coins: after.coins - spent('COINS'),
         gems: {
-          free: after.gems.free,
+          free: after.gems.free - spent('GEMS_FREE'),
           paidPurchased: after.gems.paidPurchased - spent('GEMS_PAID_PURCHASED'),
           paidGranted: after.gems.paidGranted - spent('GEMS_PAID_GRANTED'),
           paid: after.gems.paid - spent('GEMS_PAID_PURCHASED') - spent('GEMS_PAID_GRANTED'),
-          total: after.gems.total - spent('GEMS_PAID_PURCHASED') - spent('GEMS_PAID_GRANTED'),
+          total: after.gems.total - spent('GEMS_FREE') - spent('GEMS_PAID_PURCHASED') - spent('GEMS_PAID_GRANTED'),
         },
         points: { ...after.points, [banner.kind]: after.points[banner.kind] + run.pointsTotal },
       },

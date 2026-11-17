@@ -16,7 +16,11 @@ export interface GachaBannerDef {
   seriesId: string;
   nameJa: string;
   descriptionJa: string;
-  cost: { currency: 'COINS' | 'GEMS_PAID'; single: number; multi: number };
+  /**
+   * GEMS_PAID banners: acceptsFreeGems = FREE GEMS can pay too, used first
+   * (decisions 86-87); otherwise only PAID GEMS (distributed, then purchased)
+   */
+  cost: { currency: 'COINS' | 'GEMS_PAID'; single: number; multi: number; acceptsFreeGems?: boolean };
   /** parts per million, sum = 1,000,000 */
   ratesPpm: Record<Rarity, number>;
   pity: null | { epicAt: number; legendaryAt: number; bonusEvery: number };
@@ -50,7 +54,7 @@ export const GACHA_BANNERS: GachaBannerDef[] = [
     nameJa: 'プレミアムガシャ シリーズ1',
     descriptionJa:
       '有償GEMSで引けるガシャ。Epic以上が50回出なければ50回目でEpic以上、Legendary以上が100回出なければ100回目でLegendary以上を保証。累計150回ごとにEpic以上確定の単発が無料で1回引かれます。天井の回数はシリーズ内で引き継がれ、別シリーズには移りません。',
-    cost: { currency: 'GEMS_PAID', single: 100, multi: 1000 },
+    cost: { currency: 'GEMS_PAID', single: 100, multi: 1000, acceptsFreeGems: true },
     ratesPpm: { common: 0, rare: 650_000, epic: 250_000, legendary: 90_000, icon: 10_000 },
     pity: { epicAt: 50, legendaryAt: 100, bonusEvery: 150 },
     ratesVersion: 1,

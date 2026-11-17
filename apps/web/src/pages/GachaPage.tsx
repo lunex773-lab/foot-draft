@@ -20,7 +20,8 @@ export interface Banner {
   seriesId: string;
   name: string;
   description: string;
-  cost: { currency: 'COINS' | 'GEMS_PAID'; single: number; multi: number };
+  /** acceptsFreeGems: FREE GEMS are used first, then PAID GEMS (decisions 86-87) */
+  cost: { currency: 'COINS' | 'GEMS_PAID'; single: number; multi: number; acceptsFreeGems?: boolean };
   ratesPpm: Record<Rarity, number>;
   ratesVersion: number;
   pityRules: null | { epicAt: number; legendaryAt: number; bonusEvery: number };
@@ -55,13 +56,15 @@ interface DrawResponse {
 }
 
 export const pct = (ppm: number) => `${(ppm / 10_000).toLocaleString('ja-JP', { maximumFractionDigits: 4 })}%`;
-const costLabel = (c: Banner['cost']['currency']) => (c === 'COINS' ? 'COINS' : '有償GEMS');
+const costLabel = (c: Banner['cost']['currency'], acceptsFreeGems?: boolean) => (c === 'COINS' ? 'COINS' : acceptsFreeGems ? 'GEMS' : '有償GEMS');
+/** the order the GEMS of a banner are used in */
+const gemsOrder = (b: Banner) => [...(b.cost.acceptsFreeGems ? (['GEMS_FREE'] as const) : []), ...ECONOMY_CONFIG.paidGemsSpendOrder].map((c) => CURRENCY_LABEL_JA[c as keyof typeof CURRENCY_LABEL_JA]).join(' → ');
 const GUARANTEE_LABEL = { none: '', epic: 'Epic以上保証', legendary: 'Legendary以上保証', bonus: '150回特典' } as const;
 export const POINT_LABEL = { standard: 'Standardポイント', premium: 'Premiumポイント' } as const;
 
 function balanceFor(b: Banner, w: Wallet | null) {
   if (!w) return 0;
-  return b.cost.currency === 'COINS' ? w.coins : w.gems.paid;
+  return b.cost.currency === 'COINS' ? w.coins : b.cost.acceptsFreeGems ? w.gems.free + w.gems.paid : w.gems.paid;
 }
 
 function PityBox({ banner }: { banner: Banner }) {
@@ -158,14 +161,14 @@ export default function GachaPage() {
             <PityBox banner={b} />
             <div className="row" style={{ marginTop: 12 }}>
               <button className="btn" disabled={!!busy || have < b.cost.single} onClick={() => setConfirm({ banner: b, count: 1 })}>
-                1回 {fmt(b.cost.single)} {costLabel(b.cost.currency)}
+                1回 {fmt(b.cost.single)} {costLabel(b.cost.currency, b.cost.acceptsFreeGems)}
               </button>
               <button className="btn primary" disabled={!!busy || have < b.cost.multi} onClick={() => setConfirm({ banner: b, count: 10 })}>
-                10回 {fmt(b.cost.multi)} {costLabel(b.cost.currency)}
+                10回 {fmt(b.cost.multi)} {costLabel(b.cost.currency, b.cost.acceptsFreeGems)}
               </button>
               <span className="small muted">
-                所持：{fmt(have)} {costLabel(b.cost.currency)}
-                {b.cost.currency === 'GEMS_PAID' && '（無償GEMSは使えません）'}
+                所持：{fmt(have)} {costLabel(b.cost.currency, b.cost.acceptsFreeGems)}
+                {b.cost.currency === 'GEMS_PAID' && (b.cost.acceptsFreeGems ? '（無償GEMSも使えます：無償から先に使います）' : '（有償限定：無償GEMSは使えません）')}
               </span>
             </div>
           </div>
@@ -177,11 +180,9 @@ export default function GachaPage() {
           <div className="modal panel" style={{ maxWidth: 420 }} onClick={(e) => e.stopPropagation()}>
             <h3>{confirm.banner.name}</h3>
             <p className="small">
-              {confirm.count}回引きます。{fmt(confirm.count === 10 ? confirm.banner.cost.multi : confirm.banner.cost.single)} {costLabel(confirm.banner.cost.currency)} を使います。
+              {confirm.count}回引きます。{fmt(confirm.count === 10 ? confirm.banner.cost.multi : confirm.banner.cost.single)} {costLabel(confirm.banner.cost.currency, confirm.banner.cost.acceptsFreeGems)} を使います。
             </p>
-            {confirm.banner.cost.currency === 'GEMS_PAID' && (
-              <p className="tiny muted">有償GEMSは {ECONOMY_CONFIG.paidGemsSpendOrder.map((c) => CURRENCY_LABEL_JA[c]).join(' → ')} の順に使われます。</p>
-            )}
+            {confirm.banner.cost.currency === 'GEMS_PAID' && <p className="tiny muted">GEMSは {gemsOrder(confirm.banner)} の順に使われます。</p>}
             <div className="row" style={{ justifyContent: 'flex-end' }}>
               <button className="btn ghost" onClick={() => setConfirm(null)}>
                 やめる
@@ -229,7 +230,7 @@ function DrawResultModal({ result, catalog, onClose }: { result: DrawResponse; c
           })}
         </div>
         <div className="small" style={{ marginTop: 12 }}>
-          使用：{fmt(result.cost.amount)} {result.cost.currency === 'COINS' ? 'COINS' : '有償GEMS'}
+          使用：{fmt(result.cost.amount)} {result.cost.currency === 'COINS' ? 'COINS' : 'GEMS'}
           {result.cost.currency === 'GEMS_PAID' &&
             `（${Object.entries(result.cost.split)
               .map(([c, n]) => `${CURRENCY_LABEL_JA[c as keyof typeof CURRENCY_LABEL_JA]} ${fmt(n)}`)
@@ -288,8 +289,13 @@ export function GachaDetailPage() {
             <tr>
               <th>価格</th>
               <td>
-                1回 {fmt(b.cost.single)}／10回 {fmt(b.cost.multi)} {costLabel(b.cost.currency)}
-                {d.paidGemsSpendOrder && <div className="tiny muted">使う順：{d.paidGemsSpendOrder.map((c) => CURRENCY_LABEL_JA[c as keyof typeof CURRENCY_LABEL_JA]).join(' → ')}。無償GEMSは使えません</div>}
+                1回 {fmt(b.cost.single)}／10回 {fmt(b.cost.multi)} {costLabel(b.cost.currency, b.cost.acceptsFreeGems)}
+                {d.paidGemsSpendOrder && (
+                  <div className="tiny muted">
+                    使う順：{d.paidGemsSpendOrder.map((c) => CURRENCY_LABEL_JA[c as keyof typeof CURRENCY_LABEL_JA]).join(' → ')}
+                    {b.cost.acceptsFreeGems ? '（無償GEMSも使えます）' : '（有償限定：無償GEMSは使えません）'}
+                  </div>
+                )}
               </td>
             </tr>
             <tr>

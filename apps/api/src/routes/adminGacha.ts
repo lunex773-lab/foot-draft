@@ -23,6 +23,7 @@ interface BannerRow {
   cost_currency: 'COINS' | 'GEMS_PAID';
   cost_single: number;
   cost_multi: number;
+  accepts_free_gems: number;
   rates_version: number;
   pity_json: string | null;
   starts_at: number;
@@ -37,6 +38,8 @@ interface BannerInput {
   description: string;
   costSingle: number;
   costMulti: number;
+  /** decision 87: FREE GEMS can pay (Premium only) */
+  acceptsFreeGems: boolean;
   ratesPpm: Record<Rarity, number>;
   pity: { epicAt: number; legendaryAt: number; bonusEvery: number } | null;
   poolIds: string[];
@@ -81,6 +84,7 @@ async function validate(env: Env, kind: 'standard' | 'premium', b: Record<string
     description: str(b.description, 'description', { min: 1, max: 1000 }),
     costSingle: int(b.costSingle, 'costSingle', 1, 1_000_000),
     costMulti: int(b.costMulti, 'costMulti', 1, 10_000_000),
+    acceptsFreeGems: kind === 'premium' && b.acceptsFreeGems === true,
     ratesPpm,
     pity,
     poolIds,
@@ -96,7 +100,7 @@ const snapshot = (kind: string, i: BannerInput) =>
     seriesId: i.seriesId,
     name: i.name,
     description: i.description,
-    cost: { currency: kind === 'standard' ? 'COINS' : 'GEMS_PAID', single: i.costSingle, multi: i.costMulti },
+    cost: { currency: kind === 'standard' ? 'COINS' : 'GEMS_PAID', single: i.costSingle, multi: i.costMulti, acceptsFreeGems: i.acceptsFreeGems },
     rates: i.ratesPpm,
     pool: i.poolIds,
     pity: i.pity,
@@ -134,7 +138,7 @@ async function bannerDetail(env: Env, id: string) {
 
 adminGachaRoutes.get('/gacha/banners', requirePermission('gacha.read'), async (c) => {
   const rows = await c.env.DB.prepare(
-    `SELECT b.id, b.kind, b.series_id, b.name, b.status, b.rates_version, b.cost_currency, b.cost_single, b.cost_multi, b.starts_at, b.ends_at, b.sort_order,
+    `SELECT b.id, b.kind, b.series_id, b.name, b.status, b.rates_version, b.cost_currency, b.cost_single, b.cost_multi, b.accepts_free_gems, b.starts_at, b.ends_at, b.sort_order,
             (SELECT COUNT(*) FROM gacha_pool_items i WHERE i.banner_id = b.id) AS pool_size,
             (SELECT COUNT(*) FROM gacha_draws d WHERE d.banner_id = b.id) AS draws
        FROM gacha_banners b ORDER BY CASE b.status WHEN 'published' THEN 0 WHEN 'draft' THEN 1 ELSE 2 END, b.sort_order, b.created_at DESC`,
@@ -156,9 +160,9 @@ adminGachaRoutes.post('/gacha/banners', requirePermission('gacha.write'), async 
   const now = Date.now();
   await c.env.DB.batch([
     c.env.DB.prepare(
-      `INSERT INTO gacha_banners (id, kind, series_id, name, description, cost_currency, cost_single, cost_multi, rates_version, pity_json, starts_at, ends_at, status, sort_order, created_at, updated_at)
-       VALUES (?,?,?,?,?,?,?,?,1,?,?,?,'draft',?,?,?)`,
-    ).bind(id, kind, i.seriesId, i.name, i.description, kind === 'standard' ? 'COINS' : 'GEMS_PAID', i.costSingle, i.costMulti, i.pity ? JSON.stringify(i.pity) : null, i.startsAt, i.endsAt, i.sortOrder, now, now),
+      `INSERT INTO gacha_banners (id, kind, series_id, name, description, cost_currency, cost_single, cost_multi, accepts_free_gems, rates_version, pity_json, starts_at, ends_at, status, sort_order, created_at, updated_at)
+       VALUES (?,?,?,?,?,?,?,?,?,1,?,?,?,'draft',?,?,?)`,
+    ).bind(id, kind, i.seriesId, i.name, i.description, kind === 'standard' ? 'COINS' : 'GEMS_PAID', i.costSingle, i.costMulti, i.acceptsFreeGems ? 1 : 0, i.pity ? JSON.stringify(i.pity) : null, i.startsAt, i.endsAt, i.sortOrder, now, now),
     ...writeStmts(c.env, id, 1, i),
     auditStatement(c.env, a.id, 'gacha_created', { type: 'gacha', id }, { kind, name: i.name, seriesId: i.seriesId, pool: i.poolIds.length }, ipOf(c)),
   ]);
@@ -184,8 +188,8 @@ adminGachaRoutes.patch('/gacha/banners/:id', requirePermission('gacha.write'), a
   const now = Date.now();
   await c.env.DB.batch([
     c.env.DB.prepare(
-      'UPDATE gacha_banners SET series_id = ?, name = ?, description = ?, cost_single = ?, cost_multi = ?, rates_version = ?, pity_json = ?, starts_at = ?, ends_at = ?, sort_order = ?, updated_at = ? WHERE id = ?',
-    ).bind(i.seriesId, i.name, i.description, i.costSingle, i.costMulti, version, i.pity ? JSON.stringify(i.pity) : null, i.startsAt, i.endsAt, i.sortOrder, now, id),
+      'UPDATE gacha_banners SET series_id = ?, name = ?, description = ?, cost_single = ?, cost_multi = ?, accepts_free_gems = ?, rates_version = ?, pity_json = ?, starts_at = ?, ends_at = ?, sort_order = ?, updated_at = ? WHERE id = ?',
+    ).bind(i.seriesId, i.name, i.description, i.costSingle, i.costMulti, i.acceptsFreeGems ? 1 : 0, version, i.pity ? JSON.stringify(i.pity) : null, i.startsAt, i.endsAt, i.sortOrder, now, id),
     ...writeStmts(c.env, id, version, i),
     ...(b.status === 'published'
       ? [
@@ -215,6 +219,7 @@ adminGachaRoutes.post('/gacha/banners/:id/publish', requirePermission('gacha.wri
     description: d.banner.description,
     costSingle: d.banner.cost_single,
     costMulti: d.banner.cost_multi,
+    acceptsFreeGems: d.banner.accepts_free_gems === 1,
     ratesPpm: d.ratesPpm,
     pity: d.banner.pity,
     poolIds: d.poolIds,

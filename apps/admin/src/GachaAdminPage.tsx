@@ -21,6 +21,7 @@ interface Row {
   cost_currency: string;
   cost_single: number;
   cost_multi: number;
+  accepts_free_gems?: number;
   starts_at: number;
   ends_at: number | null;
   pool_size: number;
@@ -90,7 +91,7 @@ export function GachaAdminPage({ canWrite }: { canWrite: boolean }) {
                 <td>{STATUS_LABEL[r.status]}</td>
                 <td className="num">v{r.rates_version}</td>
                 <td>
-                  {fmtInt(r.cost_single)}／{fmtInt(r.cost_multi)} {r.cost_currency === 'COINS' ? 'COINS' : '有償GEMS'}
+                  {fmtInt(r.cost_single)}／{fmtInt(r.cost_multi)} {r.cost_currency === 'COINS' ? 'COINS' : r.accepts_free_gems ? 'GEMS（無償も可）' : '有償GEMS'}
                 </td>
                 <td className="num">{r.pool_size}</td>
                 <td className="num">{fmtInt(r.draws)}</td>
@@ -119,6 +120,7 @@ function GachaEditor({ id: openedId, canWrite, onBack }: { id: string | null; ca
     description: '',
     costSingle: 100,
     costMulti: 1000,
+    acceptsFreeGems: true,
     rates: { common: '0', rare: '65', epic: '25', legendary: '9', icon: '1' } as Record<Rarity, string>,
     pityOn: true,
     pity: { epicAt: 50, legendaryAt: 100, bonusEvery: 150 },
@@ -146,6 +148,7 @@ function GachaEditor({ id: openedId, canWrite, onBack }: { id: string | null; ca
       description: b.description,
       costSingle: b.cost_single,
       costMulti: b.cost_multi,
+      acceptsFreeGems: b.accepts_free_gems === 1,
       rates: Object.fromEntries(RARITIES.map((r) => [r, String((d.ratesPpm[r] ?? 0) / 10_000)])) as Record<Rarity, string>,
       pityOn: !!b.pity,
       pity: b.pity ?? f.pity,
@@ -185,6 +188,7 @@ function GachaEditor({ id: openedId, canWrite, onBack }: { id: string | null; ca
     description: form.description,
     costSingle: Number(form.costSingle),
     costMulti: Number(form.costMulti),
+    acceptsFreeGems: form.kind === 'premium' && form.acceptsFreeGems,
     ratesPpm: Object.fromEntries(RARITIES.map((r) => [r, ppm(r)])),
     pity: form.kind === 'premium' && form.pityOn ? form.pity : null,
     poolIds: pool,
@@ -260,8 +264,14 @@ function GachaEditor({ id: openedId, canWrite, onBack }: { id: string | null; ca
               10回
               <input type="number" value={form.costMulti} disabled={locked} onChange={(e) => set('costMulti', Number(e.target.value))} style={{ width: 110 }} />
             </label>
-            <span className="small muted">{form.kind === 'standard' ? 'COINS' : '有償GEMS'}</span>
+            <span className="small muted">{form.kind === 'standard' ? 'COINS' : form.acceptsFreeGems ? 'GEMS（無償→有償の順）' : '有償GEMS'}</span>
           </div>
+          {form.kind === 'premium' && (
+            <label className="row small">
+              <input type="checkbox" checked={form.acceptsFreeGems} disabled={locked} onChange={(e) => set('acceptsFreeGems', e.target.checked)} />
+              無償GEMSも使える（無償GEMSから先に使い、足りない分を有償GEMS。オフ＝有償限定ガシャ）
+            </label>
+          )}
           <div className="row">
             <label className="form-field">
               開始（日本時間）
