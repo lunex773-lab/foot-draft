@@ -31,6 +31,7 @@ function Rewards({ snap }: { snap: RoomSnapshot }) {
         )}
         {r.bonus > 0 && <span className="chip on">{snap.mode === 'event' ? 'イベント順位ボーナス' : 'ソロ課題の達成報酬'} +{fmt(r.bonus)}</span>}
         {r.matchRewardGiven && <span className="chip">今日 {r.leaguesToday}/10 リーグ</span>}
+        {!!r.exchangePoints && <span className="chip on">Standard 交換ポイント +{fmt(r.exchangePoints)}</span>}
       </div>
       {!!r.passXp && (
         <div className="small" style={{ marginTop: 6 }}>
@@ -74,9 +75,6 @@ function Outcome({ snap }: { snap: RoomSnapshot }) {
         ) : (
           <div style={{ marginTop: 6 }}>人間のプレイヤーが1人だったため、レートは変わりません（{mine.before}）</div>
         )}
-        <Link className="small" to="/ranked">
-          ランキングを見る
-        </Link>
       </div>
     );
   }
@@ -92,9 +90,6 @@ function Outcome({ snap }: { snap: RoomSnapshot }) {
         <div className="small muted">
           {o.solo.record.won}勝{o.solo.record.drawn}分{o.solo.record.lost}敗・{o.solo.record.goalsFor}得点・{o.solo.record.goalsAgainst}失点・無失点 {o.solo.record.cleanSheets}試合
         </div>
-        <Link className="small" to="/solo">
-          課題の画面へ
-        </Link>
       </div>
     );
   }
@@ -103,9 +98,6 @@ function Outcome({ snap }: { snap: RoomSnapshot }) {
       <div className="result-box">
         <div className="small muted">イベント</div>
         <div style={{ fontWeight: 700 }}>{snap.variant.name}</div>
-        <Link className="small" to={`/events/${snap.variant.eventId}`}>
-          イベントの成績を見る
-        </Link>
       </div>
     );
   }

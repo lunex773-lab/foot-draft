@@ -1,25 +1,19 @@
-import { type SoloChallenge } from '@fd/shared';
-import { useEffect, useState } from 'react';
+import { computeChemistry, enhancePlayer, fitSquad, lineupStrength } from '@fd/shared';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { DuelButton } from '../components/DuelButton';
-import { TierBadge } from '../components/TierBadge';
 import { api } from '../lib/api';
 import { useAuth } from '../lib/auth';
+import { useCatalog } from '../lib/catalog';
 import { errorText } from '../lib/labels';
+import { useTeam } from '../lib/team';
 import { fmt, useWallet } from '../lib/wallet';
-import { type EventItem } from './EventsPage';
 import { ActiveRooms, type HistoryRow } from './PlayPage';
 
-interface Board {
-  season: { id: string; name: string };
-  items: { position: number; userId: string; displayName: string; rating: number; member?: boolean }[];
-  me: { position: number | null; players: number };
-}
-
 /**
- * Home (design from the user, 2026-11-17): hero, the DUEL button (opens the
- * mode select), the main modes, today's rewards, events and the top of the
- * ranked leaderboard. Every number comes from the server.
+ * Home: hero, the DUEL button (mode select), MATCH and DRAFT MATCH (official
+ * spec v2.0), the team used in MATCH and today's rewards. Every number comes
+ * from the server.
  */
 export default function HomePage() {
   const { me } = useAuth();
@@ -29,20 +23,10 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null);
   const [active, setActive] = useState<HistoryRow[]>([]);
   const [stats, setStats] = useState<{ leaguesPlayed: number; leaguesWon: number } | null>(null);
-  const [ranked, setRanked] = useState<{ rating: number; games: number; position: number | null; season: { name: string } } | null>(null);
-  const [solo, setSolo] = useState<{ challenge: SoloChallenge; cleared: boolean } | null>(null);
-  const [board, setBoard] = useState<Board | null>(null);
-  const [events, setEvents] = useState<EventItem[]>([]);
   const [missionsReady, setMissionsReady] = useState(0);
   const [pass, setPass] = useState<{ level: number; claimable: number } | null>(null);
 
   useEffect(() => {
-    api<typeof ranked>('/api/ranked/me').then(setRanked).catch(() => undefined);
-    api<typeof solo>('/api/solo/today').then(setSolo).catch(() => undefined);
-    api<Board>('/api/ranked/leaderboard').then(setBoard).catch(() => undefined);
-    api<{ items: EventItem[] }>('/api/events')
-      .then((r) => setEvents(r.items.filter((e) => e.open)))
-      .catch(() => undefined);
     api<{ items: HistoryRow[] }>('/api/users/me/history')
       .then((r) => setActive(r.items.filter((x) => x.status !== 'finished' && x.status !== 'closed')))
       .catch(() => undefined);
@@ -100,55 +84,33 @@ export default function HomePage() {
 
       <div className="section-title">
         <h2>GAME MODES</h2>
-        <span>{ranked?.season.name ?? ''}</span>
       </div>
       <section className="cards">
         <article className="fd-card">
           <div className="fd-card-header">
-            <h3>QUICK DRAFT</h3>
+            <h3>MATCH</h3>
             <span className="badge">4 PLAYERS</span>
           </div>
-          <p>空いているルームに参加します。4人そろうと自動で開始。空席はCPUが入ります。</p>
+          <p>持っているカードで作ったチームで、4人の総当たりリーグ（3試合）。空席はCPUチームが入ります。</p>
           <div className="button-row">
-            <button className="btn primary" disabled={busy} onClick={() => go(() => api('/api/rooms/quick', { body: {} }))}>
-              クイックドラフト
+            <button className="btn primary" disabled={busy} onClick={() => go(() => api('/api/match/quick', { body: {} }))}>
+              MATCH を探す
             </button>
-            <Link className="btn" to="/play">
-              ほかのモード
+            <Link className="btn" to="/team">
+              チームを編集
             </Link>
           </div>
         </article>
-        <article className="fd-card">
+        <article className="fd-card soon">
           <div className="fd-card-header">
-            <h3>RANKED</h3>
-            {ranked && <TierBadge rating={ranked.rating} />}
+            <h3>DRAFT MATCH</h3>
+            <span className="badge">準備中</span>
           </div>
-          <p>
-            ライバルとの対決に挑戦。ドラフトで最高のチームを目指そう。
-            {ranked && ranked.games > 0 && `（${ranked.games}試合${ranked.position ? `・${ranked.position}位` : ''}）`}
-          </p>
-          <div className="button-row">
-            <button className="btn primary" disabled={busy} onClick={() => go(() => api('/api/ranked/queue', { body: {} }))}>
-              ランク戦を探す
-            </button>
-            <Link className="btn" to="/ranked">
-              ランキング
-            </Link>
-          </div>
-        </article>
-        <article className="fd-card">
-          <div className="fd-card-header">
-            <h3>SOLO CHALLENGE</h3>
-            <span className={`badge ${solo?.cleared ? 'on' : ''}`}>{solo?.cleared ? '達成済み' : 'DAILY'}</span>
-          </div>
-          <p>{solo ? `今日の課題：${solo.challenge.titleJa}` : '今日の課題に挑戦。CPU 3チームと戦います。'}</p>
-          <div className="button-row">
-            <Link className="btn primary" to="/solo">
-              チャレンジを始める
-            </Link>
-          </div>
+          <p>共通のカードプールから、チンチロで決めた順番に11人を指名して戦うモード。ランキングはこのモードで行います。</p>
         </article>
       </section>
+
+      <MyTeamCard />
 
       <div className="section-title">
         <h2>TODAY</h2>
@@ -191,64 +153,65 @@ export default function HomePage() {
           </div>
         </article>
       </section>
+    </div>
+  );
+}
 
-      {events.length > 0 && (
-        <>
-          <div className="section-title">
-            <h2>SPECIAL EVENTS</h2>
-            <Link to="/events">VIEW ALL</Link>
-          </div>
-          <section className="cards">
-            {events.slice(0, 2).map((e) => (
-              <article key={e.id} className="fd-card">
-                <div className="fd-card-header">
-                  <h3>{e.name}</h3>
-                  <span className="badge on">開催中</span>
-                </div>
-                <p>{e.conditions.join('・')}</p>
-                <div className="button-row">
-                  <button className="btn primary" disabled={busy} onClick={() => go(() => api(`/api/events/${e.id}/join`, { body: {} }))}>
-                    参加する
-                  </button>
-                  <Link className="btn" to={`/events/${e.id}`}>
-                    詳細
-                  </Link>
-                </div>
-              </article>
-            ))}
-          </section>
-        </>
-      )}
-
+/** the team used in MATCH: strength and chemistry (decision 73) */
+export function MyTeamCard() {
+  const catalog = useCatalog();
+  const { data } = useTeam();
+  const view = useMemo(() => {
+    if (!data || !catalog) return null;
+    const cards = data.cards.filter((c) => catalog.has(c.playerId)).map((c) => enhancePlayer(catalog.get(c.playerId)!, c.level));
+    const squad = data.squads.find((s) => s.slot === data.active) ?? data.squads[0];
+    const lineup = squad ? fitSquad(squad.lineup, cards) : null;
+    if (!squad || !lineup) return null;
+    const byId = new Map(cards.map((p) => [p.id, p]));
+    return { name: squad.name, lineup, strength: lineupStrength(lineup, byId), chem: computeChemistry(lineup.starters.map((id) => byId.get(id)), lineup.formation, lineup.tactics).score, owned: cards.length };
+  }, [data, catalog]);
+  return (
+    <>
       <div className="section-title">
-        <h2>TOP RANKING</h2>
-        <Link to="/ranked">VIEW ALL</Link>
+        <h2>MY TEAM</h2>
+        <Link to="/team">EDIT</Link>
       </div>
       <section className="cards">
         <article className="fd-card">
-          {board && board.items.length === 0 && <p className="flush">今シーズンのランク戦はまだ行われていません。</p>}
-          <div className="list">
-            {board?.items.slice(0, 3).map((r) => (
-              <div key={r.userId} className={`list-item rank ${r.userId === me?.id ? 'me' : ''}`}>
-                <span>
-                  {String(r.position).padStart(2, '0')} · {r.displayName}
-                  {r.member && <span className="member-badge inline">★</span>}
-                </span>
-                <strong>{fmt(r.rating)} PTS</strong>
+          {!view && <p className="flush muted">読み込み中…</p>}
+          {view && (
+            <>
+              <div className="fd-card-header">
+                <h3>{view.name}</h3>
+                <span className="badge on">{view.lineup.formation}</span>
               </div>
-            ))}
-            {board && board.me.position !== null && board.me.position > 3 && ranked && (
-              <div className="list-item rank me">
-                <span>
-                  {String(board.me.position).padStart(2, '0')} · {me?.displayName}
-                </span>
-                <strong>{fmt(ranked.rating)} PTS</strong>
+              <div className="stat-row three">
+                <div>
+                  <div className="stat-label">総合力</div>
+                  <div className="stat-value neon">{view.strength}</div>
+                </div>
+                <div>
+                  <div className="stat-label">ケミストリー</div>
+                  <div className="stat-value">{view.chem}</div>
+                </div>
+                <div>
+                  <div className="stat-label">所持カード</div>
+                  <div className="stat-value">{view.owned}</div>
+                </div>
               </div>
-            )}
-          </div>
+              <div className="button-row">
+                <Link className="btn" to="/team">
+                  編成を変える
+                </Link>
+                <Link className="btn ghost" to="/gacha">
+                  ガシャで強化
+                </Link>
+              </div>
+            </>
+          )}
         </article>
       </section>
-    </div>
+    </>
   );
 }
 

@@ -1,5 +1,6 @@
 import { GAME_CONFIG, TIMER_EXPERIMENT_MODES, describeFilter, type ClientMessage, type RoomSnapshot } from '@fd/shared';
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Countdown } from '../../components/Countdown';
 import { seatColor } from '../../lib/labels';
 
@@ -55,7 +56,75 @@ function RankedLobby({ snap, onLeave, serverNow }: { snap: RoomSnapshot; onLeave
 }
 
 export function Lobby({ snap, send, onLeave, serverNow }: { snap: RoomSnapshot; send: (m: ClientMessage) => void; onLeave: () => void; serverNow: () => number }) {
+  if (snap.mode === 'match') return <MatchLobby snap={snap} send={send} onLeave={onLeave} />;
   return snap.mode === 'ranked' ? <RankedLobby snap={snap} onLeave={onLeave} serverNow={serverNow} /> : <StandardLobby snap={snap} send={send} onLeave={onLeave} />;
+}
+
+/** MATCH lobby (decisions 68-69): everybody brings the team they use in MATCH */
+function MatchLobby({ snap, send, onLeave }: { snap: RoomSnapshot; send: (m: ClientMessage) => void; onLeave: () => void }) {
+  const me = snap.seats.find((s) => s.seat === snap.you);
+  const isHost = !!me?.isHost;
+  const humans = snap.seats.filter((s) => s.userId).length;
+  const priv = snap.variant.kind === 'match' && snap.variant.private;
+  const link = `${window.location.origin}/join/${snap.code}`;
+  const [copied, setCopied] = useState(false);
+  return (
+    <div className="grid2">
+      <div className="panel">
+        <h2>{priv ? 'プライベート MATCH' : 'MATCH'}</h2>
+        <div className="small muted">{priv ? '招待コード・リンクを友だちに送ってください。' : '参加者を待っています。招待コードでも参加できます。'}</div>
+        <div className="code">{snap.code}</div>
+        <div className="row" style={{ marginTop: 8 }}>
+          <button className="btn small" onClick={() => navigator.clipboard?.writeText(link).then(() => setCopied(true))}>
+            {copied ? 'コピーしました' : '招待リンクをコピー'}
+          </button>
+        </div>
+        <div className="seats" style={{ marginTop: 16 }}>
+          {snap.seats.map((s) => (
+            <div key={s.seat} className="seat" style={{ borderColor: s.userId ? seatColor(s.seat) : undefined }}>
+              {s.userId ? (
+                <>
+                  <div className="name">
+                    {s.member && <span className="member-badge" title="Premium Membership 会員">★</span>}
+                    {s.displayName}
+                  </div>
+                  <div className="tiny muted row" style={{ marginTop: 4 }}>
+                    <span className={`dot ${s.connected ? 'on' : ''}`} /> {s.connected ? '接続中' : '未接続'}
+                    {s.isHost && <span className="chip">ホスト</span>}
+                    {s.seat === snap.you && <span className="chip on">あなた</span>}
+                  </div>
+                </>
+              ) : (
+                <div className="muted small">空き（開始時はCPUチーム）</div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="panel">
+        <h2>ルール</h2>
+        <ul className="small muted" style={{ lineHeight: 1.8, paddingLeft: 18, marginTop: 0 }}>
+          <li>チーム画面で「使用中」にしたチーム（持っているカード・強化込み）で出場します。開始前ならチームを変えられます</li>
+          <li>4チームの総当たりリーグ（3試合）で順位を決定。空席は参加者の強さに合わせたCPUチームが入ります</li>
+          <li>各試合の前に、チームの選手の中でスタメン・フォーメーション・戦術を変更できます</li>
+          <li>報酬：COINS（1日10リーグまで）と順位に応じた Standard 交換ポイント</li>
+        </ul>
+        <Link className="btn small" to="/team" style={{ marginBottom: 12 }}>
+          チームを確認・編集
+        </Link>
+        {isHost ? (
+          <button className="btn primary" style={{ width: '100%' }} onClick={() => send({ type: 'start' })}>
+            試合開始（{humans}人{humans < 4 ? `＋CPU ${4 - humans}` : ''}）
+          </button>
+        ) : (
+          <div className="muted">ホストの開始を待っています…（4人そろうと自動で開始）</div>
+        )}
+        <button className="btn ghost danger small" style={{ marginTop: 12 }} onClick={onLeave}>
+          ルームを退出
+        </button>
+      </div>
+    </div>
+  );
 }
 
 /** quick / private / event lobby */

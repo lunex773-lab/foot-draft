@@ -19,10 +19,12 @@ import { MatchDetailModal } from '../../components/MatchDetailModal';
 import { PitchEditor } from '../../components/PitchEditor';
 import { Standings } from '../../components/Standings';
 import { seatColor } from '../../lib/labels';
+import { seatRoster } from '../../lib/team';
 
 export function Lineup({ snap, players, send, serverNow }: { snap: RoomSnapshot; players: Map<string, Player>; send: (m: ClientMessage) => void; serverNow: () => number }) {
   const you = snap.you!;
-  const roster = useMemo(() => (snap.rosters[you] ?? []).map((id) => players.get(id)!).filter(Boolean), [snap.rosters, you, players]);
+  // MATCH: the seat's cards are strengthened (decision 70)
+  const roster = useMemo(() => seatRoster(snap, players, you), [snap.rosters, snap.levels, you, players]);
   const serverLineup = snap.lineups[you];
   const [lineup, setLineup] = useState<LineupT | null>(serverLineup ?? null);
   const [detail, setDetail] = useState<string | null>(null);
@@ -50,7 +52,7 @@ export function Lineup({ snap, players, send, serverNow }: { snap: RoomSnapshot;
   const strength = lineupStrength(lineup, byId);
   const fixture = snap.fixtures.find((f) => f.matchday === md && (f.homeSeat === you || f.awaySeat === you));
   const opp = fixture ? (fixture.homeSeat === you ? fixture.awaySeat : fixture.homeSeat) : null;
-  const oppRoster = opp !== null ? (snap.rosters[opp] ?? []).map((id) => players.get(id)!).filter(Boolean) : [];
+  const oppRoster = opp !== null ? seatRoster(snap, players, opp) : [];
   const oppLineup = opp !== null ? snap.lineups[opp] : null;
   const oppStrength = oppLineup ? lineupStrength(oppLineup, new Map(oppRoster.map((p) => [p.id, p]))) : null;
   const lastResults = snap.fixtures.filter((f) => f.homeGoals !== null);
@@ -102,7 +104,7 @@ export function Lineup({ snap, players, send, serverNow }: { snap: RoomSnapshot;
               自動で並べる
             </button>
           </div>
-          <PitchEditor roster={roster} lineup={lineup} onChange={update} />
+          <PitchEditor roster={roster} lineup={lineup} onChange={update} levels={snap.levels?.[you]} />
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div className="panel">

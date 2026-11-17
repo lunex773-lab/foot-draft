@@ -97,6 +97,14 @@ export function newRequestId(): string {
 
 export const fmt = (n: number) => n.toLocaleString('ja-JP');
 
+/** short form for the top bar: 12,345 / 123.4K / 1.2M (exact numbers on the wallet page) */
+export const fmtShort = (n: number) => {
+  const a = Math.abs(n);
+  if (a < 100_000) return fmt(n);
+  if (a < 1_000_000) return `${Math.floor(n / 100) / 10}K`;
+  return `${Math.floor(n / 100_000) / 10}M`;
+};
+
 export const REASON_LABEL: Record<string, string> = {
   match_reward: '対戦報酬',
   login_bonus: 'ログインボーナス',

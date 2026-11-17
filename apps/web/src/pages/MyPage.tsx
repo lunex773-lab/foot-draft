@@ -1,6 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { TierBadge } from '../components/TierBadge';
 import { api } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { fmt, useWallet } from '../lib/wallet';
@@ -24,14 +23,12 @@ function Row({ to, label, sub, value }: { to: string; label: string; sub?: strin
 export default function MyPage() {
   const { me, logout } = useAuth();
   const { wallet, membership } = useWallet();
-  const [ranked, setRanked] = useState<{ rating: number; games: number; position: number | null; season: { name: string } } | null>(null);
   const [stats, setStats] = useState<{ leaguesPlayed: number; leaguesWon: number } | null>(null);
   const [missionsReady, setMissionsReady] = useState(0);
   const [pass, setPass] = useState<{ level: number; claimable: number; premium: boolean } | null>(null);
   const [unread, setUnread] = useState(0);
 
   useEffect(() => {
-    api<typeof ranked>('/api/ranked/me').then(setRanked).catch(() => undefined);
     api<{ stats: { leaguesPlayed: number; leaguesWon: number } }>('/api/users/me')
       .then((r) => setStats(r.stats))
       .catch(() => undefined);
@@ -65,14 +62,14 @@ export default function MyPage() {
         <article className="fd-card">
           <div className="stat-row">
             <div>
-              <div className="stat-label">RANK</div>
-              <div className="stat-value">{ranked ? <TierBadge rating={ranked.rating} /> : '—'}</div>
-              <div className="stat-sub">{ranked ? `${ranked.season.name}${ranked.position ? `・${ranked.position}位` : ''}` : ''}</div>
-            </div>
-            <div>
               <div className="stat-label">LEAGUES</div>
               <div className="stat-value">{stats ? fmt(stats.leaguesPlayed) : '—'}</div>
               <div className="stat-sub">優勝 {stats ? fmt(stats.leaguesWon) : '—'}回</div>
+            </div>
+            <div>
+              <div className="stat-label">RANKING</div>
+              <div className="stat-value muted">—</div>
+              <div className="stat-sub">DRAFT MATCH で開始予定</div>
             </div>
           </div>
         </article>
@@ -106,9 +103,8 @@ export default function MyPage() {
       <nav className="menu-list" aria-label="マイページのメニュー">
         <Row to="/missions" label="ミッション" value={missionsReady > 0 ? <span className="badge on">{missionsReady}</span> : null} />
         <Row to="/pass" label="Season Pass" value={pass ? `Lv ${pass.level}${pass.premium ? '・プレミアム' : ''}` : null} />
-        <Row to="/ranked" label="ランク戦・ランキング" />
-        <Row to="/play" label="モード選択" sub="クイック・ランク・ソロ・Collection・イベント・プライベート" />
-        <Row to="/events" label="イベント" />
+        <Row to="/play" label="モード選択" sub="MATCH・プライベート MATCH" />
+        <Row to="/team" label="チーム編成" />
         <Row to="/history" label="対戦履歴" />
         <Row to="/wallet" label="残高と履歴" />
         <Row to="/settings" label="設定・フィードバック" value={unread > 0 ? <span className="badge on">返信 {unread}</span> : null} />

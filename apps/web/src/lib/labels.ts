@@ -63,12 +63,13 @@ export const ERROR_TEXT: Record<string, string> = {
   NOT_IN_POOL: 'その選手は候補にいません',
   DRAFT_FINISHED: 'ドラフトは終了しています',
   INVALID_STARTERS: 'スタメンは11人必要です',
-  INVALID_BENCH: '控えは3人必要です',
+  INVALID_BENCH: '控えの人数が足りません（所持カードが14枚以上なら3人）',
+  UNKNOWN_PLAYER: '持っていない選手（またはチームにいない選手）が入っています',
   DUPLICATE_PLAYER: '同じ選手が重複しています',
   INVALID_TACTICS: '戦術の設定が正しくありません',
   INVALID_FORMATION: 'フォーメーションが正しくありません',
   ROOM_FULL: 'ルームが満員です',
-  ROOM_NOT_JOINABLE: 'このルームには参加できません（ドラフト開始済み、または招待コードで参加できないモード）',
+  ROOM_NOT_JOINABLE: 'このルームには参加できません（開始済み、または招待コードで参加できないモード）',
   FORMATION_LOCKED: 'この課題ではフォーメーションを変更できません',
   RESERVED: 'そのカードは別のプレイヤーの専用枠です',
   INSUFFICIENT_FUNDS: '残高が足りません',
@@ -95,6 +96,8 @@ export const MODE_LABEL: Record<string, string> = {
   solo: 'ソロ課題',
   event: 'イベント',
   collection: 'Collection Draft',
+  match: 'MATCH',
+  draft_match: 'DRAFT MATCH',
 };
 
 export function modeLabel(mode: string): string {

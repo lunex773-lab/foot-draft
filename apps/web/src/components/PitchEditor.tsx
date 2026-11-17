@@ -3,16 +3,42 @@ import { PlayerAvatar } from '@fd/ui';
 import { useState } from 'react';
 import { PlayerRow } from './PlayerRow';
 
-type Sel = { kind: 'slot'; index: number } | { kind: 'bench'; index: number } | null;
+export type PitchTarget = { kind: 'slot'; index: number } | { kind: 'bench'; index: number };
+type Sel = PitchTarget | null;
 
-/** Lineup editing: tap a slot / bench player, then tap another to swap. */
-export function PitchEditor({ roster, lineup, onChange, disabled }: { roster: Player[]; lineup: Lineup; onChange: (l: Lineup) => void; disabled?: boolean }) {
+/**
+ * Lineup editing: tap a slot / bench player, then tap another to swap.
+ * With `placing` (team screen) a tap on a slot / bench place calls onPlace instead.
+ */
+export function PitchEditor({
+  roster,
+  lineup,
+  onChange,
+  disabled,
+  placing,
+  onPlace,
+  levels,
+}: {
+  roster: Player[];
+  lineup: Lineup;
+  onChange: (l: Lineup) => void;
+  disabled?: boolean;
+  placing?: boolean;
+  onPlace?: (target: PitchTarget) => void;
+  /** MATCH: strengthening level per player id (shown as +n) */
+  levels?: Record<string, number>;
+}) {
   const [sel, setSel] = useState<Sel>(null);
   const byId = new Map(roster.map((p) => [p.id, p]));
   const slots = FORMATIONS[lineup.formation].slots;
 
   const tap = (target: NonNullable<Sel>) => {
     if (disabled) return;
+    if (placing && onPlace) {
+      setSel(null);
+      onPlace(target);
+      return;
+    }
     if (!sel) return setSel(target);
     if (sel.kind === target.kind && sel.index === target.index) return setSel(null);
     const starters = [...lineup.starters];
@@ -29,7 +55,7 @@ export function PitchEditor({ roster, lineup, onChange, disabled }: { roster: Pl
 
   return (
     <div>
-      <div className="pitch">
+      <div className={`pitch ${placing ? 'placing' : ''}`}>
         <svg className="lines" viewBox="0 0 68 100" preserveAspectRatio="none">
           <g fill="none" stroke="#fff" strokeOpacity="0.4" strokeWidth="0.3">
             <rect x="1" y="1" width="66" height="98" />
@@ -50,19 +76,35 @@ export function PitchEditor({ roster, lineup, onChange, disabled }: { roster: Pl
               <span className={`rt ${fit}`}>
                 {slot.pos} {r || ''}
               </span>
-              <span className="lbl">{p?.lastName ?? '—'}</span>
+              <span className="lbl">
+                {p?.lastName ?? '—'}
+                {p && levels?.[p.id] ? <b className="lv-mini">+{levels[p.id]}</b> : null}
+              </span>
             </div>
           );
         })}
       </div>
       <div style={{ marginTop: 10 }}>
         <div className="small muted" style={{ marginBottom: 6 }}>
-          控え（3人）{!disabled && '— 選手をタップしてから入れ替え先をタップ'}
+          {lineup.bench.length > 0 ? `控え（${lineup.bench.length}人）` : '控えなし（所持カードが12枚以上になると控えを入れられます）'}
+          {!disabled && !placing && lineup.bench.length > 0 && '— 選手をタップしてから入れ替え先をタップ'}
         </div>
         <div className="plist">
           {lineup.bench.map((id, i) => {
             const p = byId.get(id);
-            return p ? <PlayerRow key={id} player={p} selected={sel?.kind === 'bench' && sel.index === i} onClick={disabled ? undefined : () => tap({ kind: 'bench', index: i })} right={<span className="chip">SUB</span>} /> : null;
+            return p ? (
+              <PlayerRow
+                key={id}
+                player={p}
+                selected={sel?.kind === 'bench' && sel.index === i}
+                onClick={disabled ? undefined : () => tap({ kind: 'bench', index: i })}
+                right={
+                  <span className="chip">
+                    SUB{levels?.[p.id] ? ` +${levels[p.id]}` : ''}
+                  </span>
+                }
+              />
+            ) : null;
           })}
         </div>
       </div>

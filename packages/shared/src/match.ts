@@ -3,6 +3,7 @@
  * every player brings the team of the cards they own. 4-player round robin
  * league (3 matches), empty seats are CPU teams.
  */
+import { GAME_CONFIG } from './config';
 import { POSITION_GROUP } from './data/positions';
 import { FORMATIONS } from './data/formations';
 import type { RandomSource } from './economy/gacha';
@@ -118,4 +119,31 @@ export function buildCpuSquad(catalog: readonly Player[], targetOvr: number, rnd
 export function startersAverage(lineup: Lineup, byId: Map<string, Player>): number {
   const list = lineup.starters.map((id) => byId.get(id)).filter(Boolean) as Player[];
   return list.length ? Math.round((list.reduce((s, p) => s + p.ovr, 0) / list.length) * 10) / 10 : 0;
+}
+
+/**
+ * A saved team adjusted to the cards owned now (decision 73): the bench is
+ * filled up to 3 substitutes (best OVR first) or shortened. Null when a
+ * starter is not owned any more.
+ */
+export function fitSquad(lineup: Lineup | null | undefined, cards: readonly Player[]): Lineup | null {
+  const owned = new Map(cards.map((p) => [p.id, p]));
+  if (!lineup || !Array.isArray(lineup.starters) || lineup.starters.length !== GAME_CONFIG.startersCount || lineup.starters.some((id) => !owned.has(id))) return null;
+  const want = Math.max(0, Math.min(GAME_CONFIG.benchCount, cards.length - GAME_CONFIG.startersCount));
+  const used = new Set(lineup.starters);
+  const bench: string[] = [];
+  for (const id of lineup.bench ?? []) {
+    if (bench.length < want && owned.has(id) && !used.has(id)) {
+      bench.push(id);
+      used.add(id);
+    }
+  }
+  for (const p of [...cards].sort((a, b) => b.ovr - a.ovr)) {
+    if (bench.length >= want) break;
+    if (!used.has(p.id)) {
+      bench.push(p.id);
+      used.add(p.id);
+    }
+  }
+  return { ...lineup, starters: [...lineup.starters], bench, tactics: { ...lineup.tactics } };
 }

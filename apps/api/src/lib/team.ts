@@ -4,6 +4,7 @@ import {
   autoLineup,
   cryptoRandom,
   enhancePlayer,
+  fitSquad,
   pickStarterCards,
   squadLineup,
   validateLineup,
@@ -131,9 +132,9 @@ export interface MatchTeam {
 }
 
 /**
- * The team a player brings to MATCH: the active saved team. When it is not
- * valid any more (cards removed by a test reset), the best team of the owned
- * cards is used instead.
+ * The team a player brings to MATCH: the active saved team (its bench filled
+ * up to 3 when more cards were obtained). When it is not valid any more (cards
+ * removed by a test reset), the best team of the owned cards is used instead.
  */
 export async function loadMatchTeam(env: Env, userId: string, catalog: readonly Player[]): Promise<MatchTeam> {
   const cards = await ownedCards(env, userId);
@@ -143,10 +144,13 @@ export async function loadMatchTeam(env: Env, userId: string, catalog: readonly 
   const ids = usable.map((c) => c.playerId);
   const { squads, active } = await squadsOf(env, userId);
   const chosen = squads.find((s) => s.slot === active) ?? squads[0];
-  let lineup: Lineup | null = chosen && !validateLineup(chosen.lineup, ids) ? chosen.lineup : null;
+  const strong = usable.map((c) => enhancePlayer(byId.get(c.playerId)!, c.level));
+  // the saved team, its bench filled up when more cards were obtained since it was saved
+  const fitted = chosen ? fitSquad(chosen.lineup, strong) : null;
+  let lineup: Lineup | null = fitted && !validateLineup(fitted, ids) ? fitted : null;
   if (!lineup) {
     if (usable.length < 11) throw new Error('not enough cards for a team');
-    lineup = bestSquad(usable.map((c) => enhancePlayer(byId.get(c.playerId)!, c.level)));
+    lineup = bestSquad(strong);
   }
   const levels: Record<string, number> = {};
   for (const id of [...lineup.starters, ...lineup.bench]) levels[id] = levelOf.get(id) ?? 0;

@@ -158,7 +158,7 @@ export default function PassPage() {
           </tbody>
         </table>
         <div className="tiny muted" style={{ marginTop: 8 }}>
-          カードはまだ持っていない選手から選ばれます（全員持っていたら交換ポイント）。手に入れたカードは <Link to="/collection">コレクション</Link> の Collection Draft で使えます。ランク戦には影響しません。
+          カードはまだ持っていない選手から選ばれます（全員持っていたら交換ポイント）。手に入れたカードは <Link to="/team">チーム</Link> の編成（MATCH）で使えます。
         </div>
       </div>
     </div>

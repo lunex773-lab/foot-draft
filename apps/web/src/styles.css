@@ -2244,3 +2244,408 @@ a.list-item:active {
 .panel h3 {
   font-size: 14px;
 }
+
+/* ======================================================================
+   MATCH: team screen, card details, catalog (user request 2026-11-17)
+   ====================================================================== */
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.filters input {
+  flex: 1 1 160px;
+  min-width: 0;
+}
+
+.filters select {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+/* catalog grid: 3 cards per row on a phone */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: 10px;
+}
+
+.card-cell {
+  position: relative;
+  min-width: 0;
+}
+
+.card-cell.unowned {
+  pointer-events: none;
+}
+
+.card-tags {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: flex;
+  gap: 4px;
+}
+
+.lv-tag {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: #1d2a0a;
+  border: 1px solid rgba(229, 255, 0, 0.6);
+  color: var(--neon);
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1.4;
+}
+
+.lv-tag.max {
+  background: var(--neon);
+  color: var(--on-neon);
+}
+
+.fav-tag {
+  color: #ffd84d;
+  font-size: 14px;
+  text-shadow: 0 1px 3px #000;
+}
+
+.lv-mini {
+  margin-left: 3px;
+  color: var(--neon);
+  font-size: 9px;
+}
+
+.chip.lv {
+  border-color: rgba(229, 255, 0, 0.6);
+  color: var(--neon);
+}
+
+/* card details */
+.card-detail {
+  width: min(460px, 100%);
+}
+
+.card-detail h3 {
+  margin: 14px 0 6px;
+}
+
+.cd-top {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 14px;
+  margin-top: 10px;
+}
+
+.cd-head h2 {
+  margin: 0 0 4px;
+  font-size: 20px;
+}
+
+.cd-ovr {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.cd-ovr .display {
+  color: var(--neon);
+  font-size: 34px;
+  line-height: 1;
+}
+
+.cd-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 16px;
+  margin-top: 14px;
+}
+
+.cd-stat {
+  display: grid;
+  grid-template-columns: 36px 44px minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.cd-stat .k {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.cd-stat .v {
+  font-weight: 900;
+}
+
+.cd-stat .plus {
+  margin-left: 2px;
+  color: var(--neon);
+}
+
+.cd-stat .bar {
+  height: 6px;
+  border-radius: 99px;
+  background: #0e1016;
+  overflow: hidden;
+}
+
+.cd-stat .bar span {
+  display: block;
+  height: 100%;
+  background: var(--neon);
+}
+
+.list-item.block {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.lv-meter {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.lv-meter span {
+  width: 26px;
+  height: 8px;
+  border-radius: 99px;
+  background: #222834;
+}
+
+.lv-meter span.on {
+  background: var(--neon);
+  box-shadow: 0 0 8px rgba(229, 255, 0, 0.5);
+}
+
+.lv-meter b {
+  margin-left: 6px;
+  font-size: 13px;
+}
+
+/* team screen */
+.squad-tabs {
+  display: flex;
+  margin-top: 10px;
+}
+
+.squad-tabs button {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.use-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-left: 5px;
+  border-radius: 50%;
+  background: var(--neon);
+  box-shadow: 0 0 8px var(--neon);
+  vertical-align: middle;
+}
+
+.team-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 12px 0 6px;
+}
+
+.big-num {
+  font-size: 30px;
+  line-height: 1.1;
+}
+
+.badge.warn {
+  margin-left: 4px;
+  border-color: #ffb547;
+  color: #ffb547;
+}
+
+.warn-text {
+  margin-top: 4px;
+  color: #ffb547;
+}
+
+.good-text {
+  color: var(--good);
+}
+
+.note {
+  margin-top: 8px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: rgba(229, 255, 0, 0.07);
+  color: var(--text);
+}
+
+.team-tools {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+}
+
+.team-tools input,
+.team-tools select {
+  width: 100%;
+  min-width: 0;
+}
+
+.placing-banner {
+  position: sticky;
+  top: 6px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding: 8px 10px;
+  border: 1px solid rgba(229, 255, 0, 0.6);
+  border-radius: 10px;
+  background: #171d11;
+  color: var(--neon);
+  font-size: 13px;
+}
+
+.pitch.placing .pslot {
+  animation: slot-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes slot-pulse {
+  50% {
+    filter: drop-shadow(0 0 6px rgba(229, 255, 0, 0.9));
+  }
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.row-tags {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #0d1016;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.icon-btn.on {
+  border-color: #ffd84d;
+  color: #ffd84d;
+}
+
+.starter-panel {
+  border-color: rgba(229, 255, 0, 0.55);
+}
+
+.fd-card.soon {
+  opacity: 0.72;
+}
+
+/* ---------------------------------------------------------- iPhone width fix (user report 2026-11-17)
+   The top bar did not shrink: brand + balances made the page wider than a
+   320-393px iPhone. The brand shrinks, the balances are shortened in the bar
+   (exact numbers on the wallet page) and the app never scrolls sideways. */
+html,
+body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.app {
+  overflow-x: clip;
+}
+
+.topbar {
+  min-width: 0;
+}
+
+.brand {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: clip;
+}
+
+.topbar .who {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 400px) {
+  .brand {
+    font-size: 13px;
+    letter-spacing: 0.06em;
+  }
+  .brand .beta-tag {
+    margin-left: 4px;
+    padding: 1px 4px;
+    font-size: 8px;
+  }
+  .topbar .who {
+    gap: 5px;
+  }
+  .wallet-bar {
+    gap: 4px;
+    font-size: 11px;
+  }
+  .wallet-bar span {
+    padding: 2px 6px 2px 3px;
+  }
+}
+
+@media (max-width: 350px) {
+  .brand .beta-tag {
+    display: none;
+  }
+}
+
+/* modals (card details, match details) sit above the bottom menu */
+.modal-bg {
+  z-index: 60;
+  padding-bottom: calc(24px + env(safe-area-inset-bottom));
+}

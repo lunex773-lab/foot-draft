@@ -38,6 +38,8 @@ interface DrawResult {
   duplicate: boolean;
   points: number;
   pointType: 'standard' | 'premium';
+  /** decision 70: the level a duplicate strengthened the card to (null = new card or points) */
+  enhancedTo: number | null;
   name: string;
 }
 
@@ -120,12 +122,11 @@ export default function GachaPage() {
           <h2 style={{ margin: 0 }}>ガシャ</h2>
           <div className="row small">
             <Link to="/gacha/history">抽選履歴</Link>
-            <Link to="/collection">コレクション</Link>
-            <Link to="/exchange">交換所</Link>
+            <Link to="/cards">選手図鑑</Link>
           </div>
         </div>
         <div className="small muted" style={{ marginTop: 6 }}>
-          抽選はすべてサーバーで行います。所持済みのカードが出た場合は、そのガシャの種類の交換ポイントになります。Collection Draft 以外のモード（ランク戦など）では所持カードは使われません。
+          抽選はすべてサーバーで行います。持っているカードが出た場合はそのカードが +1 強化され（最大 +5）、+5 の後はそのガシャの種類の交換ポイントになります。手に入れたカードと強化は MATCH のチームで使えます（DRAFT MATCH では使いません）。
         </div>
       </div>
       {banners.length === 0 && <div className="muted">開催中のガシャはありません。</div>}
@@ -214,7 +215,13 @@ function DrawResultModal({ result, catalog, onClose }: { result: DrawResponse; c
               <div key={i} className="slot draw-slot">
                 {p ? <PlayerCard player={p} width="100%" /> : <div className="small">{r.name}</div>}
                 <div className="row tiny" style={{ justifyContent: 'center', marginTop: 4 }}>
-                  {r.duplicate ? <span className="chip">重複 +{r.points}pt</span> : <span className="chip on">NEW</span>}
+                  {!r.duplicate ? (
+                    <span className="chip on">NEW</span>
+                  ) : r.enhancedTo !== null ? (
+                    <span className="chip lv">強化 +{r.enhancedTo}</span>
+                  ) : (
+                    <span className="chip">+5済み → {r.points}pt</span>
+                  )}
                   {r.guarantee !== 'none' && <span className="chip on">{GUARANTEE_LABEL[r.guarantee]}</span>}
                 </div>
               </div>
@@ -227,7 +234,8 @@ function DrawResultModal({ result, catalog, onClose }: { result: DrawResponse; c
             `（${Object.entries(result.cost.split)
               .map(([c, n]) => `${CURRENCY_LABEL_JA[c as keyof typeof CURRENCY_LABEL_JA]} ${fmt(n)}`)
               .join('・')}）`}
-          {result.pointsGained.amount > 0 && `　重複カード → ${POINT_LABEL[result.pointsGained.type]} +${fmt(result.pointsGained.amount)}`}
+          {result.results.some((r) => r.enhancedTo !== null) && `　強化 ${result.results.filter((r) => r.enhancedTo !== null).length}回`}
+          {result.pointsGained.amount > 0 && `　+5の重複 → ${POINT_LABEL[result.pointsGained.type]} +${fmt(result.pointsGained.amount)}`}
           {result.missionsCompleted.length > 0 && (
             <>
               {'　'}
@@ -309,7 +317,7 @@ export function GachaDetailPage() {
             <tr>
               <th>重複カード</th>
               <td>
-                {POINT_LABEL[d.duplicatePoints.type]}に変換：
+                持っているカードが出ると +1 強化（最大 +5・OVRと能力値が +1 ずつ。MATCH で有効）。+5 のカードが出た場合は{POINT_LABEL[d.duplicatePoints.type]}に変換：
                 {RARITIES.filter((r) => d.counts[r] > 0)
                   .map((r) => `${RARITY_INFO[r].label} ${d.duplicatePoints.values[r]}`)
                   .join('・')}
@@ -416,6 +424,7 @@ interface HistoryRow {
   is_duplicate: number;
   point_type: 'standard' | 'premium';
   points: number;
+  enhanced_to: number | null;
   created_at: number;
   banner_name: string;
   rates_version: number;
@@ -460,7 +469,7 @@ export function GachaHistoryPage() {
                   <td>{h.name}</td>
                   <td className={`rar-${h.rarity}`}>{RARITY_INFO[h.rarity].label}</td>
                   <td className="small">
-                    {h.is_duplicate ? `重複 → ${POINT_LABEL[h.point_type]} +${h.points}` : 'NEW'}
+                    {!h.is_duplicate ? 'NEW' : h.enhanced_to !== null ? `重複 → 強化 +${h.enhanced_to}` : `重複 → ${POINT_LABEL[h.point_type]} +${h.points}`}
                     {h.guarantee !== 'none' && `・${GUARANTEE_LABEL[h.guarantee]}`}
                   </td>
                 </tr>

@@ -151,7 +151,7 @@ export default function ShopPage() {
               <div className="small">
                 {yen(membership.priceJpy)} / {membership.periodDays}日（自動更新）　会員の間は毎日 <b>無償GEMS 20</b> と会員バッジ
               </div>
-              <div className="tiny muted">能力の強化やランク戦での優遇はありません。</div>
+              <div className="tiny muted">試合の強さが変わることはありません。</div>
             </div>
             {shop.membership.active ? (
               <div style={{ textAlign: 'right' }}>

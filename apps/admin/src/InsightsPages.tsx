@@ -189,7 +189,7 @@ export function OverviewPage({ onOpen }: { onOpen?: (page: string) => void }) {
   );
 }
 
-export const MODE_LABEL: Record<string, string> = { quick: 'クイック', private: 'プライベート', ranked: 'ランク戦', solo: 'ソロ課題', event: 'イベント', collection: 'Collection Draft' };
+export const MODE_LABEL: Record<string, string> = { quick: 'クイック', private: 'プライベート', ranked: 'ランク戦', solo: 'ソロ課題', event: 'イベント', collection: 'Collection Draft', match: 'MATCH', draft_match: 'DRAFT MATCH' };
 const TAG_LABEL: Record<string, string> = { founder: 'Founder', beta_tester: 'Beta Tester', friend_tester: 'Friend Tester', developer: 'Developer', normal: 'Normal' };
 export const TAGS = Object.keys(TAG_LABEL);
 export const tagLabel = (t: string) => TAG_LABEL[t] ?? t;

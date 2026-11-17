@@ -15,7 +15,7 @@ interface UserView {
 }
 
 const time = (ms: number | null | undefined) => (ms ? new Date(ms).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }) : '—');
-const MODE: Record<string, string> = { quick: 'クイック', private: 'プライベート', ranked: 'ランク戦', solo: 'ソロ課題', event: 'イベント', collection: 'Collection Draft' };
+const MODE: Record<string, string> = { quick: 'クイック', private: 'プライベート', ranked: 'ランク戦', solo: 'ソロ課題', event: 'イベント', collection: 'Collection Draft', match: 'MATCH', draft_match: 'DRAFT MATCH' };
 const STATUS_LABEL = { active: '有効', suspended: '停止中' } as const;
 
 /** Users (spec 12-4): search and details */

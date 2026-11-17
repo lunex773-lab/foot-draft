@@ -3,7 +3,7 @@ import { BrowserRouter, Link, NavLink, Navigate, Route, Routes, useLocation } fr
 import { api } from './lib/api';
 import { AuthProvider, useAuth } from './lib/auth';
 import { BetaWelcome, VersionBanner } from './lib/beta';
-import { WalletProvider, fmt, useWallet } from './lib/wallet';
+import { WalletProvider, fmt, fmtShort, useWallet } from './lib/wallet';
 import AuthPage from './pages/AuthPage';
 import HomePage, { JoinByLink } from './pages/HomePage';
 
@@ -11,14 +11,10 @@ const RoomPage = lazy(() => import('./pages/RoomPage'));
 const HistoryPage = lazy(() => import('./pages/HistoryPage'));
 const CatalogPage = lazy(() => import('./pages/CatalogPage'));
 const MatchReplayPage = lazy(() => import('./pages/MatchReplayPage'));
-const RankedPage = lazy(() => import('./pages/RankedPage'));
-const SoloPage = lazy(() => import('./pages/SoloPage'));
-const EventsPage = lazy(() => import('./pages/EventsPage'));
-const EventDetailPage = lazy(() => import('./pages/EventsPage').then((m) => ({ default: m.EventDetailPage })));
 const GachaPage = lazy(() => import('./pages/GachaPage'));
 const GachaDetailPage = lazy(() => import('./pages/GachaPage').then((m) => ({ default: m.GachaDetailPage })));
 const GachaHistoryPage = lazy(() => import('./pages/GachaPage').then((m) => ({ default: m.GachaHistoryPage })));
-const CollectionPage = lazy(() => import('./pages/CollectionPage'));
+const TeamPage = lazy(() => import('./pages/TeamPage'));
 const ExchangePage = lazy(() => import('./pages/ExchangePage'));
 const MissionsPage = lazy(() => import('./pages/MissionsPage'));
 const WalletPage = lazy(() => import('./pages/WalletPage'));
@@ -85,14 +81,14 @@ function WalletBar() {
   return (
     <>
       {wallet && (
-        <Link to="/wallet" className="wallet-bar" title="残高と履歴">
+        <Link to="/wallet" className="wallet-bar" title={`残高と履歴（${fmt(wallet.coins)} COINS・${fmt(wallet.gems.total)} GEMS）`}>
           <span className="coin">
             <i aria-hidden="true">C</i>
-            {fmt(wallet.coins)}
+            {fmtShort(wallet.coins)}
           </span>
           <span className="gem">
             <i aria-hidden="true">G</i>
-            {fmt(wallet.gems.total)}
+            {fmtShort(wallet.gems.total)}
           </span>
         </Link>
       )}
@@ -107,12 +103,12 @@ function WalletBar() {
 
 // ---------------------------------------------------------------- bottom menu (user request, 2026-11-17)
 
-type Tab = 'home' | 'collection' | 'gacha' | 'shop' | 'me';
+type Tab = 'home' | 'team' | 'gacha' | 'shop' | 'me';
 
-/** which tab a page belongs to */
+/** which tab a page belongs to (user request 2026-11-17: チーム = team + catalog, 交換所 under ガシャ) */
 function tabOf(path: string): Tab {
-  if (/^\/(collection|exchange|cards)/.test(path)) return 'collection';
-  if (path.startsWith('/gacha')) return 'gacha';
+  if (/^\/(team|cards)/.test(path)) return 'team';
+  if (/^\/(gacha|exchange)/.test(path)) return 'gacha';
   if (/^\/(shop|pass)/.test(path)) return 'shop';
   if (/^\/(me|missions|history|wallet|settings|match)/.test(path)) return 'me';
   return 'home';
@@ -120,12 +116,7 @@ function tabOf(path: string): Tab {
 
 const ICONS: Record<Tab, ReactNode> = {
   home: <path d="M4 11.5 12 5l8 6.5V20a1 1 0 0 1-1 1h-4.5v-6h-5v6H5a1 1 0 0 1-1-1z" />,
-  collection: (
-    <>
-      <rect x="7" y="3.5" width="12" height="16" rx="2" />
-      <path d="M4.5 7v11.5A2.5 2.5 0 0 0 7 21h9" />
-    </>
-  ),
+  team: <path d="M8.5 4 4 6.5l1.6 4 2.4-.9V20h8V9.6l2.4.9 1.6-4L15.5 4c-.5 1.5-1.8 2.5-3.5 2.5S9 5.5 8.5 4z" />,
   gacha: (
     <>
       <circle cx="12" cy="12" r="8" />
@@ -149,7 +140,7 @@ const ICONS: Record<Tab, ReactNode> = {
 
 const TABS: { tab: Tab; to: string; label: string }[] = [
   { tab: 'home', to: '/', label: 'ホーム' },
-  { tab: 'collection', to: '/collection', label: 'コレクション' },
+  { tab: 'team', to: '/team', label: 'チーム' },
   { tab: 'gacha', to: '/gacha', label: 'ガシャ' },
   { tab: 'shop', to: '/shop', label: 'ショップ' },
   { tab: 'me', to: '/me', label: 'マイページ' },
@@ -175,12 +166,15 @@ function BottomNav({ unread }: { unread: number }) {
   );
 }
 
-/** pages of one tab that sit side by side (collection / exchange / catalog, shop / pass) */
-const SUB_TABS: Partial<Record<Tab, { to: string; label: string }[]>> = {
-  collection: [
-    { to: '/collection', label: 'コレクション' },
-    { to: '/exchange', label: '交換所' },
+/** pages of one tab that sit side by side (team / catalog, gacha / exchange, shop / pass) */
+const SUB_TABS: Partial<Record<Tab, { to: string; label: string; end?: boolean }[]>> = {
+  team: [
+    { to: '/team', label: '編成' },
     { to: '/cards', label: '選手図鑑' },
+  ],
+  gacha: [
+    { to: '/gacha', label: 'ガシャ' },
+    { to: '/exchange', label: '交換所' },
   ],
   shop: [
     { to: '/shop', label: 'ショップ' },
@@ -262,14 +256,11 @@ function ShellInner() {
               <Route path="/history" element={<HistoryPage />} />
               <Route path="/match/:matchId" element={<MatchReplayPage />} />
               <Route path="/cards" element={<CatalogPage />} />
-              <Route path="/ranked" element={<RankedPage />} />
-              <Route path="/solo" element={<SoloPage />} />
-              <Route path="/events" element={<EventsPage />} />
-              <Route path="/events/:eventId" element={<EventDetailPage />} />
+              <Route path="/team" element={<TeamPage />} />
               <Route path="/gacha" element={<GachaPage />} />
               <Route path="/gacha/history" element={<GachaHistoryPage />} />
               <Route path="/gacha/:bannerId" element={<GachaDetailPage />} />
-              <Route path="/collection" element={<CollectionPage />} />
+              <Route path="/collection" element={<Navigate to="/cards" replace />} />
               <Route path="/exchange" element={<ExchangePage />} />
               <Route path="/missions" element={<MissionsPage />} />
               <Route path="/wallet" element={<WalletPage />} />

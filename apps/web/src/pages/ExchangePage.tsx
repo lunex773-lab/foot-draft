@@ -163,7 +163,7 @@ export default function ExchangePage() {
       )}
       <div className="row small" style={{ justifyContent: 'center' }}>
         <Link to="/gacha">ガシャ</Link>
-        <Link to="/collection">コレクション</Link>
+        <Link to="/cards">選手図鑑</Link>
       </div>
     </div>
   );

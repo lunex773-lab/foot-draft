@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FORMATIONS, MATCH_CONFIG, POSITION_GROUP, buildCpuSquad, enhancePlayer, getCatalog, pickStarterCards, seededRandom, squadLineup, validateLineup } from '../src';
+import { FORMATIONS, MATCH_CONFIG, POSITION_GROUP, buildCpuSquad, enhancePlayer, fitSquad, getCatalog, pickStarterCards, seededRandom, squadLineup, validateLineup } from '../src';
 
 
 const catalog = getCatalog();
@@ -46,5 +46,25 @@ describe('MATCH (decisions 68-74)', () => {
       expect(Math.abs(avg - target)).toBeLessThan(6);
       FORMATIONS[formation].slots.forEach((slot, i) => expect(POSITION_GROUP[starters[i].primaryPosition]).toBe(POSITION_GROUP[slot.pos]));
     }
+  });
+});
+
+describe('fitSquad (decision 73)', () => {
+  const catalog = getCatalog();
+  it('fills the bench of a team saved with 11 cards when more cards are owned', () => {
+    const commons = catalog.filter((p) => p.rarity === 'common');
+    const ids = pickStarterCards(commons, seededRandom('fit'));
+    const eleven = ids.map((id) => catalog.find((p) => p.id === id)!);
+    const saved = squadLineup(eleven, MATCH_CONFIG.starterFormation);
+    expect(saved.bench).toHaveLength(0);
+    const more = [...eleven, ...catalog.filter((p) => !ids.includes(p.id)).slice(0, 5)];
+    const fitted = fitSquad(saved, more)!;
+    expect(fitted.starters).toEqual(saved.starters);
+    expect(fitted.bench).toHaveLength(3);
+    expect(validateLineup(fitted, more.map((p) => p.id))).toBeNull();
+    // 12 cards: one substitute
+    expect(fitSquad(saved, more.slice(0, 12))!.bench).toHaveLength(1);
+    // a starter that is not owned any more
+    expect(fitSquad(saved, more.slice(1))).toBeNull();
   });
 });

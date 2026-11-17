@@ -280,9 +280,17 @@ async function main() {
   check(ok === 3 && tens.filter((r) => r.data?.error?.code === 'INSUFFICIENT_FUNDS').length === 2 && w4.data.wallet.coins === 5_100, `5 parallel 10-draws with COINS for 3: 3 succeed, 2 rejected, 5,100 left (ok ${ok}, coins ${w4.data.wallet.coins})`);
   const draws = [d1r, ...singles, ...tens.filter((r) => r.status === 200)].flatMap((r) => r.data.results);
   const coll = await api('/api/collection', { token: a.token });
-  check(coll.data.counts.owned === new Set(draws.map((r: any) => r.playerId)).size && coll.data.counts.owned === draws.filter((r: any) => !r.duplicate).length, `collection = distinct cards drawn (${coll.data.counts.owned})`);
+  // MATCH (decision 72): the first visit also gives the 11 first cards
+  const drawnIds = new Set(draws.map((r: any) => r.playerId));
+  const fromGacha = (coll.data.items as any[]).filter((i) => i.source === 'gacha');
+  const starters = (coll.data.items as any[]).filter((i) => i.source === 'starter');
+  check(
+    fromGacha.length === drawnIds.size && fromGacha.length === draws.filter((r: any) => !r.duplicate).length && coll.data.counts.owned === fromGacha.length + starters.length && starters.length <= 11,
+    `collection = distinct cards drawn (${fromGacha.length}) + first cards (${starters.length})`,
+  );
+  // decision 70: a duplicate strengthens the card (+1 up to +5) before it becomes points
   const pts = draws.reduce((s: number, r: any) => s + r.points, 0);
-  check(w4.data.wallet.points.standard === pts && pts > 0, `duplicates became ${pts} Standard points`);
+  check(w4.data.wallet.points.standard === pts && draws.filter((r: any) => r.duplicate).every((r: any) => r.enhancedTo !== null || r.points > 0), `duplicates strengthened cards (${draws.filter((r: any) => r.enhancedTo !== null).length}) / became ${pts} Standard points`);
   check(await ledgerMatches(a.token), 'ledger rows add up to the balances');
   const hist = await api('/api/gacha/history?limit=200', { token: a.token });
   check(hist.data.items.length === draws.length, 'draw history has every card');
@@ -368,7 +376,7 @@ async function main() {
   const out = ca.snap!.outcome!.rewards!;
   const rankA = ca.snap!.finalRanks![seatA];
   check(out[seatA].coins === matchRewardFor(rankA).total && out[seatA].matchRewardGiven && out[seatA].leaguesToday === 1, `A: match reward ${out[seatA].coins} COINS (rank ${rankA})`);
-  check(out[seatA].missionsCompleted.includes('d-league') && out[seatA].missionsCompleted.includes('b-collection'), `missions completed by the league: ${out[seatA].missionsCompleted.join(', ')}`);
+  check(out[seatA].missionsCompleted.includes('d-league') && out[seatA].missionsCompleted.includes('b-first-league'), `missions completed by the league: ${out[seatA].missionsCompleted.join(', ')}`);
   ca.close();
   cb.close();
 
@@ -376,7 +384,7 @@ async function main() {
   console.log('\n[missions]');
   const ms = await api('/api/missions', { token: a.token });
   const m = (id: string) => ms.data.items.find((x: any) => x.id === id);
-  check(ms.data.items.length === MISSIONS.length && m('d-league').completed && m('b-gacha').completed && m('b-collection').completed && m('w-leagues').progress === 1, 'progress: daily league, beginner gacha / Collection Draft, weekly 1/10');
+  check(ms.data.items.length === MISSIONS.length && m('d-league').completed && m('b-gacha').completed && m('b-first-league').completed && m('w-leagues').progress === 1, 'progress: daily league, beginner gacha / first league, weekly 1/10');
   const coinsBefore = (await api('/api/currency', { token: a.token })).data.wallet.coins;
   const cl = await api('/api/missions/d-league/claim', { token: a.token, body: {} });
   check(cl.status === 200 && cl.data.paid === 100 && cl.data.wallet.coins === coinsBefore + 100, 'claim the daily mission: +100 COINS');
@@ -410,7 +418,7 @@ async function main() {
   const cleared = sc.snap!.outcome!.solo!.cleared;
   check(!sr.matchRewardGiven && sr.leaguesToday === 10 && sr.coins === (cleared ? 200 : 0), `11th league today: no match reward${cleared ? ', solo clear bonus 200 COINS' : ' (challenge not cleared)'}`);
   const cm = await api('/api/missions', { token: cUser.token });
-  check(cm.data.items.find((x: any) => x.id === 'd-league').completed && cm.data.items.find((x: any) => x.id === 'b-solo').completed, 'missions still count above the cap');
+  check(cm.data.items.find((x: any) => x.id === 'd-league').completed && cm.data.items.find((x: any) => x.id === 'b-first-league').completed, 'missions still count above the cap');
   sc.close();
 
   // ------------------------------------------------------------ season rewards

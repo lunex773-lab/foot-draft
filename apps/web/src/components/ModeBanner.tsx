@@ -32,6 +32,14 @@ export function ModeBanner({ snap }: { snap: RoomSnapshot }) {
       </div>
     );
   }
+  if (v.kind === 'match') {
+    return (
+      <div className="mode-banner">
+        <span className="chip on">MATCH</span>
+        <span className="small">持っているカードのチーム（強化込み）で戦う4人の総当たりリーグ</span>
+      </div>
+    );
+  }
   if (v.kind === 'collection') {
     return (
       <div className="mode-banner event">
