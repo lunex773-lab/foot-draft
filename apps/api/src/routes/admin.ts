@@ -49,10 +49,13 @@ adminRoutes.post('/auth/login', async (c) => {
     status: string;
   }>();
   const passOk = row ? await verifyPassword(password, row.password_hash, row.password_salt, row.password_iterations) : false;
-  const require2fa = c.env.ADMIN_REQUIRE_2FA === 'true';
+  const twoFactor = adminTwoFactorMode(c.env);
+  const require2fa = twoFactor === 'required';
   let reason: string | null = null;
   if (!row || !passOk || row.status !== 'active') reason = 'invalid_credentials';
-  else if (row.totp_enabled && row.totp_secret) {
+  else if (twoFactor === 'off') {
+    // decision 108: no 2FA on the test environment (staging), even for admins who enrolled
+  } else if (row.totp_enabled && row.totp_secret) {
     if (!totp) {
       await audit(c.env, row.id, 'login_2fa_required', { type: 'admin', id: username.toLowerCase() }, undefined, ipOf(c));
       return c.json({ error: { code: 'TOTP_REQUIRED', message: '2段階認証コードを入力してください' } }, 401);
@@ -89,9 +92,22 @@ adminRoutes.post('/auth/login', async (c) => {
   }
   await c.env.DB.prepare('UPDATE admin_users SET last_login_at = ? WHERE id = ?').bind(Date.now(), row!.id).run();
   const token = await createAdminSession(c.env, row!.id, ipOf(c), c.req.header('User-Agent') ?? null);
-  await audit(c.env, row!.id, 'login_succeeded', { type: 'admin', id: row!.id }, { totp: !!row!.totp_enabled }, ipOf(c));
+  await audit(c.env, row!.id, 'login_succeeded', { type: 'admin', id: row!.id }, { totp: twoFactor !== 'off' && !!row!.totp_enabled, twoFactor }, ipOf(c));
   return c.json({ token, admin: { id: row!.id, username: row!.username, role: row!.role } });
 });
+
+/**
+ * Admin 2FA (TOTP) by environment (ADMIN_REQUIRE_2FA):
+ *   "true"  required: enrol an authenticator app at the first login (production)
+ *   "off"   not used at all: no code is asked, even for admins who enrolled (staging, decision 108)
+ *   other   optional: admins who enrolled use it (local)
+ * Production always requires it, whatever the variable says.
+ */
+export function adminTwoFactorMode(env: Env): 'required' | 'optional' | 'off' {
+  if (env.ENVIRONMENT === 'production' || env.ADMIN_REQUIRE_2FA === 'true') return 'required';
+  if (env.ADMIN_REQUIRE_2FA === 'off') return 'off';
+  return 'optional';
+}
 
 adminRoutes.use('/*', async (c, next) => {
   if (c.req.path.endsWith('/auth/login')) return next();

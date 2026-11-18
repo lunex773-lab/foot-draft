@@ -12,7 +12,7 @@ export interface Env {
   ENVIRONMENT: 'local' | 'development' | 'staging' | 'production';
   /** HMAC secret for WebSocket tickets (secret) */
   WS_TICKET_SECRET: string;
-  /** "true" -> admins must use TOTP */
+  /** admin TOTP: "true" required, "off" not used (staging), other optional; production always required */
   ADMIN_REQUIRE_2FA: string;
   /** "true" -> rooms may override timings (tests). Never in production. */
   ALLOW_TEST_TIMINGS: string;

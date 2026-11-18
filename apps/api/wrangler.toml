@@ -75,7 +75,8 @@ class_name = "AuctionDO"
 name = "football-draft-api-staging"
 [env.staging.vars]
 ENVIRONMENT = "staging"
-ADMIN_REQUIRE_2FA = "true"
+# decision 108: the test environment has no 2FA for admins (production keeps it)
+ADMIN_REQUIRE_2FA = "off"
 ALLOW_TEST_TIMINGS = "false"
 ALLOWED_ORIGINS = ""
 [[env.staging.d1_databases]]

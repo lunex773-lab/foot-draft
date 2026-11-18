@@ -57,7 +57,9 @@ URL は `https://<Pages のプロジェクト名>.pages.dev` と `https://<Worke
 
 1. 登録が終わったら Claude に伝えてください。Claude が Deploy（staging）を起動して結果を確認し、URL を報告します。
 2. 管理者の作成：Actions → **Create admin** → Run workflow（environment・ユーザー名・権限を選択）。Claude から起動することもできます。
-3. 管理サイトの URL を開き、ユーザー名と `ADMIN_INITIAL_PASSWORD` でログインします。初回は QR コードが表示されるので、認証アプリ（Google Authenticator など）で読み取り、6桁のコードを入力すると2段階認証が有効になります。
+3. 管理サイトの URL を開き、ユーザー名と `ADMIN_INITIAL_PASSWORD` でログインします。
+   - staging（テスト版）：パスワードだけでログインできます（2段階認証なし、決定 108）。
+   - production（本番）：初回は QR コードが表示されるので、認証アプリ（Google Authenticator など）で読み取り、6桁のコードを入力すると2段階認証が有効になります。
 4. 本番：Actions → **Deploy** → environment に production を選んで実行 → GitHub で承認 → 公開。
 
 ## 注意
