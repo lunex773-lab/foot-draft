@@ -107,7 +107,11 @@ export type AdminPermission =
   /** aggregated revenue */
   | 'revenue.read'
   /** beta test tools: bulk tags, test data reset, draft timer setting (Phase 7) */
-  | 'beta.manage';
+  | 'beta.manage'
+  /** player auction: aggregated figures, lots, settings and queue (read) */
+  | 'auction.read'
+  /** player auction: settings, open / pause, listing queue, cancel a lot (decision 105) */
+  | 'auction.write';
 
 const ALL: AdminPermission[] = [
   'cards.read',
@@ -133,15 +137,17 @@ const ALL: AdminPermission[] = [
   'purchases.write',
   'revenue.read',
   'beta.manage',
+  'auction.read',
+  'auction.write',
 ];
 
 const ROLE_PERMISSIONS: Record<AuthAdmin['role'], AdminPermission[]> = {
   owner: ALL,
   admin: ALL.filter((p) => p !== 'admins.manage'),
   // player search and feedback; balances read only
-  support: ['cards.read', 'events.read', 'seasons.read', 'users.read', 'users.wallet', 'feedback.read', 'feedback.write', 'purchases.read', 'gacha.read'],
+  support: ['cards.read', 'events.read', 'seasons.read', 'users.read', 'users.wallet', 'feedback.read', 'feedback.write', 'purchases.read', 'gacha.read', 'auction.read'],
   // aggregated figures only, nothing that identifies a player
-  viewer: ['cards.read', 'events.read', 'seasons.read', 'analytics.read', 'economy.read', 'revenue.read', 'gacha.read'],
+  viewer: ['cards.read', 'events.read', 'seasons.read', 'analytics.read', 'economy.read', 'revenue.read', 'gacha.read', 'auction.read'],
 };
 
 export const ADMIN_ROLES: AuthAdmin['role'][] = ['owner', 'admin', 'support', 'viewer'];

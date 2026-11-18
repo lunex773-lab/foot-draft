@@ -7,8 +7,8 @@ import { randomId } from './crypto';
  * the start. Balances are emptied through the ledgers (reason "test_reset"),
  * the MATCH teams are removed (the first 11 cards come again, lib/team.ts),
  * so ledger and balance stay equal. Kept: account, tags, match / draft
- * records, ranked rating, gacha / exchange / purchase history, feedback,
- * analytics, login-bonus and distribution claims, membership.
+ * records, ranked rating, gacha / exchange / purchase / auction history,
+ * feedback, analytics, login-bonus and distribution claims, membership.
  */
 
 const CURRENCIES = [
@@ -77,6 +77,15 @@ export function resetStmts(env: Env, userId: string, runId: string, summary: Res
     env.DB.prepare("DELETE FROM reward_claims WHERE user_id = ? AND (reward_key LIKE 'mission:%' OR reward_key LIKE 'pass:%')").bind(userId),
     env.DB.prepare('DELETE FROM season_pass_progress WHERE user_id = ?').bind(userId),
     env.DB.prepare('DELETE FROM season_pass_xp WHERE user_id = ?').bind(userId),
+    // auction coins (decision 100): holds released, balance emptied through the ledger, and the
+    // initial funds come again on the next visit; a lot the player leads is then not paid and is cancelled
+    env.DB.prepare("UPDATE auction_holds SET status = 'released', closed_at = ?, close_op = ? WHERE user_id = ? AND status = 'active'").bind(now, opId, userId),
+    env.DB.prepare(
+      `INSERT INTO auction_transactions (id, user_id, amount, balance_after, reason, ref_type, ref_id, op_id, created_at)
+       SELECT ?, user_id, -balance, 0, 'test_reset', 'test_reset_run', ?, ?, ? FROM auction_wallets WHERE user_id = ? AND balance > 0`,
+    ).bind(randomId(), runId, opId, now, userId),
+    env.DB.prepare('UPDATE auction_wallets SET balance = 0, held = 0, updated_at = ? WHERE user_id = ?').bind(now, userId),
+    env.DB.prepare("DELETE FROM reward_claims WHERE user_id = ? AND reward_key = 'auction:initial'").bind(userId),
     env.DB.prepare('UPDATE test_resets SET done_at = COALESCE(done_at, ?), summary_json = COALESCE(summary_json, ?) WHERE run_id = ? AND user_id = ?').bind(now, JSON.stringify(summary), runId, userId),
     analyticsStatement(env, { name: 'test_data_reset', userId, properties: { runId } }),
   );

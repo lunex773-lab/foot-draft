@@ -10,6 +10,7 @@ import { ensureCurrentSeason, leaderboard, seasonView } from '../lib/seasons';
 import { adminAccountRoutes } from './adminAdmins';
 import { adminDistributionRoutes } from './adminDistributions';
 import { adminGachaRoutes } from './adminGacha';
+import { adminAuctionRoutes } from './adminAuction';
 import { adminBetaRoutes } from './adminBeta';
 import { adminGameStatRoutes } from './adminGameStats';
 import { adminInsightRoutes } from './adminInsights';
@@ -419,3 +420,5 @@ adminRoutes.route('/', adminGachaRoutes);
 // ------------------------------------------------------------------ Phase 7 (beta test)
 adminRoutes.route('/', adminBetaRoutes);
 adminRoutes.route('/', adminGameStatRoutes);
+// ------------------------------------------------------------------ player auction (decisions 97-106)
+adminRoutes.route('/', adminAuctionRoutes);

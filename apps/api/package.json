@@ -12,14 +12,15 @@
     "seed:generate": "tsx scripts/generate-seed.ts",
     "db:migrate:local": "wrangler d1 migrations apply DB --local",
     "admin:create:local": "tsx scripts/create-admin.ts --local",
-    "e2e": "tsx scripts/e2e.ts && tsx scripts/e2e-phase3.ts && tsx scripts/e2e-phase4.ts && tsx scripts/e2e-phase5.ts && tsx scripts/e2e-phase6.ts && tsx scripts/e2e-phase7.ts && tsx scripts/e2e-match.ts && tsx scripts/e2e-draft-match.ts",
+    "e2e": "tsx scripts/e2e.ts && tsx scripts/e2e-phase3.ts && tsx scripts/e2e-phase4.ts && tsx scripts/e2e-phase5.ts && tsx scripts/e2e-phase6.ts && tsx scripts/e2e-phase7.ts && tsx scripts/e2e-match.ts && tsx scripts/e2e-draft-match.ts && tsx scripts/e2e-auction.ts",
     "e2e:phase3": "tsx scripts/e2e-phase3.ts",
     "e2e:phase4": "tsx scripts/e2e-phase4.ts",
     "e2e:phase5": "tsx scripts/e2e-phase5.ts",
     "e2e:phase6": "tsx scripts/e2e-phase6.ts",
     "e2e:phase7": "tsx scripts/e2e-phase7.ts",
     "e2e:match": "tsx scripts/e2e-match.ts",
-    "e2e:draft-match": "tsx scripts/e2e-draft-match.ts"
+    "e2e:draft-match": "tsx scripts/e2e-draft-match.ts",
+    "e2e:auction": "tsx scripts/e2e-auction.ts"
   },
   "dependencies": {
     "@fd/shared": "*",
