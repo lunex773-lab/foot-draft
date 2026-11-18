@@ -20,6 +20,7 @@ const RankingPage = lazy(() => import('./pages/RankingPage'));
 /** development only: preview of the SHOOT GACHA by rarity (not in production builds) */
 const DevShootPage = import.meta.env.DEV ? lazy(() => import('./shoot/DevShootPage')) : null;
 const ExchangePage = lazy(() => import('./pages/ExchangePage'));
+const AuctionPage = lazy(() => import('./pages/AuctionPage'));
 const MissionsPage = lazy(() => import('./pages/MissionsPage'));
 const WalletPage = lazy(() => import('./pages/WalletPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
@@ -112,7 +113,7 @@ type Tab = 'home' | 'team' | 'gacha' | 'shop' | 'me';
 /** which tab a page belongs to (user request 2026-11-17: チーム = team + catalog, 交換所 under ガシャ) */
 function tabOf(path: string): Tab {
   if (/^\/(team|cards)/.test(path)) return 'team';
-  if (/^\/(gacha|exchange)/.test(path)) return 'gacha';
+  if (/^\/(gacha|exchange|auction)/.test(path)) return 'gacha';
   if (/^\/(shop|pass)/.test(path)) return 'shop';
   if (/^\/(me|missions|history|wallet|settings|match|ranking)/.test(path)) return 'me';
   return 'home';
@@ -179,6 +180,7 @@ const SUB_TABS: Partial<Record<Tab, { to: string; label: string; end?: boolean }
   gacha: [
     { to: '/gacha', label: 'ガシャ' },
     { to: '/exchange', label: '交換所' },
+    { to: '/auction', label: 'オークション' },
   ],
   shop: [
     { to: '/shop', label: 'ショップ' },
@@ -269,6 +271,7 @@ function ShellInner() {
               <Route path="/gacha/:bannerId" element={<GachaDetailPage />} />
               <Route path="/collection" element={<Navigate to="/cards" replace />} />
               <Route path="/exchange" element={<ExchangePage />} />
+              <Route path="/auction" element={<AuctionPage />} />
               <Route path="/missions" element={<MissionsPage />} />
               <Route path="/wallet" element={<WalletPage />} />
               <Route path="/settings" element={<SettingsPage />} />
