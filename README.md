@@ -2,6 +2,7 @@
 
 サッカー選手のカードでチームを作って戦う、最大4人のオンライン対戦ゲーム（正式基準：仕様書「MATCH / DRAFT MATCH v2.0」、`docs/11-match-plan.md`）。
 モード：MATCH（持っているカードのチームで4人の総当たり。初期選手11人、ガシャの重複で +1〜+5 に強化）・プライベート MATCH・DRAFT MATCH（2〜4人、共通カードプール、チンチロで指名順、11人のスネークドラフト、月間ランキング：`docs/12-draft-match-plan.md`）。以前のドラフトのモードは画面から外した（API・記録は残す）。
+オークション：ガシャのタブの中。全ユーザー共通の市場に最大8人が出品され、公開で競り上げる（オークション専用のコイン、最初に 100,000、足りない分は GEMS から交換。落札した選手はコレクションへ、持っている選手は +1）。管理サイトから開催・停止・出品の方法・数値を変更（`docs/14-auction-plan.md`）。
 SHOOT GACHA：ガシャを引くと、一人称の PK（three.js の 3D、引っ張って離すとシュート、レアリティでキーパーの反応が変わり必ずゴール）のあとにカードが登場する（`docs/13-shoot-gacha-plan.md`）。
 チーム画面：3つのチームの保存・おまかせ編成・戦術・総合力とケミストリー・お気に入り、選手図鑑（所持／全カード・カード詳細）。
 経済：COINS・GEMS（無償・有償）、ガシャ（Standard・Premium、天井つき。重複は強化、+5 の後は交換ポイント。Premium は無償 GEMS → 有償 GEMS の順に使う）、交換所、ミッション、ログインボーナス、対戦報酬、Season Pass、Premium Membership、GEMS の販売（Apple・Google は未接続。ローカルと staging は模擬ストアで確認）。
@@ -19,7 +20,7 @@ SHOOT GACHA：ガシャを引くと、一人称の PK（three.js の 3D、引っ
 | `assets/` | 配信用のカード画像（`cards/FD-001.png`〜`FD-300.png`：実写の肖像を入れたカード、または元画像にイラストの選手を描き込んだカード）とレアリティ別テンプレート。ゲーム・管理サイトの静的ファイルとして配信 |
 | `tools/card-art` | カード画像を作るツール（実写の肖像の生成用の指示文・ダウンロード・カード作成、イラストの描き込み） |
 | `packages/ui` | 選手カード（データベースのカード画像を表示）・国旗 |
-| `apps/api` | ゲームのバックエンド。Cloudflare Workers（Hono）＋ D1 ＋ Durable Objects（`RoomDO`：ルーム・ドラフト・試合の進行をサーバーで確定） |
+| `apps/api` | ゲームのバックエンド。Cloudflare Workers（Hono）＋ D1 ＋ Durable Objects（`RoomDO`：ルーム・ドラフト・試合の進行、`DraftMatchDO`：DRAFT MATCH、`AuctionDO`：オークションの市場。結果はすべてサーバーで確定） |
 | `apps/web` | ゲーム本体（React＋Vite）。`src/shoot/` は SHOOT GACHA の 3D 演出（three.js） |
 | `apps/admin` | FOOTBALL DRAFT ADMIN（運営管理サイト。管理者専用認証） |
 
@@ -64,7 +65,7 @@ npm run admin:create:local -- --username あなたの管理者名
 ```bash
 npm test -w @fd/shared          # 単体テスト（乱数・選手データ・ドラフト・編成・SIM・順位）
 npm run sim:balance -- 150      # SIMのバランス検証（大量の自動試合）
-npm run e2e -w @fd/api          # API起動中に実行：4人のWebSocketクライアントでリーグを1回通しで対戦＋Phase 3（ランク・ソロ・イベント・管理）＋Phase 4（経済）＋Phase 5〜7＋MATCH＋DRAFT MATCH
+npm run e2e -w @fd/api          # API起動中に実行：4人のWebSocketクライアントでリーグを1回通しで対戦＋Phase 3（ランク・ソロ・イベント・管理）＋Phase 4（経済）＋Phase 5〜7＋MATCH＋DRAFT MATCH＋オークション
 npm run e2e:phase3 -w @fd/api   # Phase 3 だけ
 npm run e2e:phase4 -w @fd/api   # Phase 4 だけ（通貨・ガシャ・交換所・ミッション・Collection Draft・テスト付与）
 npm run e2e:phase5 -w @fd/api   # Phase 5 だけ（役割・分析・継続率・フィードバック・ユーザー・GEMS 配布・操作ログ）
@@ -72,6 +73,7 @@ npm run e2e:phase6 -w @fd/api   # Phase 6 だけ（模擬ストアの購入・�
 npm run e2e:phase7 -w @fd/api   # Phase 7 だけ（テスト用アカウント・制限時間の比較・評価・リセット・ベータの集計）
 npm run e2e:match -w @fd/api    # MATCH だけ（初期選手・強化・チーム・MATCH のルーム・報酬）
 npm run e2e:draft-match -w @fd/api  # DRAFT MATCH だけ（マッチング・チンチロ・プール・ドラフト・ランキング・監査ログ）
+npm run e2e:auction -w @fd/api  # オークションだけ（入札・仮押さえ・同時入札・延長・決済・GEMS 交換・管理・不正検知）
 npm run typecheck
 ```
 
@@ -96,3 +98,4 @@ GitHub Actions で Cloudflare に公開します（開発ブランチへのプ�
 - `docs/11-match-plan.md` MATCH・チーム画面（仕様書 v2.0）
 - `docs/12-draft-match-plan.md` DRAFT MATCH（仕様書 v2.0）
 - `docs/13-shoot-gacha-plan.md` SHOOT GACHA（3D の PK ガシャ演出）
+- `docs/14-auction-plan.md` オークション（仕様書 PLAYER AUCTION SYSTEM v1.0）

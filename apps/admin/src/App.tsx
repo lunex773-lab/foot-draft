@@ -7,6 +7,7 @@ import { AdminsPage, SettingsPage } from './AdminsPage';
 import { DistributionsPage } from './DistributionsPage';
 import { EconomyPage } from './EconomyPage';
 import { FeedbackPage } from './FeedbackPage';
+import { AuctionAdminPage } from './AuctionAdminPage';
 import { GachaAdminPage } from './GachaAdminPage';
 import { ProductsPage, PurchasesPage, RevenuePage } from './ShopAdminPages';
 import { AnalyticsPage, OverviewPage, RetentionPage } from './InsightsPages';
@@ -93,7 +94,7 @@ function Login({ onDone }: { onDone: () => void }) {
   );
 }
 
-type Page = 'overview' | 'users' | 'analytics' | 'retention' | 'economy' | 'revenue' | 'matches' | 'drafts' | 'beta' | 'feedback' | 'distributions' | 'purchases' | 'products' | 'gacha' | 'cards' | 'events' | 'seasons' | 'audit' | 'admins' | 'settings';
+type Page = 'overview' | 'users' | 'analytics' | 'retention' | 'economy' | 'revenue' | 'matches' | 'drafts' | 'beta' | 'feedback' | 'distributions' | 'purchases' | 'products' | 'gacha' | 'auction' | 'cards' | 'events' | 'seasons' | 'audit' | 'admins' | 'settings';
 
 interface NavItem {
   page: Page;
@@ -125,6 +126,7 @@ const NAV: { group: string; items: NavItem[] }[] = [
       { page: 'purchases', label: 'Purchases', any: ['purchases.read'] },
       { page: 'products', label: '商品', any: ['products.write', 'revenue.read', 'purchases.read'] },
       { page: 'gacha', label: 'ガシャ管理', any: ['gacha.read'] },
+      { page: 'auction', label: 'オークション', any: ['auction.read'] },
       { page: 'events', label: 'イベント管理', any: ['events.read'] },
       { page: 'seasons', label: 'シーズン・ランキング', any: ['seasons.read'] },
       { page: 'cards', label: 'カード一覧', any: ['cards.read'] },
@@ -220,6 +222,7 @@ export default function App() {
         {current === 'purchases' && <PurchasesPage canWrite={can('purchases.write')} />}
         {current === 'products' && <ProductsPage canWrite={can('products.write')} />}
         {current === 'gacha' && <GachaAdminPage canWrite={can('gacha.write')} />}
+        {current === 'auction' && <AuctionAdminPage canWrite={can('auction.write')} canUsers={can('users.wallet')} />}
         {current === 'cards' && <CardsPage />}
         {current === 'events' && <EventsPage canWrite={can('events.write')} />}
         {current === 'seasons' && <SeasonsPage />}

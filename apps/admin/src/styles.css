@@ -739,3 +739,18 @@ form textarea {
   display: block;
   height: 100%;
 }
+
+/* PLAYER AUCTION page */
+.good-text {
+  color: #5fd38d;
+}
+.warn-text {
+  color: #ffb547;
+}
+.btn.small {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+.seg button:disabled {
+  opacity: 0.6;
+}
