@@ -12,6 +12,7 @@ import { GachaAdminPage } from './GachaAdminPage';
 import { ProductsPage, PurchasesPage, RevenuePage } from './ShopAdminPages';
 import { AnalyticsPage, OverviewPage, RetentionPage } from './InsightsPages';
 import { BetaPage } from './BetaPage';
+import { DialogHost } from './dialog';
 import { DraftAnalyticsPage, MatchesPage } from './GameStatsPages';
 import { UsersPage } from './UsersPage';
 import { EventsPage } from './EventsPage';
@@ -146,6 +147,7 @@ export default function App() {
   const [me, setMe] = useState<AdminMe | null>(null);
   const [checking, setChecking] = useState(hasToken());
   const [page, setPage] = useState<Page | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const loadMe = () =>
     adminApi<AdminMe>('/auth/me')
@@ -161,21 +163,44 @@ export default function App() {
   }, []);
 
   if (checking) return <div className="muted" style={{ padding: 40 }}>確認中…</div>;
-  if (!me) return <Login onDone={loadMe} />;
+  if (!me)
+    return (
+      <>
+        <Login onDone={loadMe} />
+        <DialogHost />
+      </>
+    );
 
   const can = (p: string) => me.admin.permissions?.includes(p) ?? false;
   const visible = (i: NavItem) => i.any.length === 0 || i.any.some(can);
   // the first page the role can open
   const LANDING: Page[] = ['overview', 'users', 'feedback', 'distributions', 'events', 'cards'];
   const current: Page = page ?? LANDING.find((p) => NAV.flatMap((g) => g.items).some((i) => i.page === p && visible(i))) ?? 'settings';
+  const pageLabel = NAV.flatMap((g) => g.items).find((i) => i.page === current)?.label ?? '';
+  const open = (p: Page) => {
+    setPage(p);
+    setMenuOpen(false);
+    window.scrollTo(0, 0);
+  };
   return (
-    <div className="layout">
+    <div className={`layout ${menuOpen ? 'menu-open' : ''}`}>
+      {/* phones: a compact bar with the page name; the menu opens on demand */}
+      <header className="topbar">
+        <button className="topbar-menu" onClick={() => setMenuOpen((v) => !v)} aria-expanded={menuOpen} aria-label="メニュー">
+          <span />
+          <span />
+          <span />
+        </button>
+        <div className="topbar-title">{pageLabel}</div>
+        <span className={`env ${me.environment}`}>{me.environment.toUpperCase()}</span>
+      </header>
+      {menuOpen && <div className="menu-backdrop" onClick={() => setMenuOpen(false)} />}
       <aside className="side">
         <div className="logo">
           FOOTBALL <b>DRAFT</b>
           <div className="tiny muted">ADMIN</div>
         </div>
-        <div style={{ marginBottom: 10 }}>
+        <div className="side-env" style={{ marginBottom: 10 }}>
           <span className={`env ${me.environment}`}>{me.environment.toUpperCase()}</span>
         </div>
         {NAV.map((g) => {
@@ -185,7 +210,7 @@ export default function App() {
             <div key={g.group} className="nav-group">
               <div className="nav-head">{g.group}</div>
               {items.map((i) => (
-                <button key={i.page} className={`nav ${current === i.page ? 'on' : ''}`} onClick={() => setPage(i.page)}>
+                <button key={i.page} className={`nav ${current === i.page ? 'on' : ''}`} onClick={() => open(i.page)}>
                   {i.page === 'economy' && me.testGrantsEnabled && can('economy.test_grant') ? 'Economy・テスト付与' : i.label}
                 </button>
               ))}
@@ -230,6 +255,7 @@ export default function App() {
         {current === 'admins' && can('admins.manage') && <AdminsPage meId={me.admin.id} />}
         {current === 'settings' && <SettingsPage me={me.admin} />}
       </main>
+      <DialogHost />
     </div>
   );
 }

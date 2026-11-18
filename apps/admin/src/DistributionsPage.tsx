@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { adminApi } from './api';
+import { confirmDialog } from './dialog';
 import { fmtInt } from './charts';
 import { TAGS, jstDay, tagLabel } from './InsightsPages';
 
@@ -166,7 +167,7 @@ function NewDistribution({ onDone }: { onDone: (id: string | null) => void }) {
   };
   const create = async () => {
     if (!preview || !title.trim()) return;
-    if (!window.confirm(`${fmtInt(preview.count)}人に無償GEMSを ${fmtInt(preview.amount)} ずつ、合計 ${fmtInt(preview.total)} 配布する準備をします。\n（このあと詳細画面で「配布を実行」を押すと付与されます）`)) return;
+    if (!(await confirmDialog(`${fmtInt(preview.count)}人に無償GEMSを ${fmtInt(preview.amount)} ずつ、合計 ${fmtInt(preview.total)} 配布する準備をします。\n（このあと詳細画面で「配布を実行」を押すと付与されます）`, { okLabel: '準備する' }))) return;
     setBusy(true);
     setError(null);
     try {
@@ -306,7 +307,7 @@ function DistributionDetail({ id, canWrite, onBack }: { id: string; canWrite: bo
   }, [id]);
   const run = async () => {
     if (!d) return;
-    if (!window.confirm(`${fmtInt(d.batch.target_count)}人に無償GEMSを ${fmtInt(d.batch.amount_per_user)} ずつ配布します。実行しますか？`)) return;
+    if (!(await confirmDialog(`${fmtInt(d.batch.target_count)}人に無償GEMSを ${fmtInt(d.batch.amount_per_user)} ずつ配布します。実行しますか？`, { okLabel: '配布する' }))) return;
     setRunning(true);
     setError(null);
     try {
@@ -324,7 +325,7 @@ function DistributionDetail({ id, canWrite, onBack }: { id: string; canWrite: bo
     }
   };
   const cancel = async () => {
-    if (!window.confirm('配布を中止します。まだ付与していない人には配布されません。')) return;
+    if (!(await confirmDialog('配布を中止します。まだ付与していない人には配布されません。', { okLabel: '中止する', danger: true }))) return;
     try {
       await adminApi(`/distributions/${id}/cancel`, {});
       load();

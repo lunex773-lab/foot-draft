@@ -1,6 +1,7 @@
 import { formatAuctionDuration } from '@fd/shared';
 import { useEffect, useMemo, useState } from 'react';
 import { adminApi } from './api';
+import { promptDialog } from './dialog';
 import { StatTile, fmtInt } from './charts';
 
 /**
@@ -120,7 +121,7 @@ function OverviewTab({ canWrite }: { canWrite: boolean }) {
   if (!d) return <div className="muted">読み込み中…</div>;
   const m = d.market;
   const cancel = async (lot: MarketLot) => {
-    const reason = window.prompt(`#${lot.no} を取り消します（仮押さえは解除され、だれも支払いません）。理由：`, '');
+    const reason = await promptDialog(`#${lot.no} を取り消します（仮押さえは解除され、だれも支払いません）。理由：`, '', { okLabel: '取り消す' });
     if (reason === null) return;
     await adminApi(`/auction/lots/${lot.id}/cancel`, { reason });
     load();

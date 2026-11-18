@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { adminApi } from './api';
+import { confirmDialog } from './dialog';
 import { BarList, ColumnChart, HeatCell, StatTile, fmtDuration, fmtInt, fmtPct } from './charts';
 import { TimerTable, type TimerRow } from './GameStatsPages';
 import { DevToggle, MODE_LABEL, PeriodFilter, TAGS, jstDay, tagLabel, useDev, useLoad, type Period } from './InsightsPages';
@@ -418,7 +419,7 @@ function DraftTimer({ canManage }: { canManage: boolean }) {
     setMsg(null);
     setErr(null);
     const body = mode === 'compare' ? { mode, variants } : { mode, seconds };
-    if (!window.confirm(mode === 'compare' ? `新しいルームを ${variants.join('秒・')}秒 に分けて比べます。よろしいですか？` : `新しいルームをすべて ${seconds}秒 にします。よろしいですか？`)) return;
+    if (!(await confirmDialog(mode === 'compare' ? `新しいルームを ${variants.join('秒・')}秒 に分けて比べます。よろしいですか？` : `新しいルームをすべて ${seconds}秒 にします。よろしいですか？`))) return;
     try {
       await adminApi('/beta/draft-timer', body, 'PUT');
       await load();
@@ -532,7 +533,7 @@ function BulkGrant() {
     setMsg(null);
     setErr(null);
     const label = KINDS.find((k) => k[0] === kind)?.[1];
-    if (!window.confirm(`${targetText(target)}に ${label} を1人 ${Number(amount).toLocaleString('ja-JP')} 付与します（テスト用・staging とローカルのみ）。よろしいですか？`)) return;
+    if (!(await confirmDialog(`${targetText(target)}に ${label} を1人 ${Number(amount).toLocaleString('ja-JP')} 付与します（テスト用・staging とローカルのみ）。よろしいですか？`))) return;
     setBusy(true);
     try {
       const r = await adminApi<{ players: number; paid: number; notFound: string[] }>('/beta/test-grants', { target: targetBody(target), kind, amount: Number(amount), note, requestId: newId() });
@@ -597,9 +598,10 @@ function Reset() {
     setErr(null);
     setProgress(null);
     if (
-      !window.confirm(
+      !(await confirmDialog(
         `${targetText(target)}の持ち物（COINS・GEMS・交換ポイント・カード・Collection Draft の登録・ガシャの天井・ミッション・Season Pass）を初期状態に戻します。アカウント・対戦記録・フィードバックは残ります。元に戻せません。よろしいですか？`,
-      )
+        { okLabel: '初期化する', danger: true },
+      ))
     )
       return;
     setBusy(true);

@@ -313,11 +313,6 @@ tbody tr:hover {
   .layout {
     grid-template-columns: minmax(0, 1fr);
   }
-  .side {
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
-  }
   .stat-chips {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -694,15 +689,7 @@ form textarea {
     grid-template-columns: minmax(0, 1fr);
   }
 }
-@media (max-width: 860px) {
-  /* the menu becomes one wrapping row; group titles are not needed there */
-  .nav-group {
-    display: contents;
-  }
-  .nav-head {
-    display: none;
-  }
-}
+
 
 /* ---------------------------------------------------------- Phase 6 */
 .notice-admin {
@@ -753,4 +740,149 @@ form textarea {
 }
 .seg button:disabled {
   opacity: 0.6;
+}
+
+/* ---------------------------------------------------------- phones (the admin site on a smartphone) */
+.topbar,
+.menu-backdrop {
+  display: none;
+}
+.dialog-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.65);
+}
+.dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(440px, 100%);
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+}
+.dialog-message {
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+.dialog textarea {
+  width: 100%;
+}
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.dialog-actions .btn {
+  min-width: 96px;
+}
+@media (max-width: 860px) {
+  /* a compact bar with the page name; the menu slides in on demand */
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    padding-top: calc(8px + env(safe-area-inset-top));
+    border-bottom: 1px solid var(--line);
+    background: var(--side);
+  }
+  .topbar-menu {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+    width: 44px;
+    height: 44px;
+    padding: 0 11px;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    background: #1b202b;
+    cursor: pointer;
+  }
+  .topbar-menu span {
+    display: block;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--text);
+  }
+  .topbar-title {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .side {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 60;
+    width: min(300px, 84vw);
+    padding-top: calc(18px + env(safe-area-inset-top));
+    overflow-y: auto;
+    transform: translateX(-105%);
+    transition: transform 0.2s ease;
+  }
+  .layout.menu-open .side {
+    transform: none;
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.6);
+  }
+  .menu-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: block;
+    background: rgba(0, 0, 0, 0.5);
+  }
+  .side .nav {
+    padding: 12px 10px;
+  }
+  .main {
+    padding: 14px 12px 60px;
+  }
+  .main h1 {
+    font-size: 22px;
+  }
+  /* 16px text in fields: iPhones do not zoom in when a field is tapped */
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+  input,
+  select,
+  .btn {
+    min-height: 42px;
+  }
+  .seg button {
+    min-height: 40px;
+  }
+  .spread {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  /* wide tables scroll sideways inside the page instead of squeezing or widening it */
+  table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  th,
+  td {
+    white-space: nowrap;
+  }
 }

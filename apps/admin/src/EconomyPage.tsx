@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { AdminApiError, adminApi } from './api';
+import { confirmDialog } from './dialog';
 import { EconomyInsights } from './InsightsPages';
 
 interface Wallet {
@@ -72,7 +73,7 @@ export function EconomyPage({ canGrant, canWallet, canInsights }: { canGrant: bo
     if (!lookup) return;
     const value = Number(amount);
     const label = KINDS.find((k) => k[0] === kind)![1];
-    if (!window.confirm(`${lookup.user.username} に ${label} を ${n(value)} 付与します（テスト用・操作ログに記録されます）`)) return;
+    if (!(await confirmDialog(`${lookup.user.username} に ${label} を ${n(value)} 付与します（テスト用・操作ログに記録されます）`))) return;
     setBusy(true);
     setError(null);
     try {

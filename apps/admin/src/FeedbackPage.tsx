@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { adminApi } from './api';
+import { confirmDialog } from './dialog';
 import { MODE_LABEL, tagLabel } from './InsightsPages';
 
 const STATUS = ['new', 'reviewing', 'investigating', 'resolved', 'closed'] as const;
@@ -279,7 +280,7 @@ function FeedbackDetail({ id, canWrite, onBack }: { id: string; canWrite: boolea
             <form
               onSubmit={async (e) => {
                 e.preventDefault();
-                if (reply.trim() && window.confirm('この返信をプレイヤーに送ります。よろしいですか？') && (await act(() => adminApi(`/feedback/${id}/replies`, { body: reply })))) setReply('');
+                if (reply.trim() && (await confirmDialog('この返信をプレイヤーに送ります。よろしいですか？')) && (await act(() => adminApi(`/feedback/${id}/replies`, { body: reply })))) setReply('');
               }}
             >
               <textarea value={reply} onChange={(e) => setReply(e.target.value)} maxLength={2000} rows={3} placeholder="プレイヤーに見える返信" />

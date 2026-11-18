@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { adminApi } from './api';
+import { promptDialog } from './dialog';
 import { fmtInt, fmtPct } from './charts';
 import { TAGS, tagLabel } from './InsightsPages';
 
@@ -194,8 +195,8 @@ function UserDetail({ id, canWrite, canWallet, onBack }: { id: string; canWrite:
               {u.status === 'active' ? (
                 <button
                   className="btn danger"
-                  onClick={() => {
-                    const reason = window.prompt('停止の理由（操作ログに残ります）');
+                  onClick={async () => {
+                    const reason = await promptDialog('停止の理由（操作ログに残ります）');
                     if (reason !== null) patch({ status: 'suspended', reason }, 'アカウントを停止しました（ログイン中の端末もログアウト）');
                   }}
                 >

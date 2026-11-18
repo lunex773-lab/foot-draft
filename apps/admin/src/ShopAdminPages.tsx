@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { adminApi } from './api';
+import { confirmDialog, promptDialog } from './dialog';
 import { BarList, ColumnChart, StatTile, fmtInt, fmtPct } from './charts';
 import { PeriodFilter, usePeriod } from './InsightsPages';
 
@@ -183,7 +184,7 @@ function PurchaseList({ canWrite }: { canWrite: boolean }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status]);
   const refund = async (p: PurchaseRow) => {
-    if (!window.confirm(`${p.username} の ${p.product_name}（${yen(p.price_jpy)}）に模擬ストアの返金通知を送ります。付与した GEMS を回収します。`)) return;
+    if (!(await confirmDialog(`${p.username} の ${p.product_name}（${yen(p.price_jpy)}）に模擬ストアの返金通知を送ります。付与した GEMS を回収します。`))) return;
     try {
       const r = await adminApi<{ gemsRecovered: number; shortfall: number }>(`/purchases/${p.id}/mock-refund`, {});
       setMsg(`返金：${fmtInt(r.gemsRecovered)} GEMS を回収${r.shortfall ? `、未回収 ${fmtInt(r.shortfall)}` : ''}`);
@@ -297,7 +298,7 @@ function RefundList({ canWrite }: { canWrite: boolean }) {
     load();
   }, []);
   const resolve = async (r: RefundRow) => {
-    const note = window.prompt(`未回収 ${r.shortfall} GEMS の対応を記録します（例：少額のため回収しない、アカウントを停止した 等）`);
+    const note = await promptDialog(`未回収 ${r.shortfall} GEMS の対応を記録します（例：少額のため回収しない、アカウントを停止した 等）`);
     if (!note) return;
     await adminApi(`/refunds/${r.id}/resolve`, { note });
     load();
@@ -380,7 +381,7 @@ function SubscriptionList({ canWrite }: { canWrite: boolean }) {
     load();
   }, []);
   const act = async (s: SubRow, action: string, label: string) => {
-    if (!window.confirm(`${s.username}：模擬ストアの「${label}」通知を送ります`)) return;
+    if (!(await confirmDialog(`${s.username}：模擬ストアの「${label}」通知を送ります`))) return;
     await adminApi(`/subscriptions/${s.id}/mock/${action}`, {});
     load();
   };

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { adminApi } from './api';
+import { confirmDialog } from './dialog';
 import { fmtInt } from './charts';
 
 const RARITIES = ['common', 'rare', 'epic', 'legendary', 'icon'] as const;
@@ -355,7 +356,7 @@ function GachaEditor({ id: openedId, canWrite, onBack }: { id: string | null; ca
                 <button
                   className="btn primary"
                   disabled={busy}
-                  onClick={() => window.confirm('公開するとプレイヤーのガシャ画面に表示されます（開始日時以降）。') && act(() => adminApi<Detail>(`/gacha/banners/${id}/publish`, {}), '公開しました')}
+                  onClick={async () => (await confirmDialog('公開するとプレイヤーのガシャ画面に表示されます（開始日時以降）。')) && act(() => adminApi<Detail>(`/gacha/banners/${id}/publish`, {}), '公開しました')}
                 >
                   公開
                 </button>
@@ -366,11 +367,11 @@ function GachaEditor({ id: openedId, canWrite, onBack }: { id: string | null; ca
                 <button
                   className="btn primary"
                   disabled={busy || sum !== 1_000_000 || !form.changeNote.trim()}
-                  onClick={() => window.confirm('変更を新しい版として公開します。以後の抽選は新しい版で行われます。') && act(() => adminApi<Detail>(`/gacha/banners/${id}`, payload(), 'PATCH'), '新しい版を公開しました')}
+                  onClick={async () => (await confirmDialog('変更を新しい版として公開します。以後の抽選は新しい版で行われます。')) && act(() => adminApi<Detail>(`/gacha/banners/${id}`, payload(), 'PATCH'), '新しい版を公開しました')}
                 >
                   変更を公開（v{(detail?.banner.rates_version ?? 0) + 1}）
                 </button>
-                <button className="btn danger" disabled={busy} onClick={() => window.confirm('このガシャを今すぐ終了します。') && act(() => adminApi<Detail>(`/gacha/banners/${id}/end`, {}), '終了しました')}>
+                <button className="btn danger" disabled={busy} onClick={async () => (await confirmDialog('このガシャを今すぐ終了します。')) && act(() => adminApi<Detail>(`/gacha/banners/${id}/end`, {}), '終了しました')}>
                   今すぐ終了
                 </button>
               </>

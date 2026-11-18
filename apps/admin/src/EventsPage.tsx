@@ -1,6 +1,7 @@
 import { LEAGUES, NATIONS, POSITIONS, RARITIES, RARITY_INFO, TRAITS, TRAIT_IDS, type PoolAnalysis, type PoolFilter } from '@fd/shared';
 import { useEffect, useMemo, useState } from 'react';
 import { AdminApiError, adminApi } from './api';
+import { confirmDialog } from './dialog';
 
 interface EventItem {
   id: string;
@@ -212,7 +213,7 @@ export function EventsPage({ canWrite }: { canWrite: boolean }) {
   }, []);
 
   const act = async (id: string, action: 'publish' | 'archive', label: string) => {
-    if (!window.confirm(`このイベントを${label}しますか？`)) return;
+    if (!(await confirmDialog(`このイベントを${label}しますか？`))) return;
     setError(null);
     try {
       await adminApi(`/events/${id}/${action}`, {});

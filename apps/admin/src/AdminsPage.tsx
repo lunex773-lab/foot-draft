@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { adminApi } from './api';
+import { confirmDialog } from './dialog';
 
 const ROLE_LABEL: Record<string, string> = { owner: 'owner', admin: 'admin', support: 'support', viewer: 'viewer' };
 const ROLE_DESC: Record<string, string> = {
@@ -85,7 +86,10 @@ export function AdminsPage({ meId }: { meId: string }) {
                     value={a.role}
                     disabled={a.id === meId}
                     aria-label={`${a.username} の役割`}
-                    onChange={(e) => window.confirm(`${a.username} の役割を ${e.target.value} に変更します（その管理者はログアウトされます）`) && act(() => adminApi(`/admins/${a.id}`, { role: e.target.value }, 'PATCH'), '役割を変更しました')}
+                    onChange={async (e) => {
+                      const role = e.target.value;
+                      if (await confirmDialog(`${a.username} の役割を ${role} に変更します（その管理者はログアウトされます）`)) act(() => adminApi(`/admins/${a.id}`, { role }, 'PATCH'), '役割を変更しました');
+                    }}
                   >
                     {Object.keys(ROLE_LABEL).map((r) => (
                       <option key={r} value={r}>
@@ -105,8 +109,8 @@ export function AdminsPage({ meId }: { meId: string }) {
                   {a.id !== meId && (
                     <button
                       className="btn"
-                      onClick={() =>
-                        window.confirm(`${a.username} を${a.status === 'active' ? '無効にします（ログアウトされます）' : '有効に戻します'}`) &&
+                      onClick={async () =>
+                        (await confirmDialog(`${a.username} を${a.status === 'active' ? '無効にします（ログアウトされます）' : '有効に戻します'}`)) &&
                         act(() => adminApi(`/admins/${a.id}`, { status: a.status === 'active' ? 'disabled' : 'active' }, 'PATCH'), a.status === 'active' ? '無効にしました' : '有効に戻しました')
                       }
                     >
@@ -116,7 +120,7 @@ export function AdminsPage({ meId }: { meId: string }) {
                   {a.totp_enabled === 1 && (
                     <button
                       className="btn"
-                      onClick={() => window.confirm(`${a.username} の2段階認証をリセットします。次回ログイン時に登録し直します。`) && act(() => adminApi(`/admins/${a.id}`, { resetTotp: true }, 'PATCH'), '2段階認証をリセットしました')}
+                      onClick={async () => (await confirmDialog(`${a.username} の2段階認証をリセットします。次回ログイン時に登録し直します。`)) && act(() => adminApi(`/admins/${a.id}`, { resetTotp: true }, 'PATCH'), '2段階認証をリセットしました')}
                     >
                       2段階認証をリセット
                     </button>
