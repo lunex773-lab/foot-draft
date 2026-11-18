@@ -32,3 +32,4 @@ export * from './beta';
 export * from './match';
 export * from './chinchiro';
 export * from './draftMatch';
+export * from './auction';
