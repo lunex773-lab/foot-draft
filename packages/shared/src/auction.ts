@@ -23,7 +23,7 @@ export interface AuctionSettings {
   initialFunds: number;
   /** cards listed at the same time (spec 3) */
   concurrentLots: number;
-  /** seconds a lot runs after it is listed (spec 3) */
+  /** seconds a lot runs after it is listed (decision 107: at least one day) */
   bidSeconds: number;
   /** a bid with this many seconds or less left ... (spec 3) */
   extendWindowSeconds: number;
@@ -45,7 +45,7 @@ export const DEFAULT_AUCTION_SETTINGS: AuctionSettings = {
   pauseWhenIdle: true,
   initialFunds: 100_000,
   concurrentLots: 8,
-  bidSeconds: 30,
+  bidSeconds: 86_400,
   extendWindowSeconds: 10,
   extendSeconds: 10,
   minRaisePercent: 5,
@@ -58,7 +58,8 @@ export const DEFAULT_AUCTION_SETTINGS: AuctionSettings = {
 export const AUCTION_LIMITS = {
   initialFunds: [0, 10_000_000],
   concurrentLots: [1, 16],
-  bidSeconds: [10, 600],
+  // decision 107: a lot runs at least one day (at most 30 days)
+  bidSeconds: [86_400, 2_592_000],
   extendWindowSeconds: [0, 120],
   extendSeconds: [0, 120],
   minRaisePercent: [0, 100],
@@ -66,6 +67,9 @@ export const AUCTION_LIMITS = {
   startPrice: [1, 10_000_000],
   coinsPerGem: [1, 10_000],
 } as const;
+
+/** automated tests only (local / dev with test timings): lots can be this short */
+export const AUCTION_TEST_MIN_BID_SECONDS = 10;
 
 /** the largest single bid (keeps every amount a safe integer) */
 export const AUCTION_MAX_BID = 1_000_000_000;
@@ -76,16 +80,21 @@ type NumberKey = Exclude<keyof typeof AUCTION_LIMITS, 'startPrice'>;
  * Checks admin input and fills missing fields from `base`. Returns the
  * settings or the list of fields that are not acceptable.
  */
-export function validateAuctionSettings(input: unknown, base: AuctionSettings = DEFAULT_AUCTION_SETTINGS): { ok: true; settings: AuctionSettings } | { ok: false; errors: string[] } {
+export function validateAuctionSettings(
+  input: unknown,
+  base: AuctionSettings = DEFAULT_AUCTION_SETTINGS,
+  opts: { testTimings?: boolean } = {},
+): { ok: true; settings: AuctionSettings } | { ok: false; errors: string[] } {
   if (!input || typeof input !== 'object') return { ok: false, errors: ['settings'] };
   const v = input as Record<string, unknown>;
   const errors: string[] = [];
   const out: AuctionSettings = { ...base, startPrice: { ...base.startPrice } };
   const int = (x: unknown, [lo, hi]: readonly [number, number]) => typeof x === 'number' && Number.isInteger(x) && x >= lo && x <= hi;
+  const limits = (k: NumberKey): readonly [number, number] => (k === 'bidSeconds' && opts.testTimings ? [AUCTION_TEST_MIN_BID_SECONDS, AUCTION_LIMITS.bidSeconds[1]] : AUCTION_LIMITS[k]);
   for (const key of Object.keys(AUCTION_LIMITS) as (keyof typeof AUCTION_LIMITS)[]) {
     if (key === 'startPrice' || v[key] === undefined) continue;
     const k = key as NumberKey;
-    if (int(v[k], AUCTION_LIMITS[k])) out[k] = v[k] as number;
+    if (int(v[k], limits(k))) out[k] = v[k] as number;
     else errors.push(k);
   }
   if (v.startPrice !== undefined) {
@@ -108,6 +117,37 @@ export function validateAuctionSettings(input: unknown, base: AuctionSettings = 
     else errors.push('mode');
   }
   return errors.length ? { ok: false, errors } : { ok: true, settings: out };
+}
+
+/**
+ * Settings read back from storage: numbers outside the bounds (e.g. a 30-second
+ * duration saved before decision 107) are moved to the nearest bound instead of
+ * throwing every saved value away.
+ */
+export function normalizeStoredAuctionSettings(input: unknown, opts: { testTimings?: boolean } = {}): AuctionSettings {
+  if (!input || typeof input !== 'object') return DEFAULT_AUCTION_SETTINGS;
+  const v = { ...(input as Record<string, unknown>) };
+  for (const key of Object.keys(AUCTION_LIMITS) as (keyof typeof AUCTION_LIMITS)[]) {
+    if (key === 'startPrice' || typeof v[key] !== 'number' || !Number.isFinite(v[key] as number)) continue;
+    const k = key as NumberKey;
+    const lo = k === 'bidSeconds' && opts.testTimings ? AUCTION_TEST_MIN_BID_SECONDS : AUCTION_LIMITS[k][0];
+    v[k] = Math.min(AUCTION_LIMITS[k][1], Math.max(lo, Math.round(v[k] as number)));
+  }
+  const r = validateAuctionSettings(v, DEFAULT_AUCTION_SETTINGS, opts);
+  return r.ok ? r.settings : DEFAULT_AUCTION_SETTINGS;
+}
+
+/** a duration for people: 1日 / 3時間20分 / 5分10秒 / 8秒 */
+export function formatAuctionDuration(ms: number): string {
+  const s = Math.max(0, Math.ceil(ms / 1000));
+  const d = Math.floor(s / 86_400);
+  const h = Math.floor((s % 86_400) / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  if (d > 0) return h > 0 ? `${d}日${h}時間` : `${d}日`;
+  if (h > 0) return m > 0 ? `${h}時間${m}分` : `${h}時間`;
+  if (m > 0) return sec > 0 ? `${m}分${sec}秒` : `${m}分`;
+  return `${sec}秒`;
 }
 
 // ------------------------------------------------------------------ bidding

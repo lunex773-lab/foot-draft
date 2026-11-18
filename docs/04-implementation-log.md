@@ -1,5 +1,16 @@
 # 実装記録
 
+## 2026-11-18 オークションの入札時間を最短1日に
+
+決定 107。仕様書の30秒から変更。
+
+| 区分 | 内容 | 主なファイル |
+| --- | --- | --- |
+| ルール | 入札時間は最短1日・最長30日、初期値1日。管理画面の入力は時間単位。保存済みの短い値は1日として読む（ほかの保存値はそのまま）。自動テストだけはローカル・dev で短くできる（staging・本番は不可） | `packages/shared/src/auction.ts`, `apps/api/src/lib/auction.ts`, `routes/adminAuction.ts` |
+| 表示 | 残り時間を「23時間59分」「5分10秒」の形で表示、入札画面に終了時刻（日本時間）。残り1分を切ると色で知らせる | `apps/web/src/pages/AuctionPage.tsx`, `apps/admin/src/AuctionAdminPage.tsx` |
+
+検証：単体テスト98件（最短1日・最長30日・保存値の読み替え・時間の表示を追加）、`npm run e2e:auction` すべて成功、ブラウザで1日の出品の表示を確認。
+
 ## 2026-11-18 オークション（ガシャ > オークション）
 
 計画：`docs/14-auction-plan.md`。決定事項：`docs/02-decisions.md` の 97〜106。仕様書「PLAYER AUCTION SYSTEM 開発引き継ぎ仕様 v1.0」。

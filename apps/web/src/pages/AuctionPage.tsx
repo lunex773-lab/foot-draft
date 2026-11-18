@@ -1,4 +1,4 @@
-import { BID_REFUSAL_TEXT, MAX_CARD_LEVEL, RARITY_INFO, gemsForShortfall, type AuctionLotView, type BidRefusal, type Player } from '@fd/shared';
+import { BID_REFUSAL_TEXT, MAX_CARD_LEVEL, RARITY_INFO, formatAuctionDuration, gemsForShortfall, type AuctionLotView, type BidRefusal, type Player } from '@fd/shared';
 import { PlayerCard } from '@fd/ui';
 import { useMemo, useState } from 'react';
 import { useCatalog } from '../lib/catalog';
@@ -11,6 +11,8 @@ import { useWallet } from '../lib/wallet';
  * a time, public ascending bids. Won cards go to the collection (+1 when owned).
  */
 const fmt = (n: number) => n.toLocaleString('ja-JP');
+/** the end in Japan time, e.g. 11/19 14:30 */
+const endTime = (ms: number) => new Date(ms).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
 function errorText(code: string, message: string): string {
   if (code in BID_REFUSAL_TEXT) return BID_REFUSAL_TEXT[code as BidRefusal];
@@ -71,7 +73,7 @@ export default function AuctionPage() {
               {fmt(rules.startPrice.epic)}・LEGENDARY {fmt(rules.startPrice.legendary)}・ICON {fmt(rules.startPrice.icon)}）以上。
             </li>
             <li>
-              1人の出品は {rules.bidSeconds} 秒。終了前 {rules.extendWindowSeconds} 秒以内に入札があると {rules.extendSeconds} 秒延長。
+              1人の出品は {formatAuctionDuration(rules.bidSeconds * 1000)}。終了前 {rules.extendWindowSeconds} 秒以内に入札があると {rules.extendSeconds} 秒延長。
             </li>
             <li>持っている選手を落札すると +1 強化（+5 の選手には入札できません）。入札の取り消しはできません。</li>
           </ul>
@@ -164,7 +166,7 @@ function LotCard({ lot, player, owned, serverNow, onOpen }: { lot: AuctionLotVie
   const secs = Math.ceil(left / 1000);
   const maxed = owned !== undefined && owned >= MAX_CARD_LEVEL;
   return (
-    <button className={`lot rar-${lot.rarity} ${lot.leaderIsYou ? 'mine' : ''} ${secs <= 10 ? 'ending' : ''}`} onClick={onOpen} aria-label={`${player.name} の入札`}>
+    <button className={`lot rar-${lot.rarity} ${lot.leaderIsYou ? 'mine' : ''} ${secs <= 60 ? 'ending' : ''}`} onClick={onOpen} aria-label={`${player.name} の入札`}>
       <PlayerCard player={player} width="100%" loading="eager" />
       <div className="lot-bar" aria-hidden="true">
         <span style={{ width: `${(left / total) * 100}%` }} />
@@ -173,7 +175,7 @@ function LotCard({ lot, player, owned, serverNow, onOpen }: { lot: AuctionLotVie
         <div className="lot-price">
           <span className="tiny muted">{lot.currentPrice === null ? '開始' : '現在'}</span>
           <b>{fmt(lot.currentPrice ?? lot.minNextBid)}</b>
-          <span className={`lot-time ${secs <= 10 ? 'low' : ''}`}>{secs}秒</span>
+          <span className={`lot-time ${secs <= 60 ? 'low' : ''}`}>{formatAuctionDuration(left)}</span>
         </div>
         <div className="lot-leader tiny">{lot.leaderIsYou ? 'あなたが最高額' : lot.leaderName ? `${lot.leaderName}（${lot.bidCount}件）` : '入札なし'}</div>
         {owned !== undefined && <div className="lot-owned tiny">{maxed ? '+5 のため入札不可' : `所持 +${owned} → 落札で +${owned + 1}`}</div>}
@@ -240,7 +242,9 @@ function BidSheet(props: {
               {lot.currentPrice === null ? '開始価格' : '現在の最高額'} <b>{fmt(lot.currentPrice ?? min)}</b>
             </div>
             <div className="small">{lot.leaderIsYou ? 'あなたが最高額です' : lot.leaderName ? `最高額：${lot.leaderName}` : 'まだ入札はありません'}</div>
-            <div className={`small ${left <= 10 ? 'warn-text' : ''}`}>残り {left} 秒</div>
+            <div className={`small ${left <= 60 ? 'warn-text' : ''}`}>
+              残り {formatAuctionDuration(lot.endsAt - serverNow())}（{endTime(lot.endsAt)} 終了）
+            </div>
             {owned !== undefined && <div className="small">{maxed ? '+5 まで強化済み：入札できません' : `所持 +${owned} → 落札で +${owned + 1}`}</div>}
           </div>
         </div>

@@ -5,6 +5,8 @@ import {
   availableFunds,
   checkBid,
   endAfterBid,
+  formatAuctionDuration,
+  normalizeStoredAuctionSettings,
   gemsForShortfall,
   lotRulesOf,
   minNextBid,
@@ -18,7 +20,9 @@ const rules = lotRulesOf(DEFAULT_AUCTION_SETTINGS, 'rare');
 describe('auction rules (spec PLAYER AUCTION v1.0)', () => {
   it('uses the spec values and the start prices of decision 103', () => {
     const s = DEFAULT_AUCTION_SETTINGS;
-    expect([s.initialFunds, s.concurrentLots, s.bidSeconds, s.extendWindowSeconds, s.extendSeconds, s.minRaisePercent, s.minRaiseAmount]).toEqual([100_000, 8, 30, 10, 10, 5, 100]);
+    expect([s.initialFunds, s.concurrentLots, s.extendWindowSeconds, s.extendSeconds, s.minRaisePercent, s.minRaiseAmount]).toEqual([100_000, 8, 10, 10, 5, 100]);
+    // decision 107: a lot runs one day
+    expect(s.bidSeconds).toBe(86_400);
     expect(s.startPrice).toEqual({ common: 1_000, rare: 3_000, epic: 8_000, legendary: 20_000, icon: 40_000 });
     expect(s.coinsPerGem).toBe(10);
   });
@@ -64,6 +68,26 @@ describe('auction rules (spec PLAYER AUCTION v1.0)', () => {
     expect(gemsForShortfall(50_000, 70_000, 10)).toBe(0);
     expect(gemsForShortfall(70_001, 70_000, 10)).toBe(1);
     expect(gemsForShortfall(75_005, 70_000, 10)).toBe(501);
+  });
+
+  it('decision 107: a lot runs at least one day (shorter only in automated tests)', () => {
+    expect(validateAuctionSettings({ bidSeconds: 86_399 }).ok).toBe(false);
+    expect(validateAuctionSettings({ bidSeconds: 30 }).ok).toBe(false);
+    expect(validateAuctionSettings({ bidSeconds: 86_400 }).ok).toBe(true);
+    expect(validateAuctionSettings({ bidSeconds: 7 * 86_400 }).ok).toBe(true);
+    expect(validateAuctionSettings({ bidSeconds: 31 * 86_400 }).ok).toBe(false);
+    expect(validateAuctionSettings({ bidSeconds: 20 }, DEFAULT_AUCTION_SETTINGS, { testTimings: true }).ok).toBe(true);
+    // a 30-second duration saved before the change becomes one day; the other saved values stay
+    const stored = normalizeStoredAuctionSettings({ ...DEFAULT_AUCTION_SETTINGS, bidSeconds: 30, mode: 'manual', concurrentLots: 5 });
+    expect([stored.bidSeconds, stored.mode, stored.concurrentLots]).toEqual([86_400, 'manual', 5]);
+  });
+
+  it('shows durations for people', () => {
+    expect(formatAuctionDuration(86_400_000)).toBe('1日');
+    expect(formatAuctionDuration(86_400_000 + 3 * 3_600_000)).toBe('1日3時間');
+    expect(formatAuctionDuration(3 * 3_600_000 + 20 * 60_000)).toBe('3時間20分');
+    expect(formatAuctionDuration(5 * 60_000 + 10_000)).toBe('5分10秒');
+    expect(formatAuctionDuration(7_500)).toBe('8秒');
   });
 
   it('validates admin settings within the bounds', () => {

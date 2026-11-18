@@ -1,4 +1,4 @@
-import { DEFAULT_AUCTION_SETTINGS, availableFunds, validateAuctionSettings, type AuctionSettings, type AuctionWalletView } from '@fd/shared';
+import { DEFAULT_AUCTION_SETTINGS, availableFunds, normalizeStoredAuctionSettings, type AuctionSettings, type AuctionWalletView } from '@fd/shared';
 import type { Env } from '../env';
 import { hmacSha256, randomId } from './crypto';
 import { analyticsWhen, claimedNow, type Condition } from './economy';
@@ -13,12 +13,16 @@ import { settingOf } from './settings';
 export const AUCTION_SETTINGS_KEY = 'auction';
 export const AUCTION_INITIAL_KEY = 'auction:initial';
 
-/** the admin's settings, or the defaults when missing / broken */
+/** automated tests may use lots shorter than one day (never in production, decision 107) */
+export function auctionTestTimings(env: Env): boolean {
+  return env.ALLOW_TEST_TIMINGS === 'true' && env.ENVIRONMENT !== 'production';
+}
+
+/** the admin's settings (values outside the bounds moved to the nearest bound), or the defaults */
 export async function auctionSettings(env: Env): Promise<AuctionSettings> {
   const v = (await settingOf(env, AUCTION_SETTINGS_KEY))?.value;
   if (!v) return DEFAULT_AUCTION_SETTINGS;
-  const r = validateAuctionSettings(v);
-  return r.ok ? r.settings : DEFAULT_AUCTION_SETTINGS;
+  return normalizeStoredAuctionSettings(v, { testTimings: auctionTestTimings(env) });
 }
 
 export function ensureAuctionWalletStmt(env: Env, userId: string, now: number): D1PreparedStatement {

@@ -1,6 +1,6 @@
 import { RARITIES, validateAuctionSettings } from '@fd/shared';
 import { Hono } from 'hono';
-import { AUCTION_SETTINGS_KEY, auctionSettings } from '../lib/auction';
+import { AUCTION_SETTINGS_KEY, auctionSettings, auctionTestTimings } from '../lib/auction';
 import { audit, auditStatement, ipOf } from '../lib/audit';
 import { can, requirePermission } from '../lib/auth';
 import { ApiError, readJson } from '../lib/http';
@@ -188,7 +188,8 @@ adminAuctionRoutes.put('/auction/settings', requirePermission('auction.write'), 
   const admin = c.get('admin');
   const body = await readJson<Record<string, unknown>>(c);
   const before = await auctionSettings(c.env);
-  const v = validateAuctionSettings(body, before);
+  // decision 107: at least one day (automated tests locally may use shorter lots)
+  const v = validateAuctionSettings(body, before, { testTimings: auctionTestTimings(c.env) });
   if (!v.ok) throw new ApiError('VALIDATION', `invalid: ${v.errors.join(', ')}`);
   const now = Date.now();
   await c.env.DB.batch([

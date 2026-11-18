@@ -1,3 +1,4 @@
+import { formatAuctionDuration } from '@fd/shared';
 import { useEffect, useMemo, useState } from 'react';
 import { adminApi } from './api';
 import { StatTile, fmtInt } from './charts';
@@ -13,6 +14,7 @@ const RARITY_LABEL: Record<Rarity, string> = { common: 'COMMON', rare: 'RARE', e
 const STATUS_LABEL: Record<string, string> = { open: '開催中', sold: '落札', unsold: '未落札', cancelled: '取り消し' };
 const time = (ms: number | null | undefined) => (ms ? new Date(ms).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }) : '—');
 const n = (v: unknown) => (typeof v === 'number' ? fmtInt(v) : '—');
+const duration = formatAuctionDuration;
 
 interface Settings {
   open: boolean;
@@ -206,7 +208,7 @@ function OverviewTab({ canWrite }: { canWrite: boolean }) {
                   <td className="num">{l.currentPrice === null ? '—' : fmtInt(l.currentPrice)}</td>
                   <td>{l.leaderName ?? '—'}</td>
                   <td className="num">{l.bidCount}</td>
-                  <td>{Math.max(0, Math.ceil((l.endsAt - m.serverNow) / 1000))}秒</td>
+                  <td>{duration(l.endsAt - m.serverNow)}</td>
                   {canWrite && (
                     <td>
                       <button className="btn small danger" onClick={() => cancel(l)}>
@@ -658,7 +660,21 @@ function OperateTab({ canWrite }: { canWrite: boolean }) {
           <div>
             {num('initialFunds', '初期資金（これから受け取る人に適用）', 'コイン')}
             {num('concurrentLots', '同時に出品する数', '人')}
-            {num('bidSeconds', '入札時間', '秒')}
+            <label className="form-field">
+              入札時間（最短1日・最長30日）
+              <span className="row" style={{ gap: 6 }}>
+                <input
+                  type="number"
+                  min={24}
+                  max={720}
+                  value={Math.round((s.bidSeconds / 3600) * 100) / 100}
+                  disabled={!canWrite}
+                  onChange={(e) => setS({ ...s, bidSeconds: Math.round(Number(e.target.value) * 3600) })}
+                  style={{ width: 130 }}
+                />
+                <span className="small muted">時間（{duration(s.bidSeconds * 1000)}）</span>
+              </span>
+            </label>
             {num('extendWindowSeconds', '終了前この秒数以内の入札で…', '秒')}
             {num('extendSeconds', '…延長する秒数', '秒')}
           </div>
