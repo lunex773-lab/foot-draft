@@ -13,6 +13,7 @@ import {
   pad,
   pluck,
   pulseBass,
+  riseChord,
   snare,
   stab,
   strings,
@@ -138,7 +139,8 @@ const synthwave: Track = {
         lead(m, t, n(hook[i0]), bar * 0.45, { gain: 0.07 });
         lead(m, t + bar / 2, n(hook[i0 + 1]), bar * 0.45, { gain: 0.07, from: n(hook[i0]) });
       }
-      if (brk && b === 27) sweep(m, t, bar, { gain: 0.2 });
+      // the build back into the drop: a rising chord (tonal, no noise hiss on the gacha screens)
+      if (brk && b === 27) riseChord(m, t, p.ch, bar, { gain: 0.07 });
       if (b >= 28) {
         const i0 = (b % 4) * 2;
         lead(m, t, n(hook[i0]) + 12, bar * 0.45, { gain: 0.05 });

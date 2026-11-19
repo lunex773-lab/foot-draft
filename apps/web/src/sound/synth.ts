@@ -234,6 +234,26 @@ export function sweep(m: Mix, t: number, dur: number, o: { from?: number; to?: n
 
 // ------------------------------------------------------------------ bass
 
+/** a tonal riser (no noise): a saw chord rising in pitch with an opening low-pass */
+export function riseChord(m: Mix, t: number, midis: number[], dur: number, o: { gain?: number; rev?: number } = {}) {
+  const { gain = 0.06, rev = 0.35 } = o;
+  const lp = filter(m, 'lowpass', 300, 1.2);
+  lp.frequency.setValueAtTime(300, t);
+  lp.frequency.exponentialRampToValueAtTime(5000, t + dur);
+  const g = m.ctx.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(gain, t + dur);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur + 0.05);
+  for (const md of midis)
+    for (const d of [-8, 8]) {
+      const o2 = osc(m, 'sawtooth', midiHz(md), t, t + dur + 0.1, d);
+      o2.frequency.exponentialRampToValueAtTime(midiHz(md + 12), t + dur);
+      o2.connect(lp);
+    }
+  lp.connect(g).connect(m.music);
+  send(m, g, rev);
+}
+
 /** 808: a long sine with a glide, saturated so that phones hear it */
 export function sub808(m: Mix, t: number, midi: number, dur: number, o: { glideFrom?: number; gain?: number; drive?: number } = {}) {
   const { glideFrom, gain = 0.85, drive = 2.6 } = o;

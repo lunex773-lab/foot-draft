@@ -6,14 +6,14 @@ const level = () => 1.1 * soundSettings().sfxVolume;
 
 /**
  * Sounds of the SHOOT GACHA made with the Web Audio API (no sound files):
- * the crowd, the kick, the ball, the net, the roar and a sting per rarity.
- * Muted with the button in the animation or in Settings (saved per device).
+ * the kick, the ball, the net and a sting per rarity. Noise is used only in
+ * short hits (a continuous crowd made of noise was heard as a hiss "ザー" and
+ * was removed). Muted with the button in the animation or in Settings.
  */
 
 export class ShootAudio {
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
-  private crowd: GainNode | null = null;
   private noise: AudioBuffer | null = null;
   /** a send to a large hall reverb (the ICON sounds) */
   private reverb: GainNode | null = null;
@@ -55,24 +55,6 @@ export class ShootAudio {
     this.noise = ctx.createBuffer(1, len, ctx.sampleRate);
     const d = this.noise.getChannelData(0);
     for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
-    // the crowd: band-passed noise with a slow swell
-    const src = ctx.createBufferSource();
-    src.buffer = this.noise;
-    src.loop = true;
-    const bp = ctx.createBiquadFilter();
-    bp.type = 'bandpass';
-    bp.frequency.value = 900;
-    bp.Q.value = 0.6;
-    this.crowd = ctx.createGain();
-    this.crowd.gain.value = 0.07;
-    const lfo = ctx.createOscillator();
-    lfo.frequency.value = 0.23;
-    const lfoGain = ctx.createGain();
-    lfoGain.gain.value = 0.025;
-    lfo.connect(lfoGain).connect(this.crowd.gain);
-    src.connect(bp).connect(this.crowd).connect(this.master);
-    src.start();
-    lfo.start();
   }
 
   setMuted(m: boolean) {
@@ -138,58 +120,33 @@ export class ShootAudio {
     this.noiseBurst(0.35, 'bandpass', 1400, 0.06, 500);
   }
 
-  /** the ball hits the net */
+  /** the ball hits the net: a short swish and a soft thud */
   net() {
-    this.noiseBurst(0.5, 'bandpass', 2600, 0.32, 380);
-    this.noiseBurst(0.25, 'lowpass', 300, 0.3);
+    this.noiseBurst(0.18, 'bandpass', 2200, 0.2, 600);
+    this.noiseBurst(0.15, 'lowpass', 300, 0.3);
+    this.tone(90, 0, 0.3, 0.5, 'sine', 50);
   }
 
-  /** the crowd roars for the goal */
+  /** the goal: a deep, clean boom (tonal; no noise) */
   roar() {
-    const ctx = this.ctx;
-    if (!ctx || !this.crowd) return;
-    const t = ctx.currentTime;
-    this.crowd.gain.cancelScheduledValues(t);
-    this.crowd.gain.setValueAtTime(this.crowd.gain.value, t);
-    this.crowd.gain.linearRampToValueAtTime(0.42, t + 0.25);
-    this.crowd.gain.linearRampToValueAtTime(0.16, t + 2.6);
-    this.crowd.gain.linearRampToValueAtTime(0.07, t + 5);
+    this.bass(120, 40, 0, 1.2, 0.5, 2);
   }
 
-  /** ICON: the time stops — the crowd falls silent, a deep sub drop and a dark rumble */
+  /** ICON: the time stops — a deep sub drop and a dark low chord */
   hush() {
     const ctx = this.ctx;
-    if (!ctx || !this.crowd) return;
-    const t = ctx.currentTime;
-    this.crowd.gain.setTargetAtTime(0.01, t, 0.05);
+    if (!ctx) return;
     this.bass(78, 26, 0, 1.5, 1.0, 2.6);
     this.braam([41.2, 41.45, 61.7], 0, 1.4, 0.22, 90, 260, 0.5);
-    this.noiseBurst(1.3, 'lowpass', 320, 0.4, 50, 0.6);
     // a shimmer slowing down (tape stop)
     this.tone(1760, 0.05, 1.1, 0.05, 'triangle', 220, 0.8);
   }
 
-  /** ICON: a swell rising into the card reveal */
+  /** ICON: a swell rising into the card reveal (tonal: a rising saw and a sub swell, no noise) */
   riser(dur: number) {
     const ctx = this.ctx;
-    if (!ctx || !this.master || !this.noise) return;
+    if (!ctx || !this.master) return;
     const t = ctx.currentTime;
-    const src = ctx.createBufferSource();
-    src.buffer = this.noise;
-    const f = ctx.createBiquadFilter();
-    f.type = 'bandpass';
-    f.Q.value = 1.4;
-    f.frequency.setValueAtTime(300, t);
-    f.frequency.exponentialRampToValueAtTime(7000, t + dur);
-    const g = ctx.createGain();
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(0.32, t + dur);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + dur + 0.06);
-    src.connect(f).connect(g).connect(this.master);
-    if (this.reverb) g.connect(this.reverb);
-    src.start(t, Math.random());
-    src.stop(t + dur + 0.1);
-    // a rising, filtered saw and a sub swell underneath
     const o = ctx.createOscillator();
     o.type = 'sawtooth';
     o.frequency.setValueAtTime(55, t);
@@ -214,9 +171,9 @@ export class ShootAudio {
     this.bass(150, 30, 0, 2.6, 1.15, 3.2);
     // a dark distorted brass-like chord (A1 / E2 / A2) opening and closing
     this.braam([55, 55.35, 82.41, 110, 109.4, 164.81], 0, 2.4, 0.3, 140, 1700, 0.45);
-    // the impact
-    this.noiseBurst(0.8, 'lowpass', 2600, 0.55, 70, 0.3);
-    this.noiseBurst(0.12, 'highpass', 3000, 0.25);
+    // the impact (a short hit only)
+    this.noiseBurst(0.25, 'lowpass', 1800, 0.45, 80);
+    this.noiseBurst(0.06, 'highpass', 3000, 0.2);
     // a rainbow sparkle in the hall
     [1318.5, 1661.22, 1975.53, 2637.02, 3322.44].forEach((f, i) => this.tone(f, 0.14 + i * 0.07, 1.8, 0.045, 'sine', undefined, 1));
   }
