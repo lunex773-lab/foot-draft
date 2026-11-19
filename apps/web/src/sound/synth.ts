@@ -469,3 +469,92 @@ export function burst(m: Mix, t: number, o: { type?: BiquadFilterType; from?: nu
   noiseSrc(m, t, dur).connect(f).connect(g).connect(m.music);
   send(m, g, rev);
 }
+
+// ------------------------------------------------------------------ uptempo match music (decision 115)
+
+/** a growling bass (drum & bass): detuned saws and a sub, a resonant low-pass that can wobble, drive */
+export function growl(m: Mix, t: number, midi: number, dur: number, o: { gain?: number; cutoff?: number; wobble?: number; depth?: number; drive?: number; glideFrom?: number; sub?: number } = {}) {
+  const { gain = 0.3, cutoff = 700, wobble = 0, depth = 0.6, drive = 2.4, glideFrom, sub: subLevel = 1.2 } = o;
+  const hz = midiHz(midi);
+  const lp = filter(m, 'lowpass', cutoff, 5);
+  lp.frequency.setValueAtTime(cutoff * 2, t);
+  lp.frequency.exponentialRampToValueAtTime(cutoff, t + Math.min(0.15, dur));
+  if (wobble > 0) {
+    const lfo = osc(m, 'sine', wobble, t, t + dur + 0.05);
+    const lg = m.ctx.createGain();
+    lg.gain.value = cutoff * depth;
+    lfo.connect(lg).connect(lp.frequency);
+  }
+  const g = m.ctx.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(gain, t + 0.006);
+  g.gain.setValueAtTime(gain, t + Math.max(0.01, dur - 0.04));
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  for (const d of [-16, 0, 16]) {
+    const s = osc(m, 'sawtooth', glideFrom ? midiHz(glideFrom) : hz, t, t + dur + 0.05, d);
+    if (glideFrom) s.frequency.exponentialRampToValueAtTime(hz, t + 0.08);
+    s.connect(lp);
+  }
+  lp.connect(shaper(m.ctx, drive)).connect(g);
+  const sub = osc(m, 'sine', glideFrom ? midiHz(glideFrom) : hz, t, t + dur + 0.05);
+  if (glideFrom) sub.frequency.exponentialRampToValueAtTime(hz, t + 0.08);
+  const sg = m.ctx.createGain();
+  sg.gain.value = subLevel;
+  sub.connect(sg).connect(g);
+  g.connect(m.drums);
+}
+
+/** an 808 cowbell tuned to a note (phonk melodies) */
+export function cowbell(m: Mix, t: number, midi: number, o: { gain?: number; decay?: number; rev?: number } = {}) {
+  const { gain = 0.12, decay = 0.3, rev = 0.2 } = o;
+  const hz = midiHz(midi);
+  const bp = filter(m, 'bandpass', hz * 1.25, 2.2);
+  const g = m.ctx.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(gain, t + 0.002);
+  g.gain.exponentialRampToValueAtTime(gain * 0.35, t + 0.035);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + decay);
+  for (const r of [1, 1.48]) osc(m, 'square', hz * r, t, t + decay + 0.05).connect(bp);
+  bp.connect(g).connect(m.music);
+  send(m, g, rev);
+}
+
+/** a hardstyle kick: a hard, distorted punch and a long tail tuned to a note */
+export function hardKick(m: Mix, t: number, midi: number, o: { gain?: number; tail?: number; drive?: number; cutoff?: number } = {}) {
+  const { gain = 0.9, tail = 0.3, drive = 6, cutoff = 2600 } = o;
+  const hz = midiHz(midi);
+  const s = osc(m, 'sine', 420, t, t + tail + 0.1);
+  s.frequency.exponentialRampToValueAtTime(hz * 2, t + 0.02);
+  s.frequency.exponentialRampToValueAtTime(hz, t + 0.075);
+  s.frequency.setValueAtTime(hz, t + tail * 0.55);
+  s.frequency.exponentialRampToValueAtTime(hz * 0.78, t + tail);
+  const g = m.ctx.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(gain, t + 0.002);
+  g.gain.setValueAtTime(gain * 0.9, t + 0.05);
+  g.gain.exponentialRampToValueAtTime(gain * 0.55, t + tail * 0.8);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + tail);
+  s.connect(shaper(m.ctx, drive)).connect(filter(m, 'lowpass', cutoff, 0.8)).connect(g).connect(m.drums);
+  // the click on top (tonal, very short)
+  const c = osc(m, 'triangle', 2400, t, t + 0.03);
+  c.frequency.exponentialRampToValueAtTime(700, t + 0.015);
+  const cg = m.ctx.createGain();
+  env(cg, t, gain * 0.3, 0.001, 0.015);
+  c.connect(cg).connect(m.drums);
+}
+
+/** a big supersaw lead note (hardstyle / anthem): seven detuned saws, optional slide */
+export function superLead(m: Mix, t: number, midi: number, dur: number, o: { gain?: number; from?: number; cutoff?: number; rev?: number } = {}) {
+  const { gain = 0.05, from, cutoff = 5200, rev = 0.4 } = o;
+  const hz = midiHz(midi);
+  const lp = filter(m, 'lowpass', cutoff, 0.9);
+  const g = m.ctx.createGain();
+  env(g, t, gain, 0.008, 0.1, Math.max(0, dur - 0.1));
+  for (const d of [-28, -17, -8, 0, 8, 17, 28]) {
+    const s = osc(m, 'sawtooth', from ? midiHz(from) : hz, t, t + dur + 0.15, d);
+    if (from) s.frequency.exponentialRampToValueAtTime(hz, t + 0.05);
+    s.connect(lp);
+  }
+  lp.connect(g).connect(m.music);
+  send(m, g, rev);
+}

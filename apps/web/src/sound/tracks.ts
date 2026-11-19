@@ -4,8 +4,11 @@ import {
   braam,
   choir,
   clap,
+  cowbell,
   crowd,
   duck,
+  growl,
+  hardKick,
   hat,
   kick,
   lead,
@@ -18,6 +21,7 @@ import {
   stab,
   strings,
   sub808,
+  superLead,
   sweep,
   tom,
   type Mix,
@@ -194,6 +198,217 @@ const epic: Track = {
     }
   },
 };
+
+// ------------------------------------------------------------------ uptempo match music: candidates (decision 115)
+
+type Note = [step: number, len: number, name: string];
+/** a melody: one list of notes (16th steps) per bar */
+const melody = (bars: Note[][]) => bars.map((b) => b.map(([s, l, nm]) => ({ s, l, m: n(nm) })));
+
+/** the build into a drop: snares getting denser and louder, and a rising chord (no noise riser) */
+function build(m: Mix, t: number, s16: number, ch: number[]) {
+  for (let i = 0; i < 16; i += i < 8 ? 2 : 1) snare(m, t + i * s16, { gain: 0.18 + i * 0.025, rev: 0.2, decay: 0.12 });
+  riseChord(m, t, ch, s16 * 16, { gain: 0.06 });
+}
+
+// E: drum & bass
+const dnb: Track = {
+  id: 'red-zone',
+  name: 'E. RED ZONE',
+  style: 'ドラムンベース（174BPM）。速く刻むブレイクビート、うなるベース、攻めるリード',
+  bpm: 174,
+  bars: 32,
+  score(m, t0) {
+    const s16 = 60 / this.bpm / 4;
+    const bar = s16 * 16;
+    const prog = [
+      { root: n('G1'), ch: chord('G3 Bb3 D4') },
+      { root: n('Eb1'), ch: chord('Eb3 G3 Bb3') },
+      { root: n('Bb1'), ch: chord('Bb3 D4 F4') },
+      { root: n('F1'), ch: chord('F3 A3 C4') },
+    ];
+    const tune = melody([
+      [[0, 3, 'D5'], [3, 3, 'Bb4'], [6, 2, 'C5'], [8, 6, 'D5'], [14, 2, 'F5']],
+      [[0, 6, 'G5'], [6, 2, 'F5'], [8, 8, 'D5']],
+      [[0, 3, 'Eb5'], [3, 3, 'D5'], [6, 2, 'C5'], [8, 6, 'Bb4'], [14, 2, 'C5']],
+      [[0, 6, 'G5'], [6, 2, 'F5'], [8, 8, 'Eb5']],
+      [[0, 3, 'D5'], [3, 3, 'F5'], [6, 2, 'Bb5'], [8, 6, 'A5'], [14, 2, 'F5']],
+      [[0, 6, 'D5'], [6, 2, 'C5'], [8, 8, 'Bb4']],
+      [[0, 3, 'C5'], [3, 3, 'A4'], [6, 2, 'C5'], [8, 6, 'F5'], [14, 2, 'Eb5']],
+      [[0, 6, 'D5'], [6, 2, 'C5'], [8, 8, 'A4']],
+    ]);
+    for (let b = 0; b < this.bars; b++) {
+      const t = t0 + b * bar;
+      const p = prog[Math.floor(b / 2) % 4];
+      const intro = b < 2;
+      const brk = b === 16 || b === 17;
+      const rise = b === 18 || b === 19;
+      const drop2 = b >= 20;
+      const full = !intro && !brk && !rise;
+      if (b % 2 === 0 && (intro || brk || rise)) pad(m, t, p.ch, bar * 2, { gain: 0.05, cutoff: 1800, attack: 0.2 });
+      // drums: the two-step break (kick 1 and the "and" of 3, snare 2 and 4) with ghost notes
+      if (!brk) {
+        kick(m, t, { gain: 0.85, decay: 0.26, from: 170, to: 52, drive: 2.6 });
+        kick(m, t + 10 * s16, { gain: 0.78, decay: 0.24, from: 170, to: 52, drive: 2.6 });
+        if (b % 4 === 3) kick(m, t + 7 * s16, { gain: 0.6, decay: 0.2 });
+      }
+      if (full || rise) {
+        if (!rise || b === 18) {
+          snare(m, t + 4 * s16, { gain: 0.95, tone: 210, rev: 0.15, decay: 0.16 });
+          snare(m, t + 12 * s16, { gain: 0.95, tone: 210, rev: 0.15, decay: 0.16 });
+          snare(m, t + 7 * s16, { gain: 0.12, decay: 0.07, rev: 0 });
+          snare(m, t + 15 * s16, { gain: 0.1, decay: 0.07, rev: 0 });
+        }
+      }
+      if (!brk) for (let i = 0; i < 16; i += full && b % 2 ? 1 : 2) hat(m, t + i * s16, { gain: i % 4 === 2 ? 0.1 : 0.06 });
+      if (full && b % 4 === 1) hat(m, t + 14 * s16, { open: true, gain: 0.08 });
+      // the growling bass
+      if (!brk && !rise) {
+        const cut = intro ? 320 : drop2 ? 1200 : 950;
+        growl(m, t, p.root, 6 * s16, { gain: 0.34, cutoff: cut, drive: 3.4, sub: 0.55 });
+        growl(m, t + 6 * s16, p.root + 12, 4 * s16, { gain: 0.3, cutoff: cut, glideFrom: p.root, drive: 3.4, sub: 0.55 });
+        growl(m, t + 10 * s16, p.root, 6 * s16, { gain: 0.34, cutoff: cut, wobble: (174 / 60) * 2, drive: 3.4, sub: 0.55 });
+      }
+      if (rise && b === 18) growl(m, t, p.root, bar * 2, { gain: 0.26, cutoff: 400, wobble: 174 / 60, depth: 0.8 });
+      if (full) stab(m, t + 2 * s16, p.ch.map((x) => x + 12), { gain: 0.06, decay: 0.18 });
+      if (b === 1 || b === 19) build(m, t, s16, p.ch);
+      // the melody: plucked in the break, the lead in the second drop
+      const mel = tune[b % 8];
+      if (brk) for (const x of mel) bell(m, t + x.s * s16, x.m, { gain: 0.15, decay: 0.9 });
+      if (drop2) for (const x of mel) lead(m, t + x.s * s16, x.m, x.l * s16 * 0.95, { gain: 0.095, cutoff: 3800 });
+    }
+  },
+};
+
+// F: phonk
+const phonk: Track = {
+  id: 'nitro-rush',
+  name: 'F. NITRO RUSH',
+  style: 'フォンク（150BPM）。音程のあるカウベルのリフ、歪んだ808、硬いキックと手拍子',
+  bpm: 150,
+  bars: 24,
+  score(m, t0) {
+    const s16 = 60 / this.bpm / 4;
+    const bar = s16 * 16;
+    const prog = [
+      { root: n('F#1'), ch: chord('F#3 A3 C#4') },
+      { root: n('D2'), ch: chord('D3 F#3 A3') },
+      { root: n('B1'), ch: chord('B2 D3 F#3') },
+      { root: n('C#2'), ch: chord('C#3 F3 G#3') },
+    ];
+    const riff = melody([
+      [[0, 2, 'F#5'], [3, 2, 'F#5'], [6, 2, 'A5'], [8, 2, 'F#5'], [10, 2, 'C#6'], [12, 2, 'B5'], [14, 2, 'A5']],
+      [[0, 2, 'F#5'], [3, 2, 'F#5'], [6, 2, 'A5'], [8, 2, 'E5'], [10, 2, 'F#5'], [13, 2, 'C#5'], [14, 2, 'E5']],
+    ]);
+    for (let b = 0; b < this.bars; b++) {
+      const t = t0 + b * bar;
+      const p = prog[Math.floor(b / 2) % 4];
+      const intro = b < 2;
+      const brk = b === 12 || b === 13;
+      const drop2 = b >= 14;
+      const full = !intro && !brk;
+      // the cowbell riff (an octave higher doubles it in the second drop)
+      for (const x of riff[b % 2]) {
+        cowbell(m, t + x.s * s16, x.m, { gain: intro ? 0.2 : 0.3, decay: 0.3 });
+        if (drop2 && b % 4 >= 2) cowbell(m, t + x.s * s16, x.m + 12, { gain: 0.11, decay: 0.2 });
+      }
+      if (b % 2 === 0) pad(m, t, p.ch, bar * 2, { gain: 0.035, cutoff: 900, attack: 0.3 });
+      if (full) {
+        // kick + distorted 808 together
+        for (const [s, l, up, gl] of [
+          [0, 3, 0, 0],
+          [3, 3, 0, 0],
+          [6, 4, 12, 1],
+          [10, 2, 0, 0],
+          [12, 4, b % 2 ? 7 : 0, 0],
+        ] as const) {
+          if (s !== 3 || b % 2) kick(m, t + s * s16, { gain: s === 0 ? 0.95 : 0.8, decay: 0.24, from: 180, to: 50, drive: 3 });
+          sub808(m, t + s * s16, p.root + up, l * s16, { gain: 0.55, drive: 7, glideFrom: gl ? p.root : undefined });
+        }
+        clap(m, t + 4 * s16, { gain: 1.1, rev: 0.2 });
+        clap(m, t + 12 * s16, { gain: 1.1, rev: 0.2 });
+        snare(m, t + 12 * s16, { gain: 0.5, rev: 0.1 });
+        // hats: 8ths, with triplet rolls at the end of every other bar
+        for (let i = 0; i < 16; i += 2) hat(m, t + i * s16, { gain: i % 4 ? 0.08 : 0.11 });
+        if (b % 2) for (let k = 0; k < 6; k++) hat(m, t + 12 * s16 + (k * 4 * s16) / 6, { gain: 0.06 + k * 0.01 });
+      } else if (brk) {
+        if (b === 12) sub808(m, t, p.root, bar * 2 - s16, { gain: 0.45, drive: 5 });
+        if (b === 13) build(m, t, s16, p.ch);
+      } else if (b === 1) {
+        kick(m, t + 12 * s16, { gain: 0.8, decay: 0.2 });
+        kick(m, t + 14 * s16, { gain: 0.8, decay: 0.2 });
+      }
+      if (drop2 && b % 2 === 0) bell(m, t, p.ch[0] + 24, { gain: 0.12, decay: 1.6 });
+    }
+  },
+};
+
+// G: hardstyle
+const hardstyle: Track = {
+  id: 'limit-break',
+  name: 'G. LIMIT BREAK',
+  style: 'ハードスタイル（155BPM）。歪んだ強烈なキック（音程のある尾）、叫ぶようなスーパーソウのリード',
+  bpm: 155,
+  bars: 32,
+  score(m, t0) {
+    const s16 = 60 / this.bpm / 4;
+    const bar = s16 * 16;
+    const prog = [
+      { root: n('A1'), ch: chord('A3 C4 E4') },
+      { root: n('F1'), ch: chord('F3 A3 C4') },
+      { root: n('C2'), ch: chord('C4 E4 G4') },
+      { root: n('G1'), ch: chord('G3 B3 D4') },
+    ];
+    const tune = melody([
+      [[0, 4, 'E5'], [4, 4, 'A5'], [8, 2, 'G5'], [10, 2, 'E5'], [12, 4, 'D5']],
+      [[0, 6, 'E5'], [6, 2, 'C5'], [8, 4, 'D5'], [12, 4, 'E5']],
+      [[0, 4, 'F5'], [4, 4, 'A5'], [8, 2, 'G5'], [10, 2, 'F5'], [12, 4, 'E5']],
+      [[0, 6, 'C5'], [6, 2, 'D5'], [8, 8, 'E5']],
+      [[0, 4, 'G5'], [4, 4, 'E5'], [8, 2, 'C5'], [10, 2, 'D5'], [12, 4, 'E5']],
+      [[0, 6, 'G5'], [6, 2, 'A5'], [8, 4, 'G5'], [12, 4, 'E5']],
+      [[0, 4, 'D5'], [4, 4, 'G5'], [8, 2, 'B4'], [10, 2, 'D5'], [12, 4, 'G5']],
+      [[0, 6, 'B5'], [6, 2, 'A5'], [8, 4, 'G5'], [12, 4, 'D5']],
+    ]);
+    for (let b = 0; b < this.bars; b++) {
+      const t = t0 + b * bar;
+      const p = prog[Math.floor(b / 2) % 4];
+      const intro = b < 2;
+      const brk = b === 14 || b === 15;
+      const rise = b === 16 || b === 17;
+      const drop2 = b >= 18;
+      const kicks = !brk;
+      if (kicks) {
+        // the hard kick on every beat, its tail on the chord's root (a kick roll in the build)
+        const step = rise && b === 17 ? 2 : 4;
+        for (let i = 0; i < 16; i += step) hardKick(m, t + i * s16, p.root + (rise ? Math.floor(i / 4) : 0), { gain: rise ? 0.6 + i * 0.02 : 0.9, tail: step === 2 ? 0.18 : 0.36 });
+      }
+      if (!brk && !rise) {
+        for (let q = 0; q < 4; q++) hat(m, t + (q * 4 + 2) * s16, { gain: 0.1, open: q % 2 === 1 });
+        if (!intro) {
+          clap(m, t + 4 * s16, { gain: 0.75, rev: 0.3 });
+          clap(m, t + 12 * s16, { gain: 0.75, rev: 0.3 });
+          // offbeat supersaw stabs
+          for (let q = 0; q < 4; q++) stab(m, t + (q * 4 + 2) * s16, p.ch.map((x) => x + 12), { gain: drop2 ? 0.06 : 0.045, decay: 0.16, cutoff: 5000 });
+        }
+      }
+      if (brk || rise) {
+        if (b % 2 === 0) pad(m, t, p.ch, bar * 2, { gain: 0.05, cutoff: 2600, attack: 0.15 });
+        if (b % 2 === 0) choir(m, t, p.ch.map((x) => x + 12), bar * 2, { gain: 0.05 });
+      }
+      if (b === 17) riseChord(m, t, p.ch, bar, { gain: 0.07 });
+      if (b === 16) for (let i = 0; i < 16; i += 2) snare(m, t + i * s16, { gain: 0.15 + i * 0.015, rev: 0.2, decay: 0.12 });
+      if (b === 17) for (let i = 0; i < 16; i++) snare(m, t + i * s16, { gain: 0.25 + i * 0.02, rev: 0.2, decay: 0.1 });
+      // the lead: softer in the break, screaming in the second drop
+      const mel = tune[b % 8];
+      if (brk || rise) for (const x of mel) superLead(m, t + x.s * s16, x.m, x.l * s16 * 0.9, { gain: 0.05, cutoff: 3000 });
+      if (drop2) for (const x of mel) superLead(m, t + x.s * s16, x.m, x.l * s16 * 0.9, { gain: 0.075, cutoff: 6000 });
+      if (b >= 4 && b < 14 && b % 2 === 0) bell(m, t, p.ch[2] + 12, { gain: 0.05, decay: 1.2 });
+    }
+  },
+};
+
+/** candidates for the match music (the user chooses one; not used in the game yet) */
+export const MATCH_CANDIDATES: Track[] = [dnb, phonk, hardstyle];
 
 export const TRACKS: Track[] = [trap, synthwave, epic];
 
