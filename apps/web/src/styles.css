@@ -3150,15 +3150,14 @@ body.shoot-open {
 }
 
 .reveal.rar-icon .reveal-label {
-  display: flex;
-  justify-content: center;
   width: 100%;
   text-shadow: none;
 }
 
+/* the ICON lettering is taller than the box: it overflows, so the card never moves */
 .reveal.rar-icon .reveal-label .icon-title {
-  width: min(78vw, 360px);
-  margin: -14px 0 -10px;
+  flex: none;
+  width: min(72vw, 330px);
 }
 
 .reveal.rar-icon.stage-reveal .reveal-label .icon-title {
@@ -3206,10 +3205,47 @@ body.shoot-open {
   align-items: center;
   justify-content: center;
   gap: 10px;
-  padding: calc(40px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom));
+  padding: calc(40px + env(safe-area-inset-top)) 16px calc(62px + env(safe-area-inset-bottom));
   overflow: hidden;
   background: rgba(0, 0, 0, 0);
   animation: reveal-dark 0.35s ease-out forwards;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+/* bottom: the hint (left) and the skip button (bottom right) */
+.reveal-bar {
+  position: absolute;
+  right: 16px;
+  bottom: calc(14px + env(safe-area-inset-bottom));
+  left: 16px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  pointer-events: none;
+}
+
+.reveal-hint {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  animation: hint-blink 1.6s ease-in-out infinite;
+}
+
+@keyframes hint-blink {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+.reveal-skip {
+  min-width: 96px;
+  min-height: 40px;
+  pointer-events: auto;
 }
 
 .reveal.rar-rare {
@@ -3223,6 +3259,10 @@ body.shoot-open {
 }
 .reveal.rar-icon {
   --rc: #ffffff;
+}
+/* before the card turns: the same for every card (no rarity hint) */
+.reveal.rar-hidden {
+  --rc: #7fe9ff;
 }
 
 @keyframes reveal-dark {
@@ -3386,7 +3426,14 @@ body.shoot-open {
   }
 }
 
+/* a fixed height: the layout is the same for every rarity and before the card turns */
 .reveal-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 64px;
+  flex: none;
+  line-height: 1;
   color: var(--rc);
   font-size: 30px;
   font-weight: 900;
@@ -3473,7 +3520,8 @@ body.shoot-open {
 
 @media (prefers-reduced-motion: reduce) {
   .shoot-freeze .icon-title,
-  .reveal.rar-icon.stage-reveal .reveal-label .icon-title {
+  .reveal.rar-icon.stage-reveal .reveal-label .icon-title,
+  .reveal-hint {
     animation: none;
   }
 }

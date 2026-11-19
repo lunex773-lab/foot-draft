@@ -9,6 +9,14 @@ import { IconTitle } from './IconTitle';
  * black, the card's silhouette, the card turning, the player revealed, the
  * rarity effect, then the name and the six stats. The card is the game's own
  * card image (no new card design).
+ *
+ * - A tap anywhere (except the skip button) goes on: during the animation it
+ *   shows the card, on a shown card it goes to the next one (after the last
+ *   card, to the list of results). The skip button (bottom right) goes to the
+ *   list at once.
+ * - Nothing shows the rarity before the card turns (decision 113): the
+ *   silhouette and the back are the same for every card. Only the ICON swell
+ *   is heard while the card turns.
  */
 
 export interface RevealItem {
@@ -68,8 +76,11 @@ export function CardReveal({ items, catalog, audio, onFinish }: { items: RevealI
   }, [stage, index, items.length, onFinish]);
 
   const tag = item.duplicate ? (item.enhancedTo !== null ? `強化 +${item.enhancedTo}` : `+${item.points}pt`) : 'NEW';
+  // the rarity (colours, label, effects) only from the moment the card shows its face
+  const shown = stage === 'reveal' || stage === 'info';
+  const last = index + 1 >= items.length;
   return (
-    <div className={`reveal rar-${item.rarity} stage-${stage}`} onClick={next} role="dialog" aria-label="カード登場">
+    <div className={`reveal rar-${shown ? item.rarity : 'hidden'} stage-${stage}`} onClick={next} role="dialog" aria-label="カード登場">
       <div className="reveal-rays" aria-hidden="true" />
       <div className="reveal-sparks" aria-hidden="true">
         {Array.from({ length: 18 }, (_, i) => (
@@ -91,9 +102,9 @@ export function CardReveal({ items, catalog, audio, onFinish }: { items: RevealI
           </div>
         </div>
       </div>
-      <div className="reveal-label">{item.rarity === 'icon' ? <IconTitle /> : RARITY_INFO[item.rarity].label}</div>
+      <div className="reveal-label">{shown && (item.rarity === 'icon' ? <IconTitle /> : RARITY_INFO[item.rarity].label)}</div>
       {stage === 'info' && (
-        <div className="reveal-info" onClick={(e) => e.stopPropagation()}>
+        <div className="reveal-info">
           <div className="spread">
             <div>
               <div className="reveal-name">{player?.name ?? item.name}</div>
@@ -116,18 +127,23 @@ export function CardReveal({ items, catalog, audio, onFinish }: { items: RevealI
               ))}
             </div>
           )}
-          <div className="button-row" style={{ marginTop: 10 }}>
-            <button className="btn primary" onClick={next}>
-              {index + 1 < items.length ? '次のカード' : '結果を見る'}
-            </button>
-            {items.length > 1 && index + 1 < items.length && (
-              <button className="btn ghost" onClick={onFinish}>
-                まとめて表示
-              </button>
-            )}
-          </div>
         </div>
       )}
+      <div className="reveal-bar">
+        <span className="reveal-hint" aria-live="polite">
+          {stage === 'info' ? (last ? 'タップで結果へ' : 'タップで次のカード') : ''}
+        </span>
+        <button
+          type="button"
+          className="shoot-btn reveal-skip"
+          onClick={(e) => {
+            e.stopPropagation();
+            onFinish();
+          }}
+        >
+          スキップ
+        </button>
+      </div>
     </div>
   );
 }
