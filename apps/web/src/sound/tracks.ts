@@ -29,7 +29,8 @@ import {
 
 /**
  * Background music (bass-heavy, chosen by the user): A for the menus, D for
- * matches and drafts, B for gacha / exchange / auction. Each track is one
+ * rooms and drafts, B for gacha / exchange / auction, and E / F / G (one at
+ * random) while a match plays on screen. Each track is one
  * seamless loop: `score` schedules every note of the loop from time t0. The
  * loops are rendered to audio files with `npm run sound:render -w @fd/web`
  * (apps/web/scripts/render-bgm.mjs) and looped by the game (player.ts).
@@ -160,6 +161,7 @@ const epic: Track = {
   style: 'スタジアムの壮大な曲（100BPM）。重低音の太鼓とブーム、刻む弦、ブラス、合唱、手拍子',
   bpm: 100,
   bars: 24,
+  // decision 117: less sub (phone speakers cannot play it), stronger strings / choir / drums
   score(m, t0) {
     const s16 = 60 / this.bpm / 4;
     const bar = s16 * 16;
@@ -174,20 +176,20 @@ const epic: Track = {
       const p = prog[b % 4];
       const intro = b < 4;
       const big = b >= 12 && b < 20;
-      choir(m, t, p.ch.slice(1).map((x) => x + 12), bar, { gain: intro ? 0.06 : 0.05 });
-      if (b % 2 === 0) boom(m, t, { gain: intro ? 0.6 : 0.8, dur: 2 });
+      choir(m, t, p.ch.slice(1).map((x) => x + 12), bar, { gain: intro ? 0.11 : 0.1 });
+      if (b % 2 === 0) boom(m, t, { gain: intro ? 0.25 : 0.3, dur: 2 });
       if (!intro) {
         // the string ostinato: 8ths
-        for (let i = 0; i < 8; i++) strings(m, t + i * 2 * s16, n(p.ost[i % 4]) + (big ? 12 : 0), s16 * 1.6, { gain: 0.05 });
+        for (let i = 0; i < 8; i++) strings(m, t + i * 2 * s16, n(p.ost[i % 4]) + (big ? 12 : 0), s16 * 1.6, { gain: 0.11 });
         // drums: a big hit on 1, toms on the 8ths
-        tom(m, t, { hz: 62, gain: 1, decay: 0.9 });
-        for (const i of [6, 10, 12, 14]) tom(m, t + i * s16, { hz: i === 12 ? 90 : 75, gain: 0.55, decay: 0.4, rev: 0.3 });
-        sub808(m, t, p.root, bar * 0.9, { gain: 0.45, drive: 2 });
+        tom(m, t, { hz: 62, gain: 0.6, decay: 0.8 });
+        for (const i of [6, 10, 12, 14]) tom(m, t + i * s16, { hz: i === 12 ? 90 : 75, gain: 0.5, decay: 0.35, rev: 0.3 });
+        sub808(m, t, p.root, bar * 0.9, { gain: 0.14, drive: 3.6 });
       }
       if (big) {
-        if (b % 4 === 0) braam(m, t, p.ch.slice(0, 3), bar * 2, { gain: 0.13 });
-        clap(m, t + 4 * s16, { gain: 0.5, rev: 0.5 });
-        clap(m, t + 12 * s16, { gain: 0.5, rev: 0.5 });
+        if (b % 4 === 0) braam(m, t, p.ch.slice(0, 3), bar * 2, { gain: 0.18 });
+        clap(m, t + 4 * s16, { gain: 0.75, rev: 0.5 });
+        clap(m, t + 12 * s16, { gain: 0.75, rev: 0.5 });
         if (b % 4 === 3) crowd(m, t, bar, { gain: 0.1 });
       }
       if (b >= 20) {
@@ -199,7 +201,7 @@ const epic: Track = {
   },
 };
 
-// ------------------------------------------------------------------ uptempo match music: candidates (decision 115)
+// ------------------------------------------------------------------ uptempo match music (decisions 115-116: all three, one at random per match)
 
 type Note = [step: number, len: number, name: string];
 /** a melody: one list of notes (16th steps) per bar */
@@ -407,14 +409,13 @@ const hardstyle: Track = {
   },
 };
 
-/** candidates for the match music (the user chooses one; not used in the game yet) */
-export const MATCH_CANDIDATES: Track[] = [dnb, phonk, hardstyle];
+export const TRACKS: Track[] = [trap, synthwave, epic, dnb, phonk, hardstyle];
 
-export const TRACKS: Track[] = [trap, synthwave, epic];
-
-/** the user's choice: which track plays where */
+/** the user's choice: which track plays where (decisions 109, 116) */
 export type Scene = 'menu' | 'match' | 'gacha';
 export const SCENE_TRACK: Record<Scene, string> = { menu: 'night-pressure', match: 'stadium-legend', gacha: 'neon-drive' };
+/** while a match plays on screen (rooms, DRAFT MATCH, replays): one of these at random */
+export const MATCH_TRACKS: string[] = [dnb.id, phonk.id, hardstyle.id];
 
 /** seconds of one loop */
 export const loopSeconds = (tr: Track) => (60 / tr.bpm) * 4 * tr.bars;

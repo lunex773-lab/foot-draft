@@ -96,6 +96,8 @@ export default function GachaPage() {
   useEffect(() => {
     // load the 3D animation in the background so that it starts at once
     void import('../shoot/ShootGacha');
+    // the crowd of the SHOOT GACHA (downloaded now, played when the gacha opens)
+    void import('../shoot/crowdClips').then((m) => m.prefetchCrowd());
   }, []);
   const [confirm, setConfirm] = useState<{ banner: Banner; count: 1 | 10 } | null>(null);
 

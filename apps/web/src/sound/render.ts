@@ -1,3 +1,4 @@
+import { crowdBus, type CrowdClip } from './crowd';
 import { SFX_ORDER, type SfxName, type SfxSet } from './sfx';
 import { createMix } from './synth';
 import { loopSeconds, type Track } from './tracks';
@@ -24,6 +25,28 @@ export async function renderLoop(track: Track, sampleRate = 44100): Promise<Audi
     for (let i = frames; i < src.length; i++) dst[i - frames] += src[i];
   }
   normalize(out, LOOP_RMS, 0.92);
+  return out;
+}
+
+/**
+ * Renders one crowd clip (crowd.ts). A loop is rendered like a music loop
+ * (its tail folded back into the start). Not normalized: the clips keep
+ * their levels relative to each other (the render script scales them all
+ * by one factor).
+ */
+export async function renderClip(clip: CrowdClip, sampleRate = 44100): Promise<AudioBuffer> {
+  const frames = Math.ceil(clip.seconds * sampleRate);
+  const ctx = new OfflineAudioContext(2, frames + (clip.loop ? TAIL * sampleRate : 0), sampleRate);
+  clip.play(crowdBus(ctx, ctx.destination), ctx.destination);
+  const full = await ctx.startRendering();
+  if (!clip.loop) return full;
+  const out = new AudioBuffer({ numberOfChannels: 2, length: frames, sampleRate });
+  for (let ch = 0; ch < 2; ch++) {
+    const src = full.getChannelData(ch);
+    const dst = out.getChannelData(ch);
+    dst.set(src.subarray(0, frames));
+    for (let i = frames; i < src.length; i++) dst[i - frames] += src[i];
+  }
   return out;
 }
 

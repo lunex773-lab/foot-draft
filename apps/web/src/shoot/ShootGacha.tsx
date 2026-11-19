@@ -2,6 +2,7 @@ import type { Player } from '@fd/shared';
 import { useEffect, useRef, useState } from 'react';
 import { CardReveal, type RevealItem } from './CardReveal';
 import { IconTitle, preloadIconFont } from './IconTitle';
+import { CHANT_AIM } from './audio';
 import { ShootEngine, type ShootPhase } from './engine';
 import { sound } from '../sound/player';
 import { bestRarity } from './plan';
@@ -41,6 +42,9 @@ export default function ShootGacha({ results, catalog, onClose }: { results: Rev
         if (new URLSearchParams(window.location.search).get('fixed') === '1') engine.fixedStep = true;
       }
       setMuted(engine.audio.muted);
+      // the stands sing from the start (the game's audio is already running after the tap on the gacha)
+      engine.audio.start();
+      engine.audio.chant(CHANT_AIM, 1.0);
       setPhase('aim');
     } catch (err) {
       // no WebGL: the cards are still shown

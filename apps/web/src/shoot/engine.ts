@@ -4,7 +4,7 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
-import { ShootAudio } from './audio';
+import { CHANT_CARDS, ShootAudio } from './audio';
 import { Burst, RainbowRings, Trail } from './effects';
 import { Keeper } from './keeper';
 import { KICK, Kicker } from './kicker';
@@ -236,6 +236,11 @@ export class ShootEngine {
   skip() {
     if (!this.goalSent) {
       this.goalSent = true;
+      // the stands: straight to the quieter chant of the cards (after the goal it is already on its way)
+      if (this.netHitAt === Infinity) {
+        this.audio.crowdHush();
+        this.audio.chant(CHANT_CARDS, 0.8);
+      }
       this.events.onGoal();
     }
   }
@@ -290,13 +295,17 @@ export class ShootEngine {
     this.keeper.update(t);
 
     // the plant foot lands
-    if (this.releaseAt + KICK.plant <= t && this.releaseAt + KICK.plant > t - dt) this.audio.plant();
+    if (this.releaseAt + KICK.plant <= t && this.releaseAt + KICK.plant > t - dt) {
+      this.audio.plant();
+      this.audio.crowdHold();
+    }
 
     // ---------------------------------------------------------------- ball
     if (t >= this.kickAt) {
       const k = t - this.kickAt;
       if (k - dt < 0) {
         this.audio.kick(this.aim.power);
+        this.audio.crowdOoh();
         this.shake = 0.06 + 0.06 * this.aim.power;
       }
       if (!this.crossed && k < this.flight) {
@@ -330,6 +339,7 @@ export class ShootEngine {
             this.netHitAt = t;
             this.audio.net();
             this.audio.roar();
+            this.audio.crowdGoal();
             this.burst.fire(this.ball.position, this.plan.color, this.plan.rainbow, this.rarity === 'common' ? 2.5 : 5);
             this.shake = Math.max(this.shake, 0.05);
           }

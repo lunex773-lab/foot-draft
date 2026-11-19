@@ -5,6 +5,7 @@ import { EventLog, MatchBoard, scoreAt } from '../components/MatchBoard';
 import { toResult, useMatchDetail } from '../components/MatchDetailModal';
 import { MatchStats } from '../components/MatchStats';
 import { seatColor } from '../lib/labels';
+import { useMatchMusic } from '../sound/player';
 
 /** Replays a stored match (same 2D board as the live view). */
 export default function MatchReplayPage() {
@@ -13,6 +14,7 @@ export default function MatchReplayPage() {
   const [minute, setMinute] = useState(0);
   const [playing, setPlaying] = useState(true);
   const raf = useRef<number | null>(null);
+  useMatchMusic();
 
   useEffect(() => {
     if (!playing || !data) return;

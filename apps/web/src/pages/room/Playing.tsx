@@ -3,6 +3,7 @@ import { EventLog, MatchBoard, scoreAt } from '../../components/MatchBoard';
 import { MatchStats } from '../../components/MatchStats';
 import { seatColor } from '../../lib/labels';
 import { useNow } from '../../lib/useNow';
+import { useMatchMusic } from '../../sound/player';
 
 export function minuteOf(m: LiveMatch, now: number): number {
   return Math.max(0, Math.min(90, ((now - m.startAt) / m.durationMs) * 90));
@@ -10,6 +11,8 @@ export function minuteOf(m: LiveMatch, now: number): number {
 
 export function Playing({ snap, players, serverNow }: { snap: RoomSnapshot; players: Map<string, Player>; serverNow: () => number }) {
   useNow(100);
+  // the match music (one of three at random) while the match is on screen
+  useMatchMusic();
   const now = serverNow();
   const live = snap.live;
   if (live.length === 0) return <div className="muted">試合を準備しています…</div>;

@@ -305,7 +305,8 @@ export function chant(b: CrowdBus, t: number, notes: ChantNote[], bpm: number, o
     const v = voice(b, { ...p, hz: 200, level, wet, start: t, stop: end + 0.6, vibDepth: p.vibDepth * 0.6, vowel: notes[0]?.vowel ?? 'o' });
     for (let k = 0; k < notes.length; k++) {
       const nn = notes[k];
-      const at = t + nn.beat * spb + late + (r() - 0.5) * 0.03;
+      // (never before the start: a loop rendered from time 0)
+      const at = Math.max(t + 0.04, t + nn.beat * spb + late + (r() - 0.5) * 0.03);
       if (at >= end) break;
       const next = notes[k + 1];
       const hz = midiHz(nn.midi - (isFemale ? 0 : 12)) * 2 ** ((tune + (r() - 0.5) * 16) / 1200);
@@ -373,3 +374,82 @@ export const CHANT_DRUMS: { beat: number; hz: number; gain: number }[] = [0, 4, 
   { beat: bar + 2.5, hz: 72, gain: 0.5 },
   { beat: bar + 3, hz: 60, gain: 0.7 },
 ]);
+
+// ------------------------------------------------------------------ the SHOOT GACHA crowd (decision 114: B, the chant)
+
+/**
+ * The crowd of the SHOOT GACHA, rendered once to audio files
+ * (npm run sound:render -w @fd/web) and played by shoot/audio.ts:
+ * the chant (a seamless loop) before the kick and, quieter, while the cards
+ * come; "オォォ" while the ball flies; everyone's "オーッ！" and the drums at the
+ * goal; and a reaction when a card shows its face (RARE small, EPIC /
+ * LEGENDARY big, ICON the biggest). All clips are rendered at one common level.
+ */
+export interface CrowdClip {
+  id: string;
+  /** seconds of audio (a loop: exactly one loop; its tail is folded back into the start) */
+  seconds: number;
+  loop: boolean;
+  play: (b: CrowdBus, out: AudioNode) => void;
+}
+
+const passes = (k: number) => Array.from({ length: k }, (_, i) => CHANT.map((x) => ({ ...x, beat: x.beat + i * 16 }))).flat();
+const drumsOf = (k: number) => Array.from({ length: k }, (_, i) => CHANT_DRUMS.map((x) => ({ ...x, beat: x.beat + i * 16 }))).flat();
+
+export const CROWD_CLIPS: CrowdClip[] = [
+  {
+    id: 'chant',
+    seconds: (32 * 60) / CHANT_BPM,
+    loop: true,
+    play(b, out) {
+      chant(b, 0, passes(2), CHANT_BPM, { gain: 0.5, seed: 21 });
+      for (const d of drumsOf(2)) standDrum(b, out, (d.beat * 60) / CHANT_BPM, { hz: d.hz, gain: d.gain * 0.8 });
+    },
+  },
+  {
+    id: 'ooh',
+    seconds: 3.8,
+    loop: false,
+    play(b) {
+      shout(b, 0.02, { voices: 30, dur: 1.1, vowels: [['u', 'o'], ['o']], rise: 1, climb: 5, gain: 0.42, spread: 0.18, seed: 31 });
+    },
+  },
+  {
+    id: 'goal',
+    seconds: 6,
+    loop: false,
+    play(b, out) {
+      shout(b, 0, { voices: 46, dur: 1.6, vowels: [['o']], rise: 3, gain: 0.66, spread: 0.06, seed: 44 });
+      shout(b, 1.9, { voices: 46, dur: 1.3, vowels: [['o']], rise: 3, gain: 0.55, spread: 0.06, seed: 45 });
+      for (const k of [0, 0.5, 1.0, 1.9]) standDrum(b, out, k, { hz: 58, gain: 0.8 });
+    },
+  },
+  {
+    id: 'react-small',
+    seconds: 3.4,
+    loop: false,
+    play(b) {
+      shout(b, 0, { voices: 24, dur: 1.1, vowels: [['o']], rise: 0, gain: 0.3, spread: 0.15, seed: 55 });
+    },
+  },
+  {
+    id: 'react-big',
+    seconds: 4,
+    loop: false,
+    play(b, out) {
+      shout(b, 0, { voices: 40, dur: 1.4, vowels: [['o']], rise: 3, gain: 0.58, spread: 0.06, seed: 54 });
+      standDrum(b, out, 0, { hz: 58, gain: 0.8 });
+      standDrum(b, out, 0.5, { hz: 58, gain: 0.7 });
+    },
+  },
+  {
+    id: 'react-icon',
+    seconds: 6.5,
+    loop: false,
+    play(b, out) {
+      shout(b, 0, { voices: 50, dur: 1.8, vowels: [['o']], rise: 4, gain: 0.72, spread: 0.06, seed: 63 });
+      for (const k of [0, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0]) standDrum(b, out, k, { hz: 56 + (k % 0.5 ? 10 : 0), gain: 0.85 });
+      shout(b, 2.3, { voices: 50, dur: 1.6, vowels: [['o']], rise: 3, gain: 0.6, spread: 0.06, seed: 64 });
+    },
+  },
+];

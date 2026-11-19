@@ -12,6 +12,51 @@
     "stadium-legend": {
       "file": "bgm-stadium-legend.m4a",
       "loopSeconds": 57.6
+    },
+    "red-zone": {
+      "file": "bgm-red-zone.m4a",
+      "loopSeconds": 44.13793650793651
+    },
+    "nitro-rush": {
+      "file": "bgm-nitro-rush.m4a",
+      "loopSeconds": 38.40002267573696
+    },
+    "limit-break": {
+      "file": "bgm-limit-break.m4a",
+      "loopSeconds": 49.54839002267574
+    }
+  },
+  "clipGain": 2.0644087261623807,
+  "clips": {
+    "chant": {
+      "file": "crowd-chant.m4a",
+      "seconds": 16,
+      "loop": true
+    },
+    "ooh": {
+      "file": "crowd-ooh.m4a",
+      "seconds": 3.8,
+      "loop": false
+    },
+    "goal": {
+      "file": "crowd-goal.m4a",
+      "seconds": 6,
+      "loop": false
+    },
+    "react-small": {
+      "file": "crowd-react-small.m4a",
+      "seconds": 3.4,
+      "loop": false
+    },
+    "react-big": {
+      "file": "crowd-react-big.m4a",
+      "seconds": 4,
+      "loop": false
+    },
+    "react-icon": {
+      "file": "crowd-react-icon.m4a",
+      "seconds": 6.5,
+      "loop": false
     }
   }
 }

@@ -1,11 +1,13 @@
+import { useEffect } from 'react';
 import { onSoundSettings, soundSettings } from '../lib/sound';
 import { SFX, type SfxName } from './sfx';
 import { createMix, type Mix } from './synth';
-import { SCENE_TRACK, type Scene } from './tracks';
+import { MATCH_TRACKS, SCENE_TRACK, type Scene } from './tracks';
 
 /**
- * The game's sound: background music by scene (A menus, D matches and drafts,
- * B gacha / exchange / auction) and the HEAVY IMPACT sound effects.
+ * The game's sound: background music by scene (A menus, D rooms and drafts,
+ * B gacha / exchange / auction; while a match plays on screen, one of the
+ * three match tracks at random) and the HEAVY IMPACT sound effects.
  *
  * - Browsers allow sound only after a tap: the audio starts at the first tap.
  * - The music files are rendered loops (public/audio, see manifest.json) that
@@ -20,7 +22,8 @@ interface Manifest {
 }
 
 const FADE = 1.2;
-const DUCKED = 0.18;
+/** the music under the SHOOT GACHA (its own stadium sound and crowd chant) */
+const DUCKED = 0.08;
 
 class SoundSystem {
   private ctx: AudioContext | null = null;
@@ -30,6 +33,10 @@ class SoundSystem {
   private manifest: Promise<Manifest | null> | null = null;
   private buffers = new Map<string, Promise<AudioBuffer | null>>();
   private scene: Scene | null = null;
+  /** while a match plays on screen: its track (decision 116) */
+  private matchTrack: string | null = null;
+  private lastMatchTrack: string | null = null;
+  private matchEndedAt = -Infinity;
   private playing: { trackId: string; src: AudioBufferSourceNode; gain: GainNode } | null = null;
   private ducked = false;
   private lastTap = 0;
@@ -60,7 +67,7 @@ class SoundSystem {
     this.sfxBus.connect(ctx.destination);
     this.sfxMix = createMix(ctx, this.sfxBus, { level: 0.9, reverbSeconds: 1.6 });
     this.applySettings();
-    if (this.scene) void this.startScene(this.scene);
+    this.refresh();
   }
 
   private applySettings() {
@@ -68,16 +75,48 @@ class SoundSystem {
     const t = this.ctx?.currentTime ?? 0;
     this.bgmBus?.gain.setTargetAtTime(s.bgm ? s.bgmVolume * (this.ducked ? DUCKED : 1) : 0, t, 0.15);
     this.sfxBus?.gain.setTargetAtTime(s.sfx ? s.sfxVolume : 0, t, 0.05);
-    if (s.bgm && this.ctx && this.scene && !this.playing) void this.startScene(this.scene);
+    if (s.bgm && this.ctx && !this.playing) this.refresh();
+  }
+
+  /** the track that should play now */
+  private wanted(): string | null {
+    return this.matchTrack ?? (this.scene ? SCENE_TRACK[this.scene] : null);
+  }
+
+  private refresh() {
+    if (!this.ctx) return;
+    const id = this.wanted();
+    if (!id) this.fadeOut();
+    else void this.startTrack(id);
   }
 
   /** the screen changed: the music of its scene (null = no music) */
   setScene(scene: Scene | null) {
     if (scene === this.scene) return;
     this.scene = scene;
-    if (!this.ctx) return;
-    if (!scene) this.fadeOut();
-    else void this.startScene(scene);
+    this.refresh();
+  }
+
+  /** a match starts playing on screen: one of the match tracks at random, never the same twice in a row */
+  startMatch() {
+    if (this.lastMatchTrack && performance.now() - this.matchEndedAt < 400) {
+      // the same match screen mounted again at once (not a new match): keep its track
+      this.matchTrack = this.lastMatchTrack;
+    } else {
+      const pool = MATCH_TRACKS.filter((id) => id !== this.lastMatchTrack);
+      this.matchTrack = pool[Math.floor(Math.random() * pool.length)] ?? MATCH_TRACKS[0];
+      this.lastMatchTrack = this.matchTrack;
+    }
+    this.refresh();
+  }
+
+  /** the match left the screen: back to the music of the scene (a moment later, in case it comes back at once) */
+  endMatch() {
+    this.matchTrack = null;
+    this.matchEndedAt = performance.now();
+    window.setTimeout(() => {
+      if (!this.matchTrack) this.refresh();
+    }, 150);
   }
 
   /** the SHOOT GACHA (or anything with its own sound) is playing */
@@ -86,11 +125,17 @@ class SoundSystem {
     this.applySettings();
   }
 
+  /** the running audio context (the SHOOT GACHA plays on it too, so its crowd can start before the first touch) */
+  audioContext(): AudioContext | null {
+    return this.ctx;
+  }
+
   /** development: what is playing (browser tests read it) */
   debug() {
     return {
       state: this.ctx?.state ?? 'none',
       scene: this.scene,
+      matchTrack: this.matchTrack,
       track: this.playing?.trackId ?? null,
       ducked: this.ducked,
       bgmGain: this.bgmBus?.gain.value ?? null,
@@ -147,12 +192,11 @@ class SoundSystem {
     return p;
   }
 
-  private async startScene(scene: Scene) {
-    const trackId = SCENE_TRACK[scene];
+  private async startTrack(trackId: string) {
     if (this.playing?.trackId === trackId || !soundSettings().bgm) return;
     const [buf, manifest] = await Promise.all([this.buffer(trackId), this.loadManifest()]);
-    // the scene may have changed while loading
-    if (!buf || !this.ctx || !this.bgmBus || SCENE_TRACK[this.scene ?? 'menu'] !== trackId || this.scene !== scene) return;
+    // the screen may have changed while loading
+    if (!buf || !this.ctx || !this.bgmBus || this.wanted() !== trackId) return;
     if (this.playing?.trackId === trackId) return;
     const ctx = this.ctx;
     const src = ctx.createBufferSource();
@@ -191,6 +235,15 @@ export function sceneOf(path: string): Scene {
   if (/^\/(room|draft|match)\b/.test(path)) return 'match';
   if (/^\/(gacha|exchange|auction)\b/.test(path)) return 'gacha';
   return 'menu';
+}
+
+/** while the calling component is on screen, a match is playing (match music) */
+export function useMatchMusic(active = true) {
+  useEffect(() => {
+    if (!active) return;
+    sound.startMatch();
+    return () => sound.endMatch();
+  }, [active]);
 }
 
 /** the final standing: 1st = win, last = lose, otherwise the plain confirm sound (once per result) */

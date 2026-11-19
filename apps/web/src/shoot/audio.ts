@@ -1,14 +1,26 @@
 import type { Rarity } from '@fd/shared';
 import { setSoundOn, soundOn, soundSettings } from '../lib/sound';
+import { sound } from '../sound/player';
+import { loadCrowd } from './crowdClips';
 
 /** the output level follows the effects volume of the settings */
 const level = () => 1.1 * soundSettings().sfxVolume;
+/** the crowd's level next to the other sounds (as in the chosen demo, at the default effects volume 0.8) */
+const crowdLevel = (clipGain: number) => 1.25 * soundSettings().sfxVolume * clipGain;
+/** the chant before the kick, and while the cards come */
+export const CHANT_AIM = 1;
+export const CHANT_CARDS = 0.6;
 
 /**
- * Sounds of the SHOOT GACHA made with the Web Audio API (no sound files):
- * the kick, the ball, the net and a sting per rarity. Noise is used only in
- * short hits (a continuous crowd made of noise was heard as a hiss "ザー" and
- * was removed). Muted with the button in the animation or in Settings.
+ * Sounds of the SHOOT GACHA made with the Web Audio API: the kick, the
+ * ball, the net and a sting per rarity. Noise is used only in short hits (a
+ * continuous crowd made of noise was heard as a hiss "ザー" and was removed).
+ * The crowd (decision 114: the chant) is pre-rendered from voiced sounds
+ * only (crowdClips.ts): the chant before the kick, "オォォ" while the ball
+ * flies, "オーッ！" and drums at the goal, the chant again (quieter) while the
+ * cards come, and a reaction when a card shows its face.
+ * Plays on the game's audio context when it is running (the chant can start
+ * before the first touch). Muted with the button in the animation or in Settings.
  */
 
 export class ShootAudio {
@@ -17,6 +29,15 @@ export class ShootAudio {
   private noise: AudioBuffer | null = null;
   /** a send to a large hall reverb (the ICON sounds) */
   private reverb: GainNode | null = null;
+  /** true: the game's audio context (never closed here) */
+  private shared = false;
+  private crowdOut: GainNode | null = null;
+  private clipGain = 1;
+  private clips: Map<string, AudioBuffer> | null = null;
+  private chantSrc: AudioBufferSourceNode | null = null;
+  private chantGain: GainNode | null = null;
+  private chantWanted = 0;
+  private shots = new Set<{ src: AudioBufferSourceNode; g: GainNode }>();
   muted = !soundOn();
 
   /** must be called from a user gesture (the first touch on the ball) */
@@ -25,9 +46,14 @@ export class ShootAudio {
       void this.ctx.resume();
       return;
     }
-    const AC = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-    if (!AC) return;
-    const ctx = new AC();
+    let ctx = sound.audioContext();
+    if (ctx) this.shared = true;
+    else {
+      const AC = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!AC) return;
+      ctx = new AC();
+    }
+    if (ctx.state !== 'running') void ctx.resume();
     this.ctx = ctx;
     this.master = ctx.createGain();
     this.master.gain.value = this.muted ? 0 : level();
@@ -55,12 +81,104 @@ export class ShootAudio {
     this.noise = ctx.createBuffer(1, len, ctx.sampleRate);
     const d = this.noise.getChannelData(0);
     for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    // the crowd: straight to the output (no compressor), at the level of the chosen demo
+    this.crowdOut = ctx.createGain();
+    this.crowdOut.gain.value = 0;
+    this.crowdOut.connect(ctx.destination);
+    void loadCrowd(ctx).then((r) => {
+      if (!r || this.ctx !== ctx || !this.crowdOut) return;
+      this.clips = r.clips;
+      this.clipGain = r.gain;
+      this.crowdOut.gain.value = this.muted ? 0 : crowdLevel(r.gain);
+      if (this.chantWanted > 0) this.chant(this.chantWanted, 1.2);
+    });
+  }
+
+  // ------------------------------------------------------------------ the crowd
+
+  /** the stands sing: CHANT_AIM before the kick, CHANT_CARDS while the cards come, 0 = quiet */
+  chant(level: number, fade = 0.6, delay = 0) {
+    this.chantWanted = level;
+    const ctx = this.ctx;
+    const buf = this.clips?.get('chant');
+    if (!ctx || !this.crowdOut || !buf) return;
+    const t = ctx.currentTime + delay;
+    if (!this.chantSrc) {
+      if (level <= 0) return;
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      src.loop = true;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0, ctx.currentTime);
+      src.connect(g).connect(this.crowdOut);
+      src.start(ctx.currentTime);
+      this.chantSrc = src;
+      this.chantGain = g;
+    }
+    const g = this.chantGain!.gain;
+    g.cancelScheduledValues(t);
+    g.setTargetAtTime(level, t, Math.max(0.02, fade / 3));
+  }
+
+  /** a crowd clip once (gain: relative) */
+  private shout(id: string, gain = 1) {
+    const ctx = this.ctx;
+    const buf = this.clips?.get(id);
+    if (!ctx || !this.crowdOut || !buf) return;
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    const g = ctx.createGain();
+    g.gain.value = gain;
+    src.connect(g).connect(this.crowdOut);
+    const shot = { src, g };
+    this.shots.add(shot);
+    src.onended = () => this.shots.delete(shot);
+    src.start();
+  }
+
+  /** the run-up: the stands hold their breath */
+  crowdHold() {
+    this.chant(0, 0.3);
+  }
+
+  /** the ball in the air: "オォォ" */
+  crowdOoh() {
+    this.shout('ooh');
+  }
+
+  /** the goal: everyone "オーッ！" and the drums; then the chant again, quieter */
+  crowdGoal() {
+    this.shout('goal');
+    this.chant(CHANT_CARDS, 1.2, 3.4);
+  }
+
+  /** ICON: the time stops, so do the stands */
+  crowdHush() {
+    const ctx = this.ctx;
+    if (!ctx) return;
+    for (const s of this.shots) {
+      s.g.gain.setTargetAtTime(0, ctx.currentTime, 0.03);
+      s.src.stop(ctx.currentTime + 0.2);
+    }
+    this.chant(0, 0.1);
+  }
+
+  /** a card shows its face: the stands react (RARE small, EPIC / LEGENDARY big, ICON the biggest) */
+  crowdReact(r: Rarity) {
+    if (r === 'rare') this.shout('react-small');
+    else if (r === 'epic') this.shout('react-big', 0.75);
+    else if (r === 'legendary') this.shout('react-big');
+    else if (r === 'icon') {
+      this.shout('react-icon');
+      this.chant(CHANT_CARDS, 1.2, 3.8);
+    }
   }
 
   setMuted(m: boolean) {
     this.muted = m;
     setSoundOn(!m);
     if (this.master && this.ctx) this.master.gain.setTargetAtTime(m ? 0 : level(), this.ctx.currentTime, 0.05);
+    if (this.crowdOut && this.ctx && this.clips) this.crowdOut.gain.setTargetAtTime(m ? 0 : crowdLevel(this.clipGain), this.ctx.currentTime, 0.05);
   }
 
   private noiseBurst(dur: number, filter: BiquadFilterType, freq: number, gain: number, sweepTo?: number, wet = 0) {
@@ -132,10 +250,11 @@ export class ShootAudio {
     this.bass(120, 40, 0, 1.2, 0.5, 2);
   }
 
-  /** ICON: the time stops — a deep sub drop and a dark low chord */
+  /** ICON: the time stops — a deep sub drop and a dark low chord (and the stands fall silent) */
   hush() {
     const ctx = this.ctx;
     if (!ctx) return;
+    this.crowdHush();
     this.bass(78, 26, 0, 1.5, 1.0, 2.6);
     this.braam([41.2, 41.45, 61.7], 0, 1.4, 0.22, 90, 260, 0.5);
     // a shimmer slowing down (tape stop)
@@ -163,6 +282,9 @@ export class ShootAudio {
     o.start(t);
     o.stop(t + dur + 0.1);
     this.bass(36, 52, 0, dur, 0.5, 1.5, true);
+    // the chant steps back for the swell (and comes back even if the reveal is tapped past)
+    this.chant(0.12, 0.4);
+    this.chant(CHANT_CARDS, 1.2, dur + 3.8);
   }
 
   /** ICON: a huge, bass-heavy impact (the goal and the card reveal) */
@@ -275,8 +397,31 @@ export class ShootAudio {
     this.noiseBurst(0.22, 'bandpass', 1200, 0.18, 4000);
   }
 
+  /** the gacha closes: a short fade, then the nodes go (the game's audio context stays open) */
   dispose() {
-    void this.ctx?.close();
+    const ctx = this.ctx;
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    this.master?.gain.setTargetAtTime(0, t, 0.06);
+    this.crowdOut?.gain.setTargetAtTime(0, t, 0.06);
+    const master = this.master;
+    const crowd = this.crowdOut;
+    const chantSrc = this.chantSrc;
+    const shared = this.shared;
+    window.setTimeout(() => {
+      try {
+        chantSrc?.stop();
+      } catch {
+        // already stopped
+      }
+      if (shared) {
+        master?.disconnect();
+        crowd?.disconnect();
+      } else void ctx.close();
+    }, 350);
     this.ctx = null;
+    this.chantSrc = null;
+    this.chantGain = null;
+    this.shots.clear();
   }
 }

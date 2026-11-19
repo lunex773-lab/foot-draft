@@ -55,7 +55,10 @@ export function CardReveal({ items, catalog, audio, onFinish }: { items: RevealI
       // ICON: a swell rises into the reveal
       if (item.rarity === 'icon') audio?.riser(STAGE_MS.spin / 1000);
     }
-    if (stage === 'reveal') audio?.sting(item.rarity);
+    if (stage === 'reveal') {
+      audio?.sting(item.rarity);
+      audio?.crowdReact(item.rarity);
+    }
     timer.current = window.setTimeout(() => setStage(NEXT[stage]), STAGE_MS[stage]);
     return () => {
       if (timer.current) window.clearTimeout(timer.current);
