@@ -1,5 +1,6 @@
 import type { ClientMessage, Player, RoomSnapshot, ServerMessage } from '@fd/shared';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { sound } from '../sound/player';
 import { api, wsUrl } from './api';
 
 export type ConnState = 'connecting' | 'open' | 'reconnecting' | 'closed';
@@ -53,6 +54,7 @@ export function useRoom(roomId: string) {
               setOffset(msg.serverNow - (msg.t + Date.now()) / 2);
               break;
             case 'error':
+              sound.play('error');
               setError({ code: msg.code, message: msg.message, at: Date.now() });
               break;
           }

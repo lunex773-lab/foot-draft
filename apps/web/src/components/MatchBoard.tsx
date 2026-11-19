@@ -1,6 +1,7 @@
 import { FORMATIONS, type MatchEvent, type MatchResultData, type Player, type TrackPoint } from '@fd/shared';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { CHANCE_LABEL, EVENT_LABEL } from '../lib/labels';
+import { sound } from '../sound/player';
 
 /**
  * 2D tactical board + event log (spec 6-6). The match is fully computed on
@@ -48,6 +49,18 @@ export function MatchBoard({ result, minute, home, away }: { result: MatchResult
   const bx = ball.y;
   const by = ball.x;
   const lastGoal = [...result.events].reverse().find((e) => e.type === 'goal' && e.minute <= minute && minute - e.minute < 2.2);
+  const goalKey = lastGoal ? `${lastGoal.minute}-${lastGoal.playerId}` : null;
+  // sounds: the kickoff when a match starts from the beginning, each goal as it is shown
+  const kickedOff = useRef(false);
+  useEffect(() => {
+    if (!kickedOff.current && minute < 1) {
+      kickedOff.current = true;
+      sound.play('kickoff');
+    }
+  }, [minute]);
+  useEffect(() => {
+    if (goalKey) sound.play('goal');
+  }, [goalKey]);
   const subsDone = result.events.filter((e) => e.type === 'sub' && e.minute <= minute);
   const reds = new Set(result.events.filter((e) => e.type === 'red' && e.minute <= minute).map((e) => e.playerId));
 

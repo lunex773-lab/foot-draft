@@ -3,7 +3,8 @@ import { api, getLastErrorCode } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { InstallGuide } from '../lib/beta';
 import { errorText, formatDateTime } from '../lib/labels';
-import { setSoundOn, soundOn } from '../lib/sound';
+import { setSoundSettings, soundSettings, type SoundSettings } from '../lib/sound';
+import { sound } from '../sound/player';
 
 const CATEGORIES = [
   ['bug', '不具合の報告（Bug Report）'],
@@ -39,7 +40,11 @@ export default function SettingsPage() {
   const [error, setError] = useState<string | null>(null);
   const [items, setItems] = useState<Item[]>([]);
   const [open, setOpen] = useState<string | null>(null);
-  const [sound, setSound] = useState(soundOn);
+  const [snd, setSnd] = useState(soundSettings);
+  const changeSound = (patch: Partial<SoundSettings>) => {
+    setSoundSettings(patch);
+    setSnd(soundSettings());
+  };
 
   const load = () =>
     api<{ items: Item[] }>('/api/feedback')
@@ -92,20 +97,23 @@ export default function SettingsPage() {
         {nameMsg && <div className="small muted" style={{ marginTop: 6 }}>{nameMsg}</div>}
       </form>
 
-      <div className="panel">
+      <div className="panel sound-settings">
         <h3>サウンド</h3>
-        <label className="row small">
-          <input
-            type="checkbox"
-            checked={sound}
-            onChange={(e) => {
-              setSound(e.target.checked);
-              setSoundOn(e.target.checked);
-            }}
-            style={{ minHeight: 0 }}
-          />{' '}
-          効果音を鳴らす（SHOOT GACHA の演出など）
-        </label>
+        <SoundRow
+          label="BGM"
+          note="メニューは NIGHT PRESSURE、試合・ドラフトは STADIUM LEGEND、ガシャ・交換所・オークションは NEON DRIVE"
+          on={snd.bgm}
+          volume={snd.bgmVolume}
+          onChange={(on, volume) => changeSound({ bgm: on, bgmVolume: volume })}
+        />
+        <SoundRow
+          label="効果音"
+          note="ボタン・決定・ゴール・勝敗・SHOOT GACHA の演出など"
+          on={snd.sfx}
+          volume={snd.sfxVolume}
+          onChange={(on, volume) => changeSound({ sfx: on, sfxVolume: volume })}
+          onRelease={() => sound.play('confirm')}
+        />
       </div>
 
       <div className="panel">
@@ -192,6 +200,31 @@ function FeedbackThread({ id, onRead }: { id: string; onRead: () => void }) {
         </div>
       ))}
       {d.replies.length === 0 && <div className="tiny muted">まだ返信はありません。</div>}
+    </div>
+  );
+}
+
+/** one line of the sound settings: on / off and a volume slider */
+function SoundRow({ label, note, on, volume, onChange, onRelease }: { label: string; note: string; on: boolean; volume: number; onChange: (on: boolean, volume: number) => void; onRelease?: () => void }) {
+  return (
+    <div className="sound-row">
+      <label className="row">
+        <input type="checkbox" checked={on} onChange={(e) => onChange(e.target.checked, volume)} style={{ minHeight: 0 }} />
+        <b>{label}</b>
+      </label>
+      <input
+        type="range"
+        min={0}
+        max={100}
+        step={5}
+        value={Math.round(volume * 100)}
+        disabled={!on}
+        aria-label={`${label}の音量`}
+        onChange={(e) => onChange(on, Number(e.target.value) / 100)}
+        onPointerUp={onRelease}
+      />
+      <span className="tiny muted sound-vol">{on ? `${Math.round(volume * 100)}%` : 'OFF'}</span>
+      <div className="tiny muted sound-note">{note}</div>
     </div>
   );
 }

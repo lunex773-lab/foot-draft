@@ -5,6 +5,7 @@ import { useCatalog } from '../lib/catalog';
 import { useAuction, type AuctionNotice } from '../lib/useAuction';
 import { useNow } from '../lib/useNow';
 import { useWallet } from '../lib/wallet';
+import { sound } from '../sound/player';
 
 /**
  * PLAYER AUCTION (decisions 97-106): one market for everyone, up to 8 cards at
@@ -217,10 +218,12 @@ function BidSheet(props: {
     setMsg(null);
     try {
       await onBid(value, gems);
+      sound.play('pick');
       setMsg({ ok: true, text: `${fmt(value)} で入札しました` });
       setConfirmGems(null);
     } catch (e) {
       const err = e as { code?: string; message: string };
+      sound.play('error');
       setMsg({ ok: false, text: errorText(err.code ?? '', err.message) });
     } finally {
       setBusy(false);
@@ -277,7 +280,7 @@ function BidSheet(props: {
               <button className="btn ghost" onClick={() => setConfirmGems(null)} disabled={busy}>
                 やめる
               </button>
-              <button className="btn primary" onClick={() => submit(confirmGems)} disabled={busy}>
+              <button className="btn primary" data-sfx="none" onClick={() => submit(confirmGems)} disabled={busy}>
                 交換して入札
               </button>
             </div>
@@ -291,6 +294,7 @@ function BidSheet(props: {
             <button
               className="btn primary"
               disabled={busy || tooLow || (gemsNeeded > 0 && gemsNeeded > gemsTotal)}
+              data-sfx={gemsNeeded > 0 ? undefined : 'none'}
               onClick={() => (gemsNeeded > 0 ? setConfirmGems(gemsNeeded) : submit(0))}
             >
               {gemsNeeded > 0 ? (gemsNeeded > gemsTotal ? '資金が足りません' : 'GEMS を交換して入札') : `${fmt(value)} で入札`}
@@ -332,9 +336,11 @@ function ExchangeSheet({ gemsTotal, coinsPerGem, onClose, onExchange }: { gemsTo
               setMsg(null);
               try {
                 await onExchange(gems);
+                sound.play('coin');
                 setMsg({ ok: true, text: `${fmt(gems * coinsPerGem)} コインに交換しました` });
               } catch (e) {
                 const err = e as { code?: string; message: string };
+                sound.play('error');
                 setMsg({ ok: false, text: errorText(err.code ?? '', err.message) });
               } finally {
                 setBusy(false);

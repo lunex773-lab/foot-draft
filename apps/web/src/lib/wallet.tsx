@@ -1,5 +1,6 @@
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { api } from './api';
+import { sound } from '../sound/player';
 import { trackSessions } from './session';
 
 /** balances as returned by the server (the client never computes them) */
@@ -39,7 +40,15 @@ interface WalletCtx {
 const Ctx = createContext<WalletCtx | null>(null);
 
 export function WalletProvider({ children }: { children: ReactNode }) {
-  const [wallet, setWallet] = useState<Wallet | null>(null);
+  const [wallet, setWalletState] = useState<Wallet | null>(null);
+  const last = useRef<Wallet | null>(null);
+  // the coin sound when COINS or GEMS go up (rewards, missions, purchases, exchanges)
+  const setWallet = useCallback((next: Wallet) => {
+    const prev = last.current;
+    if (prev && (next.coins > prev.coins || next.gems.total > prev.gems.total)) sound.play('coin');
+    last.current = next;
+    setWalletState(next);
+  }, []);
   const [login, setLogin] = useState<LoginStatus | null>(null);
   const [matchRewards, setMatchRewards] = useState<WalletCtx['matchRewards']>(null);
   const [notice, setNotice] = useState<string | null>(null);

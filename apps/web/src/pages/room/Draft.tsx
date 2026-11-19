@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { Countdown } from '../../components/Countdown';
 import { PlayerRow } from '../../components/PlayerRow';
 import { seatColor } from '../../lib/labels';
+import { sound } from '../../sound/player';
 
 type Filter = 'ALL' | PositionGroup;
 type Sort = 'ovr' | 'pac' | 'sho' | 'pas' | 'dri' | 'def' | 'phy';
@@ -38,6 +39,7 @@ export function Draft({ snap, players, send, serverNow }: { snap: RoomSnapshot; 
   const pick = (id: string) => {
     if (!myTurn || takenBy.has(id) || blocked(id)) return;
     send({ type: 'pick', playerId: id });
+    sound.play('pick');
     setSelected(null);
   };
   const sel = selected ? players.get(selected) : null;
@@ -60,7 +62,7 @@ export function Draft({ snap, players, send, serverNow }: { snap: RoomSnapshot; 
               あなた {mine.length}/14（GK {groups.GK}/3・DF {groups.DF}・MF {groups.MF}・FW {groups.FW}）
             </div>
           </div>
-          <Countdown deadline={d.deadline} serverNow={serverNow} />
+          <Countdown deadline={d.deadline} serverNow={serverNow} tick={myTurn} />
         </div>
         <div className="order-strip" style={{ marginTop: 8 }}>
           {d.order.map((seat, i) => (
@@ -74,7 +76,7 @@ export function Draft({ snap, players, send, serverNow }: { snap: RoomSnapshot; 
             <span className="small">
               選択中：<b>{sel.name}</b>（{sel.primaryPosition} {sel.ovr}）
             </span>
-            <button className="btn primary small" disabled={!myTurn || takenBy.has(sel.id) || blocked(sel.id) || (sel.primaryPosition === 'GK' && myGk >= GAME_CONFIG.maxGkPerTeam)} onClick={() => pick(sel.id)}>
+            <button className="btn primary small" data-sfx="none" disabled={!myTurn || takenBy.has(sel.id) || blocked(sel.id) || (sel.primaryPosition === 'GK' && myGk >= GAME_CONFIG.maxGkPerTeam)} onClick={() => pick(sel.id)}>
               指名する
             </button>
             <button className="btn small ghost" onClick={() => setSelected(null)}>

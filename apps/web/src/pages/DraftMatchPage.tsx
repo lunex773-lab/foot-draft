@@ -36,6 +36,7 @@ import { useDraftMatch } from '../lib/useDraftMatch';
 import { useNow } from '../lib/useNow';
 import { Playing } from './room/Playing';
 import { Rewards } from './room/Final';
+import { playResult, sound } from '../sound/player';
 
 type Send = (m: DraftMatchClientMessage) => void;
 const GROUPS: PositionGroup[] = ['GK', 'DF', 'MF', 'FW'];
@@ -279,7 +280,7 @@ function ChinchiroStage({ snap, send, serverNow }: { snap: DraftMatchSnapshot; s
                   : 'サイコロの結果を表示しています…'}
             </div>
           </div>
-          <Countdown deadline={order ? snap.deadline : cur?.deadline ?? null} serverNow={serverNow} warnAt={3} />
+          <Countdown deadline={order ? snap.deadline : cur?.deadline ?? null} serverNow={serverNow} warnAt={3} tick={canThrow} />
         </div>
       </div>
 
@@ -387,6 +388,7 @@ function DmDraft({ snap, players, send, serverNow }: { snap: DraftMatchSnapshot;
   const pick = (id: string) => {
     if (!myTurn || takenBy.has(id) || !canPick(id)) return;
     send({ type: 'pick', playerId: id });
+    sound.play('pick');
     setSelected(null);
   };
   const viewSeat = view ?? you ?? 0;
@@ -415,7 +417,7 @@ function DmDraft({ snap, players, send, serverNow }: { snap: DraftMatchSnapshot;
               </div>
             )}
           </div>
-          <Countdown deadline={d.deadline} serverNow={serverNow} warnAt={5} />
+          <Countdown deadline={d.deadline} serverNow={serverNow} warnAt={5} tick={myTurn} />
         </div>
         <div className="order-strip" style={{ marginTop: 8 }}>
           {d.order.map((seat, i) => (
@@ -429,7 +431,7 @@ function DmDraft({ snap, players, send, serverNow }: { snap: DraftMatchSnapshot;
             <span className="small">
               選択中：<b>{sel.name}</b>（{sel.primaryPosition} {sel.ovr}）
             </span>
-            <button className="btn primary small" disabled={!myTurn || takenBy.has(sel.id) || !canPick(sel.id)} onClick={() => pick(sel.id)}>
+            <button className="btn primary small" data-sfx="none" disabled={!myTurn || takenBy.has(sel.id) || !canPick(sel.id)} onClick={() => pick(sel.id)}>
               指名する
             </button>
             <button className="btn small ghost" onClick={() => setSelected(null)}>
@@ -606,6 +608,11 @@ function Result({ snap }: { snap: DraftMatchSnapshot }) {
   const you = snap.you;
   const myRank = you !== null ? snap.finalRanks?.[you] : undefined;
   const change = you !== null ? snap.outcome?.ranking?.changes[you] : undefined;
+  useEffect(() => {
+    if (myRank) playResult(myRank, snap.seats.length);
+    // once when the final rank is known
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [myRank]);
   const again = async () => {
     const r = await api<{ roomId: string }>('/api/draft-match/queue', { body: {} }).catch(() => null);
     if (r) nav(`/draft/${r.roomId}`);

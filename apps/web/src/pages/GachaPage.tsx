@@ -6,6 +6,7 @@ import { api } from '../lib/api';
 import { useCatalog } from '../lib/catalog';
 import { errorText, formatDateTime, formatJst } from '../lib/labels';
 import { fmt, newRequestId, useWallet, type Wallet } from '../lib/wallet';
+import { sound } from '../sound/player';
 
 const ShootGacha = lazy(() => import('../shoot/ShootGacha'));
 
@@ -120,6 +121,7 @@ export default function GachaPage() {
       setWallet(r.wallet);
       setBanners((bs) => bs.map((b) => (b.id === banner.id ? { ...b, pity: r.pity } : b)));
     } catch (e) {
+      sound.play('error');
       setError(errorText((e as { code?: string }).code ?? '', (e as Error).message));
     } finally {
       setBusy(null);

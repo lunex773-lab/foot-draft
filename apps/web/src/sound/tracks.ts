@@ -13,7 +13,6 @@ import {
   pad,
   pluck,
   pulseBass,
-  reese,
   snare,
   stab,
   strings,
@@ -24,9 +23,11 @@ import {
 } from './synth';
 
 /**
- * Background music candidates (bass-heavy). Each track is one seamless loop:
- * `score` schedules every note of the loop from time t0. Rendered once into a
- * buffer (render.ts) and looped.
+ * Background music (bass-heavy, chosen by the user): A for the menus, D for
+ * matches and drafts, B for gacha / exchange / auction. Each track is one
+ * seamless loop: `score` schedules every note of the loop from time t0. The
+ * loops are rendered to audio files with `npm run sound:render -w @fd/web`
+ * (apps/web/scripts/render-bgm.mjs) and looped by the game (player.ts).
  */
 export interface Track {
   id: string;
@@ -42,7 +43,7 @@ const chord = (names: string) => names.split(' ').map(n);
 
 // ------------------------------------------------------------------ A: dark trap (halftime 808)
 const trap: Track = {
-  id: 'dark-trap',
+  id: 'night-pressure',
   name: 'A. NIGHT PRESSURE',
   style: 'ダークなトラップ（140BPM・半分の速さ）。うなる808ベース、細かいハイハット、暗いベル',
   bpm: 140,
@@ -146,59 +147,9 @@ const synthwave: Track = {
   },
 };
 
-// ------------------------------------------------------------------ C: drum & bass (reese)
-const dnb: Track = {
-  id: 'deep-reese',
-  name: 'C. DEEP RUN',
-  style: 'ドラムンベース（174BPM）。うなるリースベース、速いブレイクビート、広がるパッド',
-  bpm: 174,
-  bars: 40,
-  score(m, t0) {
-    const s16 = 60 / this.bpm / 4;
-    const bar = s16 * 16;
-    const prog = [
-      { root: n('D2'), pad: chord('D4 F4 A4') },
-      { root: n('Bb1'), pad: chord('D4 F4 Bb4') },
-      { root: n('G1'), pad: chord('D4 G4 Bb4') },
-      { root: n('A1'), pad: chord('C#4 E4 A4') },
-    ];
-    for (let b = 0; b < this.bars; b++) {
-      const t = t0 + b * bar;
-      const p = prog[Math.floor(b / 2) % 4];
-      const intro = b < 8;
-      const brk = b >= 24 && b < 28;
-      const drop = !intro && !brk;
-      if (b % 2 === 0) pad(m, t, p.pad, bar * 2, { gain: 0.045, cutoff: drop ? 2400 : 1200, attack: 1 });
-      if (drop) {
-        // two-step breakbeat
-        kick(m, t, { gain: 0.85, decay: 0.22, from: 170, to: 55 });
-        kick(m, t + 10 * s16, { gain: 0.7, decay: 0.2, from: 170, to: 55 });
-        if (b % 2) kick(m, t + 7 * s16, { gain: 0.45, decay: 0.15 });
-        snare(m, t + 4 * s16, { gain: 0.6, rev: 0.12, decay: 0.16 });
-        snare(m, t + 12 * s16, { gain: 0.6, rev: 0.12, decay: 0.16 });
-        snare(m, t + 14 * s16, { gain: 0.15, decay: 0.08 });
-        for (let i = 0; i < 16; i += 2) hat(m, t + i * s16, { gain: i % 4 === 2 ? 0.12 : 0.07 });
-        hat(m, t + 15 * s16, { gain: 0.05 });
-        // the reese: long notes with a rhythmic cut
-        reese(m, t, p.root, s16 * 6, { gain: 0.3, cutoff: 650, wobble: 2.2 });
-        reese(m, t + 8 * s16, p.root + (b % 2 ? 3 : 0), s16 * 7, { gain: 0.3, cutoff: 800, wobble: 3.5 });
-        if (b % 4 === 3) stab(m, t + 14 * s16, p.pad.map((x) => x + 12), { gain: 0.035, decay: 0.2 });
-      } else if (intro) {
-        if (b >= 4) for (let i = 0; i < 16; i += 2) hat(m, t + i * s16, { gain: 0.05 });
-        if (b % 2 === 0) reese(m, t, p.root, bar * 2 - s16, { gain: 0.18, cutoff: 300, wobble: 0.6 });
-        if (b === 7) sweep(m, t, bar, { gain: 0.2 });
-      } else {
-        // the break: only pad and a slow reese
-        if (b % 2 === 0) reese(m, t, p.root, bar * 2 - s16, { gain: 0.22, cutoff: 400, wobble: 1 });
-        if (b === 27) sweep(m, t, bar, { gain: 0.2 });
-      }
-    }
-  },
-};
-
 // ------------------------------------------------------------------ D: stadium epic (cinematic)
 const epic: Track = {
-  id: 'stadium-epic',
+  id: 'stadium-legend',
   name: 'D. STADIUM LEGEND',
   style: 'スタジアムの壮大な曲（100BPM）。重低音の太鼓とブーム、刻む弦、ブラス、合唱、手拍子',
   bpm: 100,
@@ -242,7 +193,11 @@ const epic: Track = {
   },
 };
 
-export const TRACKS: Track[] = [trap, synthwave, dnb, epic];
+export const TRACKS: Track[] = [trap, synthwave, epic];
+
+/** the user's choice: which track plays where */
+export type Scene = 'menu' | 'match' | 'gacha';
+export const SCENE_TRACK: Record<Scene, string> = { menu: 'night-pressure', match: 'stadium-legend', gacha: 'neon-drive' };
 
 /** seconds of one loop */
 export const loopSeconds = (tr: Track) => (60 / tr.bpm) * 4 * tr.bars;

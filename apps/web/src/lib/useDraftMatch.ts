@@ -1,5 +1,6 @@
 import type { DraftMatchClientMessage, DraftMatchServerMessage, DraftMatchSnapshot, Player } from '@fd/shared';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { sound } from '../sound/player';
 import { api, wsUrl } from './api';
 import type { ConnState } from './useRoom';
 
@@ -38,7 +39,10 @@ export function useDraftMatch(roomId: string) {
             setSnap(msg.state);
           } else if (msg.type === 'players') setPlayers(new Map(msg.players.map((p) => [p.id, p])));
           else if (msg.type === 'pong') setOffset(msg.serverNow - (msg.t + Date.now()) / 2);
-          else if (msg.type === 'error') setError({ code: msg.code, message: msg.message, at: Date.now() });
+          else if (msg.type === 'error') {
+            sound.play('error');
+            setError({ code: msg.code, message: msg.message, at: Date.now() });
+          }
         };
         ws.onclose = () => {
           if (ping) clearInterval(ping);

@@ -1,5 +1,8 @@
 import type { Rarity } from '@fd/shared';
-import { setSoundOn, soundOn } from '../lib/sound';
+import { setSoundOn, soundOn, soundSettings } from '../lib/sound';
+
+/** the output level follows the effects volume of the settings */
+const level = () => 1.1 * soundSettings().sfxVolume;
 
 /**
  * Sounds of the SHOOT GACHA made with the Web Audio API (no sound files):
@@ -27,7 +30,7 @@ export class ShootAudio {
     const ctx = new AC();
     this.ctx = ctx;
     this.master = ctx.createGain();
-    this.master.gain.value = this.muted ? 0 : 0.9;
+    this.master.gain.value = this.muted ? 0 : level();
     // a compressor keeps the heavy bass of the ICON sounds from clipping
     const comp = ctx.createDynamicsCompressor();
     comp.threshold.value = -14;
@@ -75,7 +78,7 @@ export class ShootAudio {
   setMuted(m: boolean) {
     this.muted = m;
     setSoundOn(!m);
-    if (this.master && this.ctx) this.master.gain.setTargetAtTime(m ? 0 : 0.9, this.ctx.currentTime, 0.05);
+    if (this.master && this.ctx) this.master.gain.setTargetAtTime(m ? 0 : level(), this.ctx.currentTime, 0.05);
   }
 
   private noiseBurst(dur: number, filter: BiquadFilterType, freq: number, gain: number, sweepTo?: number, wet = 0) {

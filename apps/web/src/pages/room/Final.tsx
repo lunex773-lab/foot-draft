@@ -7,6 +7,7 @@ import { TierBadge } from '../../components/TierBadge';
 import { LeagueRating } from '../../lib/beta';
 import { seatColor, signed } from '../../lib/labels';
 import { fmt, useWallet } from '../../lib/wallet';
+import { playResult } from '../../sound/player';
 
 /** COINS and missions earned by this league (decided by the server) */
 export function Rewards({ snap }: { snap: RoomSnapshot }) {
@@ -107,6 +108,11 @@ function Outcome({ snap }: { snap: RoomSnapshot }) {
 export function Final({ snap }: { snap: RoomSnapshot }) {
   const [detail, setDetail] = useState<string | null>(null);
   const myRank = snap.you !== null ? snap.finalRanks?.[snap.you] : undefined;
+  useEffect(() => {
+    if (myRank) playResult(myRank, snap.seats.length);
+    // once when the final rank is known
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [myRank]);
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div className="panel" style={{ textAlign: 'center' }}>

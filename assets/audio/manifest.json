@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "tracks": {
+    "night-pressure": {
+      "file": "bgm-night-pressure.m4a",
+      "loopSeconds": 54.857142857142854
+    },
+    "neon-drive": {
+      "file": "bgm-neon-drive.m4a",
+      "loopSeconds": 64
+    },
+    "stadium-legend": {
+      "file": "bgm-stadium-legend.m4a",
+      "loopSeconds": 57.6
+    }
+  }
+}

@@ -3782,3 +3782,32 @@ body.shoot-open {
     opacity: 0;
   }
 }
+
+/* sound settings */
+.sound-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sound-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 4px 12px;
+}
+
+.sound-row input[type='range'] {
+  width: 100%;
+  min-height: 0;
+  accent-color: var(--neon);
+}
+
+.sound-vol {
+  min-width: 36px;
+  text-align: right;
+}
+
+.sound-note {
+  grid-column: 1 / -1;
+}

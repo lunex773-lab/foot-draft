@@ -249,25 +249,6 @@ export function sub808(m: Mix, t: number, midi: number, dur: number, o: { glideF
   s.connect(g).connect(shaper(m.ctx, drive)).connect(lp).connect(m.drums);
 }
 
-/** reese: two detuned saws through a moving low-pass + a clean sub underneath */
-export function reese(m: Mix, t: number, midi: number, dur: number, o: { gain?: number; cutoff?: number; wobble?: number } = {}) {
-  const { gain = 0.32, cutoff = 700, wobble = 2.5 } = o;
-  const hz = midiHz(midi);
-  const lp = filter(m, 'lowpass', cutoff, 3);
-  const lfo = osc(m, 'sine', wobble, t, t + dur + 0.1);
-  const lg = m.ctx.createGain();
-  lg.gain.value = cutoff * 0.5;
-  lfo.connect(lg).connect(lp.frequency);
-  const g = m.ctx.createGain();
-  env(g, t, gain, 0.02, 0.08, Math.max(0, dur - 0.1));
-  for (const d of [-14, 14]) osc(m, 'sawtooth', hz, t, t + dur + 0.1, d).connect(lp);
-  lp.connect(shaper(m.ctx, 1.8)).connect(g).connect(m.drums);
-  const sub = osc(m, 'sine', hz / 2, t, t + dur + 0.1);
-  const sg = m.ctx.createGain();
-  env(sg, t, gain * 1.8, 0.01, 0.06, Math.max(0, dur - 0.07));
-  sub.connect(sg).connect(m.drums);
-}
-
 /** short plucked saw bass (synthwave pulse) */
 export function pulseBass(m: Mix, t: number, midi: number, dur: number, o: { gain?: number; cutoff?: number } = {}) {
   const { gain = 0.38, cutoff = 900 } = o;

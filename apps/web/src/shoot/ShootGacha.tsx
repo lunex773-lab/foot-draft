@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { CardReveal, type RevealItem } from './CardReveal';
 import { IconTitle, preloadIconFont } from './IconTitle';
 import { ShootEngine, type ShootPhase } from './engine';
+import { sound } from '../sound/player';
 import { bestRarity } from './plan';
 
 /**
@@ -22,6 +23,7 @@ export default function ShootGacha({ results, catalog, onClose }: { results: Rev
 
   useEffect(() => {
     document.body.classList.add('shoot-open');
+    sound.duck(true);
     if (rarity === 'icon') preloadIconFont();
     const canvas = canvasRef.current!;
     let engine: ShootEngine | null = null;
@@ -51,6 +53,7 @@ export default function ShootGacha({ results, catalog, onClose }: { results: Rev
     window.addEventListener('keydown', onKey);
     return () => {
       document.body.classList.remove('shoot-open');
+      sound.duck(false);
       window.removeEventListener('resize', onResize);
       window.removeEventListener('keydown', onKey);
       engine?.dispose();

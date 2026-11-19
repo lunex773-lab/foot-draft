@@ -7,6 +7,7 @@ import { useCatalog } from '../lib/catalog';
 import { errorText, formatDateTime } from '../lib/labels';
 import { fmt, newRequestId, useWallet, type Wallet } from '../lib/wallet';
 import { POINT_LABEL } from './GachaPage';
+import { sound } from '../sound/player';
 
 type PointType = 'standard' | 'premium';
 
@@ -58,10 +59,12 @@ export default function ExchangePage() {
     try {
       const r = await api<{ playerId: string; wallet: Wallet }>('/api/exchange/redeem', { body: { playerId: confirm.player.id, pointType: tab, requestId: newRequestId() } });
       setWallet(r.wallet);
+      sound.play('card');
       setMsg(`${confirm.player.name} を手に入れました`);
       setConfirm(null);
       load();
     } catch (e) {
+      sound.play('error');
       setError(errorText((e as { code?: string }).code ?? '', (e as Error).message));
     } finally {
       setBusy(false);

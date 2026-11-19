@@ -1,5 +1,6 @@
 import type { AuctionLotView, AuctionMarketView, AuctionServerMessage, AuctionWalletView, Rarity } from '@fd/shared';
 import { useCallback, useEffect, useState } from 'react';
+import { sound } from '../sound/player';
 import { api, wsUrl } from './api';
 import type { ConnState } from './useRoom';
 
@@ -108,8 +109,12 @@ export function useAuction() {
               next[i] = msg.lot;
               return next;
             });
-          } else if (msg.type === 'ended') setLots((list) => list.filter((l) => l.id !== msg.lotId)); else if (msg.type === 'outbid') notify({ kind: 'outbid', lotId: msg.lotId, playerId: msg.playerId, price: msg.price, at: Date.now() });
-          else if (msg.type === 'won') {
+          } else if (msg.type === 'ended') setLots((list) => list.filter((l) => l.id !== msg.lotId));
+          else if (msg.type === 'outbid') {
+            sound.play('cancel');
+            notify({ kind: 'outbid', lotId: msg.lotId, playerId: msg.playerId, price: msg.price, at: Date.now() });
+          } else if (msg.type === 'won') {
+            sound.play('card');
             notify({ kind: 'won', lotId: msg.lotId, playerId: msg.playerId, price: msg.price, levelAfter: msg.levelAfter, points: msg.points, at: Date.now() });
             if (msg.levelAfter !== null) setOwned((o) => ({ ...o, [msg.playerId]: msg.levelAfter! }));
             void load();

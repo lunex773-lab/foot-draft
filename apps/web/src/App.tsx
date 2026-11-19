@@ -1,3 +1,5 @@
+import { sceneOf, sound } from './sound/player';
+import type { SfxName } from './sound/sfx';
 import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
 import { BrowserRouter, Link, NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { api } from './lib/api';
@@ -216,6 +218,33 @@ function Shell() {
   );
 }
 
+/**
+ * The first tap starts the audio (browsers allow sound only after a tap);
+ * every tap on a button gives its sound: the main button "決定", a ghost
+ * button "戻る", anything else "ボタン". data-sfx="none" (or another sound
+ * name) on an element overrides it.
+ */
+function useUiSounds() {
+  useEffect(() => {
+    const onDown = (e: PointerEvent) => {
+      sound.unlock();
+      const el = (e.target as Element | null)?.closest?.('button, a, [role="tab"], [data-sfx]') as HTMLElement | null;
+      if (!el || (el as HTMLButtonElement).disabled || el.getAttribute('aria-disabled') === 'true') return;
+      const own = el.closest('[data-sfx]')?.getAttribute('data-sfx');
+      if (own === 'none') return;
+      const name: SfxName = (own as SfxName | null) ?? (el.classList.contains('primary') ? 'confirm' : el.classList.contains('ghost') ? 'cancel' : 'tap');
+      sound.tap(name);
+    };
+    const onKey = () => sound.unlock();
+    document.addEventListener('pointerdown', onDown, { capture: true });
+    document.addEventListener('keydown', onKey, { capture: true });
+    return () => {
+      document.removeEventListener('pointerdown', onDown, { capture: true });
+      document.removeEventListener('keydown', onKey, { capture: true });
+    };
+  }, []);
+}
+
 function ShellInner() {
   const { me } = useAuth();
   const unread = useUnreadReplies(!!me);
@@ -227,6 +256,11 @@ function ShellInner() {
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [loc.pathname]);
+  // music by scene (A menus, D matches and drafts, B gacha / exchange / auction)
+  useEffect(() => {
+    sound.setScene(sceneOf(loc.pathname));
+  }, [loc.pathname]);
+  useUiSounds();
   return (
     <div className={`app ${wide ? 'wide' : ''} ${me && !inRoom ? 'with-nav' : ''}`}>
       <header className="topbar">
