@@ -108,7 +108,7 @@ export function CardDetail({ player, owned, onClose, onFavorite }: { player: Pla
           </b>
         </div>
         <div className="tiny muted" style={{ marginTop: 4 }}>
-          ガシャで同じカードが出ると +1（OVR・能力値がそれぞれ +1）。+{MATCH_CONFIG.maxLevel} の後は交換ポイントになります。強化は MATCH で使われます。
+          ガシャで同じカードが出ると +1。1段階ごとに OVR・6能力値・試合の内部能力（スピード・シュート・パス・守備・スタミナなど）がすべて +1（特殊能力は変わりません）。+{MATCH_CONFIG.maxLevel} の後は交換ポイントになります。強化は MATCH で使われます。
         </div>
 
         <div className="spread" style={{ marginTop: 12 }}>
