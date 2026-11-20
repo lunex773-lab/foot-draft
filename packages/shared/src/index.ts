@@ -9,6 +9,7 @@ export * from './data/clubs';
 export * from './data/formations';
 export * from './players/ratings';
 export * from './players/import';
+export * from './players/balance';
 export * from './players/catalog';
 export * from './players/roles';
 export * from './players/cardArt';

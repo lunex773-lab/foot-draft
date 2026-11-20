@@ -85,12 +85,15 @@ export function CardDetail({ player, owned, onClose, onFavorite }: { player: Pla
         </div>
 
         <h3>特殊能力</h3>
-        {player.traits.length === 0 && <div className="small muted">なし</div>}
+        {player.traits.length === 0 && <div className="small muted">なし（特殊能力は EPIC 以上のカードだけが持っています）</div>}
         <div className="list">
           {player.traits.map((t) => (
-            <div key={t} className="list-item block">
-              <strong>{TRAITS[t]?.nameJa ?? t}</strong>
-              <span className="small muted">{TRAITS[t]?.effectJa}</span>
+            <div key={t} className={`list-item block${TRAITS[t]?.iconOnly ? ' trait-icon' : ''}`}>
+              <strong>
+                {TRAITS[t]?.nameJa ?? t}
+                {TRAITS[t]?.iconOnly && <span className="chip trait-icon-chip">ICON 専用</span>}
+              </strong>
+              <span className="small muted">{(TRAITS[t]?.effectJa ?? '').replace(/^【ICON専用】/, '')}</span>
             </div>
           ))}
         </div>

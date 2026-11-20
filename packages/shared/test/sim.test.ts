@@ -16,6 +16,19 @@ const input = (seed: string): SimInput => ({
   away: { seat: 1, name: 'A', players: away, lineup: cpuLineup(away, rng.fork('a')) },
 });
 
+/** total xG of a side over many seeds (the abilities push the match the right way) */
+function xgOver(players: { home: typeof home; away: typeof away }, side: 'home' | 'away', n = 200) {
+  const r2 = new Rng('ability-lineups');
+  const lh = cpuLineup(players.home, r2.fork('h'));
+  const la = cpuLineup(players.away, r2.fork('a'));
+  let xg = 0;
+  for (let s = 0; s < n; s++) {
+    const r = simulateMatch({ seed: `ab-${s}`, home: { seat: 0, name: 'H', players: players.home, lineup: lh }, away: { seat: 1, name: 'A', players: players.away, lineup: la } });
+    xg += r.stats[side].xg;
+  }
+  return xg;
+}
+
 describe('match simulation', () => {
   it('is reproducible with the same input and seed (spec 6-4)', () => {
     const i = input('repro-1');
@@ -66,5 +79,19 @@ describe('match simulation', () => {
       pDirect += simulateMatch({ ...direct, seed: `tp-${s}` }).stats.home.possession;
     }
     expect(pPoss / 40).toBeGreaterThan(pDirect / 40 + 3);
+  });
+
+  it('ICON abilities push the match the right way (decision 120)', () => {
+    const icons = catalog.filter((p) => p.rarity === 'icon');
+    const lastLine = icons.find((p) => p.traits.includes('last_line'))!;
+    const aura = icons.find((p) => p.traits.includes('legend_aura'))!;
+    const plain = (p: (typeof catalog)[number]) => ({ ...p, traits: [] });
+    // the same ICON with and without its ability in the home team
+    const withLine = [...home.slice(0, 12), lastLine];
+    const withoutLine = [...home.slice(0, 12), plain(lastLine)];
+    expect(xgOver({ home: withLine, away }, 'away')).toBeLessThan(xgOver({ home: withoutLine, away }, 'away'));
+    const withAura = [...home.slice(0, 12), aura];
+    const withoutAura = [...home.slice(0, 12), plain(aura)];
+    expect(xgOver({ home: withAura, away }, 'home')).toBeGreaterThan(xgOver({ home: withoutAura, away }, 'home'));
   });
 });

@@ -3859,3 +3859,17 @@ body.shoot-open {
 .sound-note {
   grid-column: 1 / -1;
 }
+
+/* ICON-only special ability (card detail) */
+.list-item.trait-icon {
+  border-color: rgba(255, 236, 176, 0.55);
+  background: linear-gradient(120deg, rgba(255, 77, 77, 0.08), rgba(255, 207, 51, 0.08), rgba(51, 196, 255, 0.08), rgba(180, 77, 255, 0.08));
+}
+
+.trait-icon-chip {
+  margin-left: 8px;
+  border-color: rgba(255, 236, 176, 0.6);
+  color: #ffecb0;
+  font-size: 10px;
+  vertical-align: 2px;
+}

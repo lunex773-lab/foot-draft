@@ -55,7 +55,67 @@ export const SIM_TUNING = {
     knock_down: 0.09,
   } as Record<ChanceType, number>,
   staminaDrainPerSegment: 8.5,
+  /** extra stamina used by a high press */
+  highPressDrain: 1.12,
+  /** counter attacks of a team playing the counter tactic */
+  counterTactic: 6,
+  /** a high press leaves space behind (was 2 while fast defenders / sweeper keepers were common) */
+  highPressPaceDefense: 1,
 };
+
+/**
+ * The special abilities in numbers (decisions 118-120, data/traits.ts has the
+ * same numbers in words). Every effect works only under its condition.
+ */
+export const SIM_TRAITS = {
+  engineDrain: 0.6,
+  counterRunnerChance: 0.15,
+  counterRunnerAttack: 8,
+  sweeperKeeper: 7,
+  sweeperKeeperHighLine: 10,
+  crossChoice: 0.15,
+  crossXg: 1.35,
+  crossSetPiece: 5,
+  pressResistantBuild: 3,
+  pressResistantProgress: 2,
+  clinicalXg: 1.3,
+  leaderLate: 1.03,
+  longShotXg: 1.8,
+  aerial: 12,
+  aerialXg: 1.6,
+  ballWinnerMid: 3,
+  ballWinnerPress: 2,
+  speedsterAttack: 6,
+  speedsterDefense: 5,
+  playmakerProgress: 3,
+  playmakerXg: 1.3,
+  shotStopper: 6,
+  shotStopperPenalty: 0.85,
+  ironWall: 4,
+  manMarkerXg: 0.93,
+  dribblerAttack: 3,
+  dribblerChoice: 0.15,
+  dribblerXg: 1.25,
+  foxWeight: 1.6,
+  foxXg: 1.15,
+  clutchXg: 1.4,
+  longFeed: 5,
+  longFeedCounter: 1.05,
+  overlapAttack: 3,
+  overlapAssist: 1.6,
+  // ICON only
+  legendAura: 1.03,
+  zone: 1.1,
+  zoneXg: 1.4,
+  fantasistaAttack: 5,
+  fantasistaXg: 1.35,
+  fantasistaChoice: 0.2,
+  lastLineXg: 0.88,
+  inexhaustibleSide: 4,
+};
+
+/** chances in front of goal (Fox in the Box) */
+const CLOSE_CHANCES: ChanceType[] = ['through_ball', 'cutback', 'knock_down', 'press_win'];
 
 type Phase = 'build' | 'mid' | 'final' | 'counter' | 'press_win' | 'corner' | 'free_kick' | 'long_ball';
 
@@ -250,10 +310,13 @@ export class MatchSimulator {
     const isGkAttr = key === 'gkReflexes' || key === 'gkHandling' || key === 'gkPositioning';
     const fam = isGkAttr ? 1 : o.fam;
     let v = o.p.attributes[key] * o.scale * fam * this.fatigue(o) * t.chem.modifier;
-    // Leader: limits the late-game drop when losing
-    if (this.minute >= 70 && t.goals < this.teams[this.other(t.side)].goals && this.active(t).some((x) => x.p.traits.includes('leader'))) {
-      v *= 1.01;
-    }
+    const S = SIM_TRAITS;
+    // Leader: everyone a little stronger late in the game when losing
+    if (this.minute >= 70 && t.goals < this.teams[this.other(t.side)].goals && this.teamHas(t, 'leader')) v *= S.leaderLate;
+    // ICON Legend Aura: the whole team (once, even with two such players)
+    if (this.teamHas(t, 'legend_aura')) v *= S.legendAura;
+    // ICON The Zone: the player himself from the 70th minute
+    if (this.minute >= 70 && o.p.traits.includes('the_zone')) v *= S.zone;
     return v;
   }
 
@@ -293,6 +356,35 @@ export class MatchSimulator {
 
   private has(o: OnPitch | undefined, trait: TraitId): boolean {
     return !!o && o.p.traits.includes(trait);
+  }
+
+  /** someone on the pitch has the trait */
+  private teamHas(t: TeamState, trait: TraitId): boolean {
+    return t.lineup.some((o) => !o.off && o.p.traits.includes(trait));
+  }
+
+  /** wide defender slot (Overlap) */
+  private wideDefender(o: OnPitch): boolean {
+    return this.group(o) === 'DF' && this.flankOf(o) !== 'center';
+  }
+
+  /** extra attack on a flank from the players of that flank (Dribbler, Overlap, Fantasista, Inexhaustible) */
+  private flankAttackBonus(t: TeamState, flank: 'left' | 'center' | 'right'): number {
+    const S = SIM_TRAITS;
+    let dribblers = 0;
+    let v = 0;
+    for (const o of this.active(t)) {
+      if (this.flankOf(o) !== flank) continue;
+      const g = this.group(o);
+      if ((g === 'FW' || g === 'MF') && this.has(o, 'dribbler') && dribblers < 2) {
+        dribblers++;
+        v += S.dribblerAttack;
+      }
+      if (this.has(o, 'overlap') && this.wideDefender(o)) v += S.overlapAttack;
+      if (this.has(o, 'fantasista')) v += S.fantasistaAttack;
+      if (this.has(o, 'inexhaustible')) v += S.inexhaustibleSide;
+    }
+    return v;
   }
 
   /** absolute pitch coordinates for the attacking side */
@@ -362,14 +454,14 @@ export class MatchSimulator {
     if (t.tactics.passing === 'short') v += 1.5;
     if (t.tactics.passing === 'direct') v -= 1;
     if (this.active(t).some((o) => o.p.role === 'keeper_libero')) v += 1.5;
-    v += Math.min(4, this.traitCount(t, 'press_resistant', ['DF', 'MF']) * 2);
+    v += Math.min(2, this.traitCount(t, 'press_resistant', ['DF', 'MF'])) * SIM_TRAITS.pressResistantBuild;
     return v;
   }
 
   private press(t: TeamState): number {
     let v = this.unit(t, (o) => (this.group(o) === 'FW' ? 1 : this.group(o) === 'MF' ? 1 : 0), { acceleration: 0.25, sprintSpeed: 0.15, interception: 0.25, tackling: 0.2, stamina: 0.15 });
     if (t.tactics.defense === 'high_press') v += 6;
-    v += Math.min(3, this.traitCount(t, 'ball_winner', ['DF', 'MF']));
+    v += Math.min(2, this.traitCount(t, 'ball_winner', ['DF', 'MF'])) * SIM_TRAITS.ballWinnerPress;
     if (t.tactics.defense === 'low_block') v -= 6;
     if (t.tactics.pressIntensity === 'high') v += 2;
     if (t.tactics.pressIntensity === 'low') v -= 2;
@@ -379,8 +471,8 @@ export class MatchSimulator {
 
   private progression(t: TeamState): number {
     let v = this.unit(t, (o) => (this.group(o) === 'MF' ? 1 : this.group(o) === 'FW' ? 0.35 : 0.15), { shortPassing: 0.3, vision: 0.2, dribbling: 0.25, ballControl: 0.25 });
-    v += Math.min(2, this.traitCount(t, 'playmaker', ['MF', 'FW'])) * 2;
-    v += Math.min(2, this.traitCount(t, 'press_resistant', ['DF', 'MF']));
+    v += Math.min(2, this.traitCount(t, 'playmaker', ['MF', 'FW'])) * SIM_TRAITS.playmakerProgress;
+    v += Math.min(2, this.traitCount(t, 'press_resistant', ['DF', 'MF'])) * SIM_TRAITS.pressResistantProgress;
     if (t.tactics.offense === 'possession') v += 2.5;
     if (t.tactics.tempo === 'fast') v -= 1;
     if (t.tactics.tempo === 'slow') v += 0.5;
@@ -391,7 +483,7 @@ export class MatchSimulator {
     let v = this.unit(t, (o) => (this.group(o) === 'MF' ? 1 : this.group(o) === 'DF' ? 0.35 : 0.1), { interception: 0.4, tackling: 0.35, strength: 0.25 });
     if (t.tactics.defense === 'low_block') v += 2.5;
     if (t.tactics.defense === 'high_press') v += 1;
-    v += Math.min(4, this.traitCount(t, 'ball_winner', ['DF', 'MF']) * 2);
+    v += Math.min(2, this.traitCount(t, 'ball_winner', ['DF', 'MF'])) * SIM_TRAITS.ballWinnerMid;
     return v;
   }
 
@@ -420,6 +512,7 @@ export class MatchSimulator {
     if (t.lateChange === 'attack') v += 2;
     if (t.tactics.offense === 'counter') v -= 1.5;
     if (t.tactics.offense === 'possession') v += 1.5;
+    v += this.flankAttackBonus(t, flank);
     return v;
   }
 
@@ -441,41 +534,46 @@ export class MatchSimulator {
     if (t.tactics.defensiveLine === 'deep') v += 2;
     if (t.tactics.defensiveLine === 'high') v -= 1;
     if (t.lateChange === 'attack') v -= 2;
+    const S = SIM_TRAITS;
+    // Iron Wall: centre-backs against attacks through the middle
+    if (flank === 'center') v += Math.min(2, this.active(t).filter((o) => this.group(o) === 'DF' && this.flankOf(o) === 'center' && this.has(o, 'iron_wall')).length) * S.ironWall;
+    // ICON Inexhaustible: the defence of his own flank
+    v += this.active(t).filter((o) => this.has(o, 'inexhaustible') && this.flankOf(o) === flank).length * S.inexhaustibleSide;
     return v;
   }
 
   private paceAttack(t: TeamState): number {
     let v = this.unit(t, (o) => (this.group(o) === 'FW' ? 1.4 : o.slot.pos === 'LM' || o.slot.pos === 'RM' || o.slot.pos === 'CAM' ? 0.8 : 0), { acceleration: 0.4, sprintSpeed: 0.4, dribbling: 0.2 });
-    v += Math.min(2, this.traitCount(t, 'speedster', ['FW', 'MF'])) * 4;
+    v += Math.min(2, this.traitCount(t, 'speedster', ['FW', 'MF'])) * SIM_TRAITS.speedsterAttack;
     return v;
   }
 
   private paceDefense(t: TeamState): number {
     let v = this.unit(t, (o) => (this.group(o) === 'DF' ? 1 : 0), { acceleration: 0.3, sprintSpeed: 0.4, interception: 0.3 });
-    v += Math.min(2, this.traitCount(t, 'speedster', ['DF'])) * 3;
+    v += Math.min(2, this.traitCount(t, 'speedster', ['DF'])) * SIM_TRAITS.speedsterDefense;
     if (t.tactics.defensiveLine === 'high') v -= 5;
     if (t.tactics.defensiveLine === 'deep') v += 5;
     if (t.tactics.defense === 'low_block') v += 2;
-    if (t.tactics.defense === 'high_press') v -= 2;
+    if (t.tactics.defense === 'high_press') v -= SIM_TUNING.highPressPaceDefense;
     const gk = this.active(t).find((o) => o.slot.pos === 'GK');
-    if (gk?.p.traits.includes('sweeper_keeper')) v += t.tactics.defensiveLine === 'high' ? 6 : 4;
+    if (gk?.p.traits.includes('sweeper_keeper')) v += t.tactics.defensiveLine === 'high' ? SIM_TRAITS.sweeperKeeperHighLine : SIM_TRAITS.sweeperKeeper;
     return v;
   }
 
   private aerialAttack(t: TeamState): number {
     const top = this.active(t)
       .filter((o) => o.slot.pos !== 'GK')
-      .map((o) => this.eff(t, o, 'jumping') * 0.5 + this.eff(t, o, 'strength') * 0.3 + this.eff(t, o, 'finishing') * 0.2 + (this.has(o, 'aerial_threat') ? 8 : 0))
+      .map((o) => this.eff(t, o, 'jumping') * 0.5 + this.eff(t, o, 'strength') * 0.3 + this.eff(t, o, 'finishing') * 0.2 + (this.has(o, 'aerial_threat') ? SIM_TRAITS.aerial : 0))
       .sort((a, b) => b - a)
       .slice(0, 3);
-    const setPiece = this.traitCount(t, 'cross_specialist') > 0 ? 3 : 0;
+    const setPiece = this.traitCount(t, 'cross_specialist') > 0 ? SIM_TRAITS.crossSetPiece : 0;
     return top.reduce((s, v) => s + v, 0) / Math.max(1, top.length) + setPiece;
   }
 
   private aerialDefense(t: TeamState): number {
     const top = this.active(t)
       .filter((o) => o.slot.pos !== 'GK')
-      .map((o) => this.eff(t, o, 'jumping') * 0.5 + this.eff(t, o, 'strength') * 0.4 + this.eff(t, o, 'interception') * 0.1 + (this.has(o, 'aerial_threat') ? 8 : 0))
+      .map((o) => this.eff(t, o, 'jumping') * 0.5 + this.eff(t, o, 'strength') * 0.4 + this.eff(t, o, 'interception') * 0.1 + (this.has(o, 'aerial_threat') ? SIM_TRAITS.aerial : 0))
       .sort((a, b) => b - a)
       .slice(0, 3);
     return top.reduce((s, v) => s + v, 0) / Math.max(1, top.length);
@@ -484,7 +582,8 @@ export class MatchSimulator {
   private gkRating(t: TeamState): { rating: number; o: OnPitch | undefined } {
     const gk = this.active(t).find((o) => o.slot.pos === 'GK');
     if (!gk) return { rating: 25, o: undefined };
-    const r = this.eff(t, gk, 'gkReflexes') * 0.4 + this.eff(t, gk, 'gkPositioning') * 0.3 + this.eff(t, gk, 'gkHandling') * 0.3;
+    let r = this.eff(t, gk, 'gkReflexes') * 0.4 + this.eff(t, gk, 'gkPositioning') * 0.3 + this.eff(t, gk, 'gkHandling') * 0.3;
+    if (this.has(gk, 'shot_stopper')) r += SIM_TRAITS.shotStopper;
     // an outfield player in goal is terrible
     return { rating: gk.p.primaryPosition === 'GK' ? r : Math.min(r, 35), o: gk };
   }
@@ -565,6 +664,8 @@ export class MatchSimulator {
         const targets = this.aerialAttack(att) * 0.55 + this.paceAttack(att) * 0.45;
         let a = lp * 0.45 + targets * 0.55;
         if (att.tactics.offense === 'long_ball') a += 2;
+        // Long Feed: one passer is enough
+        if (this.active(att).some((o) => this.has(o, 'long_feed') && this.group(o) !== 'FW')) a += SIM_TRAITS.longFeed;
         let d = this.aerialDefense(def) * 0.55 + this.paceDefense(def) * 0.45;
         if (def.tactics.defense === 'high_press') d -= 3; // press bypassed
         const ok = this.contest(a, d, T.biasLongBall);
@@ -601,8 +702,9 @@ export class MatchSimulator {
         this.addTrack(side, this.rng.float(30, 70), this.rng.float(55, 70));
         this.advance(side, 0.18);
         let a = this.paceAttack(att);
-        if (att.tactics.offense === 'counter') a += 3;
-        a += Math.min(2, this.traitCount(att, 'counter_runner', ['FW', 'MF'])) * 5;
+        // the counter tactic itself (decision 122: was +3 while counter abilities were on most cards)
+        if (att.tactics.offense === 'counter') a += SIM_TUNING.counterTactic;
+        a += Math.min(2, this.traitCount(att, 'counter_runner', ['FW', 'MF'])) * SIM_TRAITS.counterRunnerAttack;
         const ok = this.contest(a, this.paceDefense(def), T.biasCounter);
         if (ok) {
           this.passes(side, this.rng.int(1, 3));
@@ -679,11 +781,14 @@ export class MatchSimulator {
     if (flank !== 'center') {
       // Cross Specialist: only players in a wide slot on this flank
       const crossers = this.active(att).filter((o) => this.has(o, 'cross_specialist') && this.flankOf(o) === flank).length;
-      const crossP = (aerial ? 0.55 : 0.3) + (att.tactics.offense === 'long_ball' ? 0.15 : 0) + Math.min(2, crossers) * 0.1;
+      const crossP = (aerial ? 0.55 : 0.3) + (att.tactics.offense === 'long_ball' ? 0.15 : 0) + Math.min(2, crossers) * SIM_TRAITS.crossChoice;
       return this.rng.chance(crossP) ? 'cross' : 'cutback';
     }
     const dribbling = this.unit(att, (o) => (this.group(o) === 'FW' || o.slot.pos === 'CAM' ? 1 : 0), { dribbling: 1 });
-    return this.rng.chance(0.3 + Math.max(0, dribbling - 70) * 0.01) ? 'dribble' : 'through_ball';
+    let p = 0.3 + Math.max(0, dribbling - 70) * 0.01;
+    if (this.active(att).some((o) => (this.group(o) === 'FW' || this.group(o) === 'MF') && this.has(o, 'dribbler'))) p += SIM_TRAITS.dribblerChoice;
+    if (this.teamHas(att, 'fantasista')) p += SIM_TRAITS.fantasistaChoice;
+    return this.rng.chance(Math.min(0.9, p)) ? 'dribble' : 'through_ball';
   }
 
   private bestBy(t: TeamState, f: (o: OnPitch) => number): OnPitch {
@@ -717,7 +822,8 @@ export class MatchSimulator {
   private turnover(winner: TeamState, zone: 'mid' | 'final'): { side: Side; phase: Phase } {
     const loser = this.teams[this.other(winner.side)];
     const runners = Math.min(2, this.traitCount(winner, 'counter_runner', ['FW', 'MF']));
-    const counterBase = (winner.tactics.offense === 'counter' ? 0.24 : winner.tactics.offense === 'long_ball' ? 0.1 : 0.06) * (1 + runners * 0.08);
+    const feeder = this.active(winner).some((o) => this.has(o, 'long_feed') && this.group(o) !== 'FW') ? SIM_TRAITS.longFeedCounter : 1;
+    const counterBase = (winner.tactics.offense === 'counter' ? 0.24 : winner.tactics.offense === 'long_ball' ? 0.1 : 0.06) * (1 + runners * SIM_TRAITS.counterRunnerChance) * feeder;
     // opponents committed forward leave more space
     const space = (loser.tactics.defensiveLine === 'high' ? 1.25 : loser.tactics.defensiveLine === 'deep' ? 0.8 : 1) * (loser.lateChange === 'attack' ? 1.3 : 1);
     const deep = winner.tactics.defense === 'low_block' ? 0.7 : winner.tactics.defense === 'high_press' ? 1.15 : 1; // distance to goal
@@ -791,6 +897,8 @@ export class MatchSimulator {
         else if (longShot) w *= (o.p.attributes.shotPower + o.p.attributes.shotAccuracy) / 130 + (this.has(o, 'long_shot') ? 1.2 : 0);
         else w *= (o.p.attributes.finishing + o.p.attributes.positioning) / 130 + (this.has(o, 'clinical_finisher') ? 0.2 : 0);
         if (flank !== 'center' && !header && this.flankOf(o) === flank) w *= 1.3;
+        // Fox in the Box: the forward who is there for the chances in front of goal
+        if (CLOSE_CHANCES.includes(chance) && this.group(o) === 'FW' && this.has(o, 'fox_in_box')) w *= SIM_TRAITS.foxWeight;
         return Math.max(0.01, w);
       });
     let assister: OnPitch | undefined = forcedAssist;
@@ -802,6 +910,8 @@ export class MatchSimulator {
             cands.map((o) => {
               let w = chance === 'cross' ? o.p.attributes.longPassing * (this.flankOf(o) === flank ? 2 : 0.6) : o.p.attributes.vision + o.p.attributes.shortPassing;
               if (o.p.traits.includes('playmaker')) w *= 1.4;
+              // Overlap: the wide defender delivers the cross from his flank
+              if (chance === 'cross' && this.has(o, 'overlap') && this.wideDefender(o) && this.flankOf(o) === flank) w *= SIM_TRAITS.overlapAssist;
               return w;
             }),
           )
@@ -818,11 +928,21 @@ export class MatchSimulator {
     let q = T.baseXg[chance] * (1 + (finishing - 72) / 110);
     if (chance !== 'penalty') q *= 1 - (this.backline(def, this.mirror(flank)) - 70) / 260;
     // trait conditions (spec 4-4): only the shooter / assister in a valid situation
-    if (longShot && this.has(shooter, 'long_shot')) q *= 1.5;
-    if (!longShot && !header && this.has(shooter, 'clinical_finisher')) q *= 1.15;
-    if (header && this.has(shooter, 'aerial_threat')) q *= 1.4;
-    if (this.has(assister, 'playmaker') && assister && this.group(assister) !== 'DF') q *= 1.15;
-    if (chance === 'cross' && this.has(assister, 'cross_specialist') && assister && this.flankOf(assister) !== 'center') q *= 1.2;
+    const S = SIM_TRAITS;
+    if (longShot && this.has(shooter, 'long_shot')) q *= S.longShotXg;
+    if (!longShot && !header && this.has(shooter, 'clinical_finisher')) q *= S.clinicalXg;
+    if (header && this.has(shooter, 'aerial_threat')) q *= S.aerialXg;
+    if (chance === 'dribble' && this.has(shooter, 'dribbler')) q *= S.dribblerXg;
+    if (CLOSE_CHANCES.includes(chance) && this.group(shooter) === 'FW' && this.has(shooter, 'fox_in_box')) q *= S.foxXg;
+    if (late && this.has(shooter, 'clutch')) q *= S.clutchXg;
+    if (this.minute >= 70 && this.has(shooter, 'the_zone')) q *= S.zoneXg;
+    if (this.has(assister, 'playmaker') && assister && this.group(assister) !== 'DF') q *= S.playmakerXg;
+    if (this.has(assister, 'fantasista')) q *= S.fantasistaXg;
+    if (chance === 'cross' && this.has(assister, 'cross_specialist') && assister && this.flankOf(assister) !== 'center') q *= S.crossXg;
+    // the defending team: Man Marker (defenders and the holding midfielder, two at most), ICON Last Line (once)
+    const markers = Math.min(2, this.active(def).filter((o) => this.has(o, 'man_marker') && (this.group(o) === 'DF' || o.slot.pos === 'CDM')).length);
+    if (chance !== 'penalty') q *= S.manMarkerXg ** markers;
+    if (this.teamHas(def, 'last_line')) q *= S.lastLineXg;
     q = clamp(q, 0.01, 0.85);
 
     att.stats.shots++;
@@ -842,8 +962,10 @@ export class MatchSimulator {
     this.advance(att.side, 0.12);
 
     const gk = this.gkRating(def);
-    let gkr = gk.rating;
-    const pGoal = clamp(q * (1 - (gkr - 72) / 130), 0.005, 0.92);
+    const gkr = gk.rating;
+    let pGoal = clamp(q * (1 - (gkr - 72) / 130), 0.005, 0.92);
+    // Shot Stopper: penalties too
+    if (chance === 'penalty' && this.has(gk.o, 'shot_stopper')) pGoal *= S.shotStopperPenalty;
     const pSave = chance === 'penalty' ? 1 - pGoal - 0.06 : clamp(0.17 + (this.eff(att, shooter, 'shotAccuracy') - 70) / 220 + q * 0.25, 0.06, 0.45);
     const pBlock = chance === 'penalty' || chance === 'direct_fk' ? 0 : 0.14;
     const u = this.rng.next();
@@ -897,12 +1019,14 @@ export class MatchSimulator {
     const T = SIM_TUNING;
     for (const o of this.active(t)) {
       let d = T.staminaDrainPerSegment * (1.25 - o.p.attributes.stamina / 200) * (DRAIN_POS[o.slot.pos] ?? 1);
-      if (t.tactics.defense === 'high_press') d *= 1.22;
+      if (t.tactics.defense === 'high_press') d *= T.highPressDrain;
       if (t.tactics.pressIntensity === 'high') d *= 1.1;
       if (t.tactics.pressIntensity === 'low') d *= 0.92;
       if (t.tactics.tempo === 'fast') d *= 1.08;
       if (t.tactics.tempo === 'slow') d *= 0.95;
-      if (o.p.traits.includes('engine')) d *= 0.75;
+      if (o.p.traits.includes('engine')) d *= SIM_TRAITS.engineDrain;
+      // ICON Inexhaustible: never tires
+      if (o.p.traits.includes('inexhaustible')) d = 0;
       o.stamina = Math.max(0, o.stamina - d);
     }
   }

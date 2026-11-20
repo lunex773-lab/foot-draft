@@ -133,7 +133,8 @@ export function computeChemistry(starters: readonly (Player | undefined)[], form
   const pureAttackers = roles.filter((r) => ['poacher', 'target_man', 'inside_forward', 'winger', 'shadow_striker', 'false_nine', 'complete_forward'].includes(r)).length;
   if (pureAttackers > 5) balance -= (pureAttackers - 5) * 2;
   const leaders = starters.filter((p) => p?.traits.includes('leader')).length;
-  balance = Math.max(0, balance) + Math.min(leaders, 2) * 3;
+  // Leader: chemistry +5 each, two at most (decision 119)
+  balance = Math.max(0, balance) + Math.min(leaders, 2) * 5;
 
   const score = Math.round(Math.max(0, Math.min(100, positionFit + links + tacticFit + balance)));
   return {

@@ -56,7 +56,7 @@ export interface DisplayStats {
 
 export type DisplayStatKey = keyof DisplayStats;
 
-/** Special abilities of the player database v1 (spec 4-4). */
+/** Special abilities (spec 4-4; decisions 118-120: 20 shared + 5 ICON-only). */
 export type TraitId =
   | 'engine'
   | 'counter_runner'
@@ -69,7 +69,21 @@ export type TraitId =
   | 'aerial_threat'
   | 'ball_winner'
   | 'speedster'
-  | 'playmaker';
+  | 'playmaker'
+  | 'shot_stopper'
+  | 'iron_wall'
+  | 'man_marker'
+  | 'dribbler'
+  | 'fox_in_box'
+  | 'clutch'
+  | 'long_feed'
+  | 'overlap'
+  // ICON only
+  | 'legend_aura'
+  | 'the_zone'
+  | 'fantasista'
+  | 'last_line'
+  | 'inexhaustible';
 
 export type RoleId =
   | 'keeper_classic'

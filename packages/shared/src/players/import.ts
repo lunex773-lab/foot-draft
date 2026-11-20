@@ -2,6 +2,7 @@ import { CLUB_BY_ID, LEAGUE_BY_NAME } from '../data/clubs';
 import { NATION_BY_CODE } from '../data/nations';
 import { POSITIONS } from '../data/positions';
 import { TRAIT_BY_NAME } from '../data/traits';
+import { balanceCard } from './balance';
 import type { InternalAttributes, Player, Position, Rarity } from '../types';
 import { deriveRole } from './roles';
 
@@ -61,8 +62,10 @@ const ATTR_MAP: Record<string, keyof InternalAttributes> = {
 const RARITY_MAP: Record<string, Rarity> = { Common: 'common', Rare: 'rare', Epic: 'epic', Legendary: 'legendary', Icon: 'icon' };
 
 /**
- * Converts the player database into game players. Display stats, OVR,
- * positions and traits are taken as-is. Throws on any inconsistency.
+ * Converts the player database into game players. Positions are taken
+ * as-is; OVR, stats and special abilities then get the card balance
+ * (balance.ts: OVR bands by rarity, abilities by rarity). The role is
+ * derived from the database's own attributes. Throws on any inconsistency.
  */
 export function convertPlayerDatabase(db: RawPlayerDb, sim: RawSimDb): Player[] {
   const simById = new Map(sim.records.map((r) => [r.player_id, r.attributes]));
@@ -120,5 +123,5 @@ export function convertPlayerDatabase(db: RawPlayerDb, sim: RawSimDb): Player[] 
   }
   if (new Set(players.map((p) => p.id)).size !== players.length) errors.push('duplicate ids');
   if (errors.length) throw new Error(`player database is invalid:\n${errors.slice(0, 20).join('\n')}`);
-  return players;
+  return players.map(balanceCard);
 }

@@ -20,7 +20,8 @@
     "e2e:phase7": "tsx scripts/e2e-phase7.ts",
     "e2e:match": "tsx scripts/e2e-match.ts",
     "e2e:draft-match": "tsx scripts/e2e-draft-match.ts",
-    "e2e:auction": "tsx scripts/e2e-auction.ts"
+    "e2e:auction": "tsx scripts/e2e-auction.ts",
+    "seed:balance": "tsx scripts/generate-balance-migration.ts"
   },
   "dependencies": {
     "@fd/shared": "*",

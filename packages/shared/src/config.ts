@@ -36,4 +36,4 @@ export const GAME_CONFIG = {
 export const CATALOG_VERSION = 2;
 
 /** Bump whenever the simulation logic changes (stored with every match, spec 6-4). */
-export const SIM_VERSION = '0.2.0';
+export const SIM_VERSION = '0.3.0';
