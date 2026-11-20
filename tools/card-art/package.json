@@ -7,7 +7,8 @@
   "scripts": {
     "appearance": "tsx src/generate-appearance.ts",
     "render": "tsx src/render.ts",
-    "typecheck": "tsc -p tsconfig.json"
+    "typecheck": "tsc -p tsconfig.json",
+    "values": "tsx src/export-values.ts"
   },
   "dependencies": {
     "@fd/shared": "*",

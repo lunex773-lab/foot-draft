@@ -1,15 +1,24 @@
-"""Builds the photorealistic player cards.
+"""Builds the player cards.
 
-    python3 tools/card-art/photo_cards.py [FD-001 FD-002 ...] [--out DIR]
+    npm run cards:photo [-- FD-001 FD-002 ...] [--out DIR]       # photo cards
+    npm run cards:render                                          # every card
+
+    python3 tools/card-art/photo_cards.py [ids] [--out DIR] [--illustrated DIR] [--all]
 
 Input : data/player-db-v1/cards/<id>.png      original card (frame, generic silhouette)
         data/player-db-v1/portraits/<id>.jpg  AI-generated portrait (square, head & shoulders)
-        data/player-db-v1/players.json        name, OVR, position, stats, rarity
+        data/player-db-v1/players.json        name, position, rarity
+        tools/card-art/.card-values.json      OVR and the six stats of the game catalog
+                                              (npm run values -w @fd/card-art; decisions 118-122)
+        --illustrated DIR                     cards with the illustrated player (render.ts --out DIR),
+                                              used for the cards without a portrait
 Output: assets/cards/<id>.png (256-colour optimized)
 
-Card = the original frame + the portrait filling the interior (no silhouette)
-+ OVR, position, name, the six stats, rarity label and footer drawn in the
-same font, sizes and colours as the original cards. Requires Pillow + numpy.
+Photo card = the original frame + the portrait filling the interior (no
+silhouette) + OVR, position, name, the six stats, rarity label and footer
+drawn in the same font, sizes and colours as the original cards.
+Illustrated card (no portrait yet) = the same, with the illustrated player
+cut out of its render instead of the portrait. Requires Pillow + numpy.
 """
 import json
 import os
@@ -80,22 +89,41 @@ def text(draw, xy, s, font, fill, anchor, shadow=2):
     draw.text(xy, s, font=font, fill=fill + (255,), anchor=anchor)
 
 
-def compose(player, mask, fonts):
+def figure_from_illustrated(card, illustrated):
+    """the illustrated player = what the render added to the original card (only around the silhouette)"""
+    a = np.asarray(illustrated.convert('RGB'), dtype=np.int16)
+    b = np.asarray(card.convert('RGB'), dtype=np.int16)
+    diff = (np.abs(a - b).max(axis=2) > 10).astype(np.uint8) * 255
+    region = np.zeros((H, W), dtype=np.uint8)
+    region[120:494, 80:432] = 255
+    alpha = Image.fromarray(np.minimum(diff, region)).filter(ImageFilter.MaxFilter(3)).filter(ImageFilter.GaussianBlur(0.8))
+    layer = illustrated.convert('RGBA')
+    layer.putalpha(alpha)
+    return layer
+
+
+def compose(player, mask, fonts, illustrated=None):
     rarity = player['rarity'].lower()
     style = STYLE[rarity]
     card = Image.open(os.path.join(CARDS, f"{player['id']}.png")).convert('RGBA')
-    photo = Image.open(os.path.join(PORTRAITS, f"{player['id']}.jpg")).convert('RGB')
-    s = PHOTO['size']
-    photo = photo.resize((s, s), Image.LANCZOS)
-    # studio background colour = average of the photo's top corners
-    pa = np.asarray(photo, dtype=np.float32)
-    photo_bg = tuple(int(v) for v in np.concatenate([pa[:40, :40].reshape(-1, 3), pa[:40, -40:].reshape(-1, 3)]).mean(axis=0))
-
-    inner = background(style, photo_bg)
-    layer = Image.new('RGBA', (W, H), (0, 0, 0, 0))
-    layer.paste(photo.convert('RGBA'), ((W - s) // 2, PHOTO['top']))
-    fade = Image.fromarray(vertical(PHOTO['top'] + s - 120, PHOTO['top'] + s - 8, 255, 0).astype(np.uint8))
-    layer.putalpha(Image.fromarray(np.minimum(np.asarray(layer.split()[3]), np.asarray(fade))))
+    if illustrated is None:
+        photo = Image.open(os.path.join(PORTRAITS, f"{player['id']}.jpg")).convert('RGB')
+        s = PHOTO['size']
+        photo = photo.resize((s, s), Image.LANCZOS)
+        # studio background colour = average of the photo's top corners
+        pa = np.asarray(photo, dtype=np.float32)
+        photo_bg = tuple(int(v) for v in np.concatenate([pa[:40, :40].reshape(-1, 3), pa[:40, -40:].reshape(-1, 3)]).mean(axis=0))
+        inner = background(style, photo_bg)
+        layer = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+        layer.paste(photo.convert('RGBA'), ((W - s) // 2, PHOTO['top']))
+        fade = Image.fromarray(vertical(PHOTO['top'] + s - 120, PHOTO['top'] + s - 8, 255, 0).astype(np.uint8))
+        layer.putalpha(Image.fromarray(np.minimum(np.asarray(layer.split()[3]), np.asarray(fade))))
+    else:
+        # the card's own background colour (above the silhouette) for the gradient
+        ca = np.asarray(card.convert('RGB'), dtype=np.float32)
+        card_bg = tuple(int(v) for v in ca[60:110, 200:312].reshape(-1, 3).mean(axis=0))
+        inner = background(style, card_bg)
+        layer = figure_from_illustrated(card, illustrated)
     inner = Image.alpha_composite(inner, layer)
     # darken the lower part for the name and stats
     shade = Image.new('RGBA', (W, H), SHADOW + (0,))
@@ -124,8 +152,22 @@ def main():
         i = args.index('--out')
         out_dir = args[i + 1]
         args = args[:i] + args[i + 2:]
+    illustrated_dir = None
+    if '--illustrated' in args:
+        i = args.index('--illustrated')
+        illustrated_dir = args[i + 1]
+        args = args[:i] + args[i + 2:]
+    every = '--all' in args
+    args = [a for a in args if a != '--all']
     players = {p['id']: p for p in json.load(open(os.path.join(DB, 'players.json')))['players']}
-    ids = args or sorted(f[:-4] for f in os.listdir(PORTRAITS) if f.endswith('.jpg'))
+    # the numbers of the game catalog (OVR bands by rarity, decisions 118-122)
+    values_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.card-values.json')
+    if not os.path.exists(values_file):
+        sys.exit('missing tools/card-art/.card-values.json: run npm run values -w @fd/card-art')
+    for card_id, v in json.load(open(values_file)).items():
+        players[card_id] = {**players[card_id], 'overall': v['overall'], 'display_stats': v['display_stats']}
+    photos = sorted(f[:-4] for f in os.listdir(PORTRAITS) if f.endswith('.jpg'))
+    ids = args or (sorted(players) if every else photos)
     os.makedirs(out_dir, exist_ok=True)
     fonts = {
         'ovr': ImageFont.truetype(FONT_BOLD, 62),
@@ -138,7 +180,12 @@ def main():
     }
     mask = interior_mask()
     for card_id in ids:
-        img = compose(players[card_id], mask, fonts)
+        illustrated = None
+        if card_id not in photos:
+            if not illustrated_dir:
+                sys.exit(f'{card_id} has no portrait: pass --illustrated DIR (render.ts --out DIR)')
+            illustrated = Image.open(os.path.join(illustrated_dir, f'{card_id}.png')).convert('RGBA')
+        img = compose(players[card_id], mask, fonts, illustrated)
         img.quantize(colors=256, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.FLOYDSTEINBERG).save(os.path.join(out_dir, f'{card_id}.png'), 'PNG', optimize=True)
     print(f'built {len(ids)} cards -> {out_dir}')
 

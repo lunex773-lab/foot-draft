@@ -1,5 +1,34 @@
 # 実装記録
 
+## 2026-11-20 特殊能力の見直しとレアリティごとの OVR の帯（決定 118〜122）
+
+ユーザーの指摘：特殊能力は ICON 2つ・EPIC 以上1つにして、種類と強さを増やす。LEGENDARY が ICON より強いのはおかしい（成長で超えるのはよいが、入手時点で上のレアリティを上回ってはいけない）。重複の強化で何が強化されるのか。計画（docs/15）を作り、承認を受けて実装。
+
+| 区分 | 内容 | 主なファイル |
+| --- | --- | --- |
+| 重複の強化（質問への回答） | 今の仕様のまま：1段階ごとに OVR・6能力値・試合の内部能力すべて +1（最大 +5、MATCH だけ） | `packages/shared/src/match.ts`（`enhancePlayer`） |
+| カードの調整 | 選手データベースのファイルはそのままにして、読み込む時に「OVR の帯」と「能力の割当表」をかける。OVR が動いた分だけ6能力値と内部能力も動かす。役割（プレースタイル）は元の能力値から決める | `packages/shared/src/players/balance.ts`, `import.ts`, `data/rarities.ts` |
+| 特殊能力 | 25種類（共通20・ICON 専用5）。効果の数値を `SIM_TRAITS` にまとめた。説明文を新しい数値に | `data/traits.ts`, `types.ts`, `sim/engine.ts`, `chemistry.ts`（リーダー +5） |
+| 試合の計算 0.3.0 | 新しい能力の効果、戦術の再調整（決定 122） | `sim/engine.ts`, `config.ts` |
+| サーバーのデータ | migration 0013（生成）：300枚の OVR・6能力値・内部能力・特殊能力を更新。持っているカード・強化の段階・過去の試合はそのまま | `apps/api/migrations/0013_card_balance.sql`, `scripts/generate-balance-migration.ts`（`npm run seed:balance -w @fd/api`） |
+| カード画像 | 300枚を描き直し（数字が変わった268枚）。数字はゲームのカタログから（`npm run values -w @fd/card-art`）。実写のない COMMON 50枚は、イラストの選手を切り抜いて実写カードと同じ作りで描き直し（12/1 に実写が作られたら置き換え） | `tools/card-art/photo_cards.py`, `src/export-values.ts`, ルートの `cards:render`・`cards:photo` |
+| 画面 | カード詳細：ICON 専用の能力に印、能力がないカードには「EPIC 以上だけが持つ」と表示 | `apps/web/src/components/CardDetail.tsx`, `styles.css` |
+| テスト | OVR の帯（上のレアリティを超えない・同じレアリティの順番を保つ）、能力の数・ICON 専用は ICON だけ・GK の能力は GK だけ等、ICON 能力が試合を正しい向きに動かす | `packages/shared/test/catalog.test.ts`, `sim.test.ts` |
+
+検証：
+- 共有ロジックのテスト101件、API のテスト、型チェック、ゲームと管理画面のビルドが通る。
+- ローカルの API に migration 0013 を適用し、`/api/players` を確認した：
+
+| レアリティ | OVR | 特殊能力の数 |
+| --- | --- | --- |
+| COMMON | 45〜59 | 0 |
+| RARE | 60〜69 | 0 |
+| EPIC | 70〜79 | 1 |
+| LEGENDARY | 80〜89 | 1 |
+| ICON | 90〜99 | 2 |
+
+- 試合のバランスの前後の比較は docs/15 の7章。
+
 ## 2026-11-19 ガシャの観客の声（応援チャント）と試合の BGM（3曲ランダム）
 
 ユーザーの指摘：ガシャに観客の声がないのは面白くない（ノイズ以外の音で）。試合中の BGM が迫力に欠ける（もっとアップテンポに）。候補を聴き比べて、観客は B 応援チャント、試合 BGM は3曲すべてを試合ごとにランダム、リプレイも含める、STADIUM LEGEND もスマホで聞こえるようにする、と決定（決定 114〜117）。

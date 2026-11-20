@@ -20,8 +20,8 @@
     "sim:balance": "npm run sim:balance -w @fd/shared",
     "build": "npm run build --workspaces --if-present",
     "cards:appearance": "npm run appearance -w @fd/card-art",
-    "cards:render": "npm run render -w @fd/card-art && python3 tools/card-art/optimize.py && npm run cards:photo",
-    "cards:photo": "python3 tools/card-art/photo_cards.py"
+    "cards:render": "npm run render -w @fd/card-art -- --out .illustrated && npm run cards:photo -- --illustrated tools/card-art/.illustrated --all",
+    "cards:photo": "npm run values -w @fd/card-art && python3 tools/card-art/photo_cards.py"
   },
   "engines": {
     "node": ">=20"
