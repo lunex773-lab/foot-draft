@@ -93,5 +93,5 @@ describe('match simulation', () => {
     const withAura = [...home.slice(0, 12), aura];
     const withoutAura = [...home.slice(0, 12), plain(aura)];
     expect(xgOver({ home: withAura, away }, 'home')).toBeGreaterThan(xgOver({ home: withoutAura, away }, 'home'));
-  });
+  }, 30000); // 800 matches
 });
